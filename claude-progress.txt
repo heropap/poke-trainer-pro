@@ -12,3 +12,8 @@ Notes: 从 pokemon-tcg-data 下载了 SV 系列 16 个扩展包共 3250 张卡�
 Feature: 卡牌展示组件
 Status: completed
 Notes: 创建了 4 个核心组件：CardImage（图片展示，懒加载，错误回退）、CardDetail（详情面板，显示HP/技能/特性/弱点/合规性/flavor text）、CardGrid（响应式网格布局，点击展开详情）、CardSearch（搜索框+多维过滤：supertype/属性/系列/Standard）。新建 /cards 页面作为卡牌图鉴浏览器，支持分页加载（60张/页）。导航栏增加了"图鉴"链接。编写了 21 个组件测试全部通过，总计 44 个测试。
+
+=== Session 3 | 2026-02-15 23:00:00 ===
+Feature: 卡组导入与验证
+Status: completed
+Notes: 实现了 PTCG Live 格式卡组文本解析器（deck-parser.ts），支持 Pokemon/Trainer/Energy 分类解析、多词卡牌名处理。建立了 PTCG Live 系列代码到 pokemon-tcg-data set ID 的映射（SVI→sv1, PAL→sv2 等，覆盖 SV + SwSh 系列）。实现了卡组验证：60张检查、4张限制（基础能量豁免）、Standard 合规性标记、未知系列/未找到卡牌警告。创建了 DeckImport UI 组件（文本框粘贴+示例卡组+验证结果表格）。更新了 /deck 页面。编写了 23 个单元测试，总计 67 个测试全部通过。
