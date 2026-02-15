@@ -1,0 +1,4 @@
+=== Session init | 2026-02-15 21:55:00 ===
+Feature: 项目初始化
+Status: completed
+Notes: 搭建了 Next.js 16 + TypeScript + Tailwind CSS 项目骨架。创建了核心目录结构（engine/, data/, components/, lib/, services/, types/）。配置了 Jest 测试框架。生成了 feature_list.json（14个功能，按优先级排列）、init.sh、claude-progress.txt。创建了首页、卡组页、对战页的占位页面和导航栏。

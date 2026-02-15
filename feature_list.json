@@ -1,0 +1,187 @@
+[
+  {
+    "category": "infrastructure",
+    "description": "项目基础架构 - Next.js + TypeScript 项目搭建，基本布局和目录结构",
+    "steps": [
+      "使用 create-next-app 初始化 TypeScript 项目",
+      "创建核心目录结构（engine/, data/, components/, lib/）",
+      "搭建基本页面布局（导航栏、主内容区）",
+      "配置 Tailwind CSS 样式系统",
+      "确保开发服务器能正常启动并响应"
+    ],
+    "passes": false,
+    "priority": 0
+  },
+  {
+    "category": "infrastructure",
+    "description": "Pokemon TCG 静态数据集成 - 拉取 pokemon-tcg-data 并建立本地卡牌索引",
+    "steps": [
+      "下载 pokemon-tcg-data JSON 数据（cards、sets）",
+      "创建卡牌数据类型定义（Card, Set, Attack, Ability 等接口）",
+      "实现卡牌索引服务（按 id、name、set 查询）",
+      "实现 Standard 环境合规性（Legality）过滤",
+      "编写数据加载和查询的单元测试"
+    ],
+    "passes": false,
+    "priority": 1
+  },
+  {
+    "category": "functional",
+    "description": "卡牌展示组件 - 使用 Canvas/SVG 渲染卡牌缩略图和详情",
+    "steps": [
+      "创建 CardImage 组件（使用 images.small 展示缩略图）",
+      "创建 CardDetail 组件（悬浮显示技能描述、HP、弱点等）",
+      "实现卡牌列表/网格视图",
+      "添加卡牌搜索和过滤功能",
+      "编写组件渲染测试"
+    ],
+    "passes": false,
+    "priority": 2
+  },
+  {
+    "category": "functional",
+    "description": "卡组导入与验证 - 支持 PTCG Live 格式导入，自动检查合规性",
+    "steps": [
+      "实现 PTCG Live 卡组文本解析器",
+      "将解析结果映射到 pokemon-tcg-data 的 card_id",
+      "实现 Standard 环境合规性校验（标记非法卡牌）",
+      "创建卡组导入 UI（文本框粘贴 + 解析结果展示）",
+      "编写解析器和验证逻辑的单元测试"
+    ],
+    "passes": false,
+    "priority": 3
+  },
+  {
+    "category": "functional",
+    "description": "游戏引擎核心 - 基于 ryuu-play 架构实现基本游戏状态管理",
+    "steps": [
+      "定义核心游戏状态类型（GameState, Player, Zone, Card 等）",
+      "实现游戏区域管理（手牌、牌组、弃牌堆、场上、奖励卡、备战区）",
+      "实现回合流转系统（抽牌阶段→主阶段→攻击阶段→结束阶段）",
+      "实现 Action 系统（定义合法动作、验证动作、执行动作）",
+      "编写游戏状态管理的单元测试"
+    ],
+    "passes": false,
+    "priority": 4
+  },
+  {
+    "category": "functional",
+    "description": "对战准备阶段 - Mulligan 处理、奖励卡设置、初始手牌",
+    "steps": [
+      "实现洗牌算法（Fisher-Yates）",
+      "实现初始手牌抽取（7张）",
+      "实现 Mulligan 检测和处理（无基础宝可梦时重抽）",
+      "实现奖励卡设置（6张）",
+      "实现基础宝可梦放置（战斗区 + 备战区）",
+      "编写准备阶段流程测试"
+    ],
+    "passes": false,
+    "priority": 5
+  },
+  {
+    "category": "functional",
+    "description": "回合内动作实现 - 附能、进化、撤退、使用支持者",
+    "steps": [
+      "实现能量附加（每回合一次限制）",
+      "实现宝可梦进化（入场首回合禁用规则）",
+      "实现撤退（消耗撤退费用）",
+      "实现支持者卡使用（每回合一次限制）",
+      "实现物品卡使用",
+      "编写各动作的合法性检查测试"
+    ],
+    "passes": false,
+    "priority": 6
+  },
+  {
+    "category": "functional",
+    "description": "伤害与击倒系统 - HP追踪、弱点/抵抗力计算、奖励卡获取",
+    "steps": [
+      "实现攻击伤害计算（基础伤害 + 弱点/抵抗力）",
+      "实现 HP 追踪和击倒判定",
+      "实现普通宝可梦击倒奖励（1张）",
+      "实现 ex/V 宝可梦击倒奖励（2张）和 VSTAR/VMAX（3张）",
+      "实现胜负判定（奖励卡取完、对方无法抽牌、对方场上无宝可梦）",
+      "编写伤害和击倒系统测试"
+    ],
+    "passes": false,
+    "priority": 7
+  },
+  {
+    "category": "functional",
+    "description": "WebSocket 对战通信 - 建立实时游戏通信层",
+    "steps": [
+      "搭建 WebSocket 服务器（Next.js API Route 或独立服务）",
+      "定义通信协议（GameAction、GameEvent 消息格式）",
+      "实现房间管理（创建房间、加入房间、匹配）",
+      "实现游戏状态同步（服务端权威模型）",
+      "编写 WebSocket 通信测试"
+    ],
+    "passes": false,
+    "priority": 8
+  },
+  {
+    "category": "functional",
+    "description": "卡牌效果框架 - 动态效果加载系统",
+    "steps": [
+      "设计卡牌效果接口（Attack, Ability, TrainerEffect）",
+      "实现效果注册表（按 card_id 注册和查询效果）",
+      "实现动态效果加载（按需加载对局涉及的卡牌逻辑）",
+      "实现 5 张示例卡牌效果（基础宝可梦）",
+      "编写效果加载和执行测试"
+    ],
+    "passes": false,
+    "priority": 9
+  },
+  {
+    "category": "functional",
+    "description": "对战 UI - 战斗界面布局与交互",
+    "steps": [
+      "创建对战场地布局（双方战斗区、备战区、牌组、弃牌堆）",
+      "实现手牌展示和选择交互",
+      "实现动作选择 UI（附能目标、攻击选择、撤退确认）",
+      "实现卡牌拖拽放置",
+      "编写 UI 交互测试"
+    ],
+    "passes": false,
+    "priority": 10
+  },
+  {
+    "category": "functional",
+    "description": "动作日志侧边栏 - 实时显示对战事件",
+    "steps": [
+      "创建 ActionLog 组件",
+      "实现事件格式化（中文描述：使用卡牌、造成伤害、击倒等）",
+      "实现日志自动滚动",
+      "集成到对战界面侧边栏",
+      "编写日志显示测试"
+    ],
+    "passes": false,
+    "priority": 11
+  },
+  {
+    "category": "functional",
+    "description": "AI 对手 - 基于启发式评估的 SimpleBot",
+    "steps": [
+      "实现游戏状态评估函数（场面优势、手牌优势、奖励卡差距）",
+      "实现合法动作枚举",
+      "实现贪心策略（选择评估分最高的动作序列）",
+      "针对 ex 环境调整评估权重",
+      "编写 AI 决策测试"
+    ],
+    "passes": false,
+    "priority": 12
+  },
+  {
+    "category": "functional",
+    "description": "主流卡牌逻辑实现 - 实现 Standard 环境前 20 套卡组的核心卡牌",
+    "steps": [
+      "整理 Standard 环境主流卡组清单（约 150 张核心卡）",
+      "设计 Groovy-to-TS 逻辑转译 Prompt 模板",
+      "批量转译并验证卡牌效果",
+      "实现特殊规则（VSTAR Power 使用次数限制等）",
+      "编写核心卡牌效果的集成测试"
+    ],
+    "passes": false,
+    "priority": 13
+  }
+]

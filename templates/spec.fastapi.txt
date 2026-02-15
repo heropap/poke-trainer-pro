@@ -1,0 +1,88 @@
+================================================================================
+                         项目规格说明 (Project Spec)
+================================================================================
+
+【项目名称】
+api-service
+
+【项目描述】
+一个 RESTful API 后端服务，包含用户管理、JWT 认证、数据 CRUD，
+使用 Python FastAPI + SQLAlchemy + SQLite 构建。
+
+================================================================================
+                              技术栈
+================================================================================
+
+框架:         fastapi
+语言:         python
+包管理器:      uv
+测试框架:      pytest
+数据库:        SQLite (通过 SQLAlchemy ORM)
+
+================================================================================
+                            开发环境
+================================================================================
+
+启动命令:      uvicorn app.main:app --reload --port 8000
+端口:          8000
+健康检查URL:   http://localhost:8000/health
+启动超时:      15秒
+测试命令:      pytest -v
+
+================================================================================
+                         功能清单 (按优先级排序)
+================================================================================
+
+--- 功能 1 [infrastructure] 优先级: 0 ---
+描述: FastAPI 项目架构搭建
+步骤:
+  - 用 uv 初始化 Python 项目，安装 fastapi, uvicorn, sqlalchemy
+  - 创建目录结构 (app/, app/models/, app/routes/, app/schemas/, tests/)
+  - 配置 SQLAlchemy + SQLite 数据库连接
+  - 添加 /health 健康检查端点
+  - 创建基础 main.py 入口
+
+--- 功能 2 [functional] 优先级: 1 ---
+描述: 用户管理 CRUD API
+步骤:
+  - 创建 User 数据模型 (id, email, hashed_password, created_at)
+  - 创建 Pydantic schemas (UserCreate, UserResponse, UserUpdate)
+  - 实现 CRUD 路由 (POST/GET/PUT/DELETE /api/users)
+  - 添加密码哈希 (bcrypt)
+  - 编写用户路由测试
+
+--- 功能 3 [functional] 优先级: 2 ---
+描述: JWT 认证系统
+步骤:
+  - 安装 python-jose, passlib
+  - 实现 JWT token 生成和验证
+  - 创建 /api/auth/login 和 /api/auth/register 端点
+  - 创建认证依赖 (get_current_user)
+  - 保护需要认证的路由
+  - 编写认证测试
+
+--- 功能 4 [functional] 优先级: 3 ---
+描述: 数据资源 CRUD (以 Item 为例)
+步骤:
+  - 创建 Item 数据模型 (id, title, description, owner_id, created_at)
+  - 创建 Pydantic schemas
+  - 实现 CRUD 路由 (关联到当前用户)
+  - 添加分页查询 (limit, offset)
+  - 编写 Item 路由测试
+
+--- 功能 5 [infrastructure] 优先级: 4 ---
+描述: 错误处理与日志
+步骤:
+  - 创建统一异常处理中间件
+  - 自定义 HTTP 异常类
+  - 配置 structlog 结构化日志
+  - 添加请求 ID 追踪
+  - 编写错误处理测试
+
+--- 功能 6 [testing] 优先级: 5 ---
+描述: 完整测试套件与 CI 配置
+步骤:
+  - 确保所有路由有测试覆盖
+  - 添加 pytest-cov 覆盖率报告
+  - 配置 conftest.py 测试固件
+  - 创建测试数据库 fixture (每个测试独立数据库)

@@ -1,0 +1,29 @@
+# === Claude Code ===
+.claude/
+
+# === 环境与密钥 ===
+.env
+.env.local
+.env.*.local
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# === Node.js ===
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# === 系统文件 ===
+.DS_Store
+Thumbs.db
+*.log
