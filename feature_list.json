@@ -9,7 +9,7 @@
       "配置 Tailwind CSS 样式系统",
       "确保开发服务器能正常启动并响应"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 0
   },
   {
@@ -22,7 +22,7 @@
       "实现 Standard 环境合规性（Legality）过滤",
       "编写数据加载和查询的单元测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 1
   },
   {

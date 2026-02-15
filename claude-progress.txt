@@ -2,3 +2,8 @@
 Feature: 项目初始化
 Status: completed
 Notes: 搭建了 Next.js 16 + TypeScript + Tailwind CSS 项目骨架。创建了核心目录结构（engine/, data/, components/, lib/, services/, types/）。配置了 Jest 测试框架。生成了 feature_list.json（14个功能，按优先级排列）、init.sh、claude-progress.txt。创建了首页、卡组页、对战页的占位页面和导航栏。
+
+=== Session 1 | 2026-02-15 22:10:00 ===
+Feature: Pokemon TCG 静态数据集成
+Status: completed
+Notes: 从 pokemon-tcg-data 下载了 SV 系列 16 个扩展包共 3250 张卡牌数据。创建了完整的 TypeScript 类型定义（Card, CardAttack, CardAbility 等）。实现了卡牌索引服务（card-service.ts），支持按 ID、名称、系列查询，支持模糊搜索、Standard 合规性过滤、多条件组合查询。编写了 21 个单元测试全部通过。
