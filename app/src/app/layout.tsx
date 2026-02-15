@@ -36,6 +36,9 @@ export default function RootLayout({
               <a href="/" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 首页
               </a>
+              <a href="/cards" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                图鉴
+              </a>
               <a href="/deck" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 卡组
               </a>

@@ -35,7 +35,7 @@
       "添加卡牌搜索和过滤功能",
       "编写组件渲染测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 2
   },
   {

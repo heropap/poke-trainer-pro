@@ -7,3 +7,8 @@ Notes: 搭建了 Next.js 16 + TypeScript + Tailwind CSS 项目骨架。创建了
 Feature: Pokemon TCG 静态数据集成
 Status: completed
 Notes: 从 pokemon-tcg-data 下载了 SV 系列 16 个扩展包共 3250 张卡牌数据。创建了完整的 TypeScript 类型定义（Card, CardAttack, CardAbility 等）。实现了卡牌索引服务（card-service.ts），支持按 ID、名称、系列查询，支持模糊搜索、Standard 合规性过滤、多条件组合查询。编写了 21 个单元测试全部通过。
+
+=== Session 2 | 2026-02-15 22:30:00 ===
+Feature: 卡牌展示组件
+Status: completed
+Notes: 创建了 4 个核心组件：CardImage（图片展示，懒加载，错误回退）、CardDetail（详情面板，显示HP/技能/特性/弱点/合规性/flavor text）、CardGrid（响应式网格布局，点击展开详情）、CardSearch（搜索框+多维过滤：supertype/属性/系列/Standard）。新建 /cards 页面作为卡牌图鉴浏览器，支持分页加载（60张/页）。导航栏增加了"图鉴"链接。编写了 21 个组件测试全部通过，总计 44 个测试。
