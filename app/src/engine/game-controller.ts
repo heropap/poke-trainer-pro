@@ -459,7 +459,7 @@ function handleUseAbility(
   }
 
   // Check if there's a registered effect for this ability
-  const cardEffect = getEffect(sourceCard.cardId);
+  const cardEffect = getEffect(sourceCard.cardId, sourceCard.card.name);
   const abilityEffect = cardEffect?.abilities?.find(a => a.name === action.abilityName);
 
   if (!abilityEffect) {

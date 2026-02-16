@@ -24,11 +24,15 @@ export type {
 export {
   registerEffect,
   registerAll,
+  registerByName,
+  registerAllByName,
   getEffect,
   hasEffect,
   getRegisteredCount,
+  getNameRegisteredCount,
   clearRegistry,
   getRegisteredCardIds,
+  getRegisteredCardNames,
 } from "./effect-registry";
 
 // Re-export context
@@ -41,11 +45,11 @@ export { flipCoin, flipCoins, setRandomFn } from "./coin";
 export { processBetweenTurns } from "./status-effects";
 
 // Card implementations
-import { trainerEffects } from "./cards/trainers";
+import { trainerEffects, trainerNameEffects } from "./cards/trainers";
 import { attackEffects } from "./cards/attacks";
-import { registerAll } from "./effect-registry";
+import { registerAll, registerAllByName } from "./effect-registry";
 
-/** All built-in card effects */
+/** All built-in card effects (ID-based) */
 const allEffects = [...trainerEffects, ...attackEffects];
 
 /**
@@ -54,11 +58,12 @@ const allEffects = [...trainerEffects, ...attackEffects];
  */
 export function initializeEffects(): void {
   registerAll(allEffects);
+  registerAllByName(trainerNameEffects);
 }
 
 /**
  * Get count of all available built-in effects.
  */
 export function getBuiltInEffectCount(): number {
-  return allEffects.length;
+  return allEffects.length + trainerNameEffects.length;
 }

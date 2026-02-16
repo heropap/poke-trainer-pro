@@ -18,7 +18,7 @@ function getCardActions(card: GameCard): { label: string; action: string; warnin
 
   if (supertype === "Trainer") {
     if (subtypes.includes("Supporter")) {
-      const effectExists = hasEffect(card.cardId);
+      const effectExists = hasEffect(card.cardId, card.card.name);
       return [{
         label: "使用",
         action: "play_supporter",
@@ -26,7 +26,7 @@ function getCardActions(card: GameCard): { label: string; action: string; warnin
       }];
     }
     if (subtypes.includes("Pokémon Tool")) {
-      const effectExists = hasEffect(card.cardId);
+      const effectExists = hasEffect(card.cardId, card.card.name);
       return [{
         label: "装备",
         action: "equip_tool",
@@ -34,7 +34,7 @@ function getCardActions(card: GameCard): { label: string; action: string; warnin
       }];
     }
     if (subtypes.includes("Item")) {
-      const effectExists = hasEffect(card.cardId);
+      const effectExists = hasEffect(card.cardId, card.card.name);
       return [{
         label: "使用",
         action: "play_item",

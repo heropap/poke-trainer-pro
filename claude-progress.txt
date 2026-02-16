@@ -416,3 +416,67 @@ Notes: 编写了全面的集成测试，覆盖所有卡牌类型通过 processAc
      - Basic + targetZone=attach → 自动检测放置
 
 测试: 新增 37 个测试，总计 388 个测试全部通过（15 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 13 | 2026-02-16 ===
+Feature: 主流卡牌逻辑实现 (Priority 13)
+Status: completed
+Notes: 
+  问题: 用户报告"卡牌使用后没有触发对应规则"。调查发现效果系统架构完好，但仅注册了 25 个效果（7 种训练师 + 10 种攻击），数据库有 248 种训练师名称。竞技常用卡（Iono、Ultra Ball、Switch 等）全部无效果实现。
+
+  方案: 名称匹配 + 30 张效果
+
+  实现步骤:
+  1. effect-registry.ts — 新增名称注册表 (nameRegistry)
+     - registerByName / registerAllByName
+     - getEffect(cardId, cardName?) 支持名称回退
+     - hasEffect(cardId, cardName?) 支持名称回退
+     - clearRegistry() 同时清除两个 Map
+
+  2. effect-types.ts + effect-context.ts — 8 个新 EffectContext 方法
+     - searchDiscard(filter, count, who) — 从弃牌堆搜索并取出
+     - shuffleHandIntoDeck(who) — 整个手牌洗入牌组
+     - switchOwnActive(benchId) — 己方换人（不消耗撤退费）
+     - revealTopCards(count, who) — 翻开牌组顶部 N 张
+     - putOnTopOfDeck(cards, who) — 放回牌组顶部
+     - shuffleIntoDeck(cards, who) — 指定卡牌洗入牌组
+     - attachEnergyFromDiscard(filter, count, target) — 从弃牌堆附加能量
+     - pickUpPokemon(instanceId, who) — 回收宝可梦+附件到手牌
+
+  3. 更新所有 getEffect/hasEffect 调用点传入 cardName
+     - turn-actions.ts: playSupporter, playItem, canRetreat (3处)
+     - game-actions.ts: performAttack, applyToolDamageModifiers (2处)
+     - game-controller.ts: handleUseAbility (1处)
+     - ActionMenu.tsx + BattleBoard.tsx: hasEffect (7处)
+
+  4. game-actions.ts — 攻击方工具 modifyDamage
+     - 新增 applyAttackerToolDamageModifiers()
+     - 在 performAttack 的弱点/抵抗力计算之前调用
+     - 完整伤害链: base → attacker tools → weakness → resistance → defender tools → final
+
+  5. trainers.ts — 30 个名称效果实现
+     支持者(10): Iono, Arven, Nemona, Judge, Penny, Tulip, Lacey, Prof. Sada's Vitality, Prof. Turo's Scenario, Jacq
+     物品(17): Ultra Ball, Switch, Night Stretcher, Buddy-Buddy Poffin, Super Rod, Pokémon Catcher, Counter Catcher, Great Ball, Poké Ball, Energy Search, Potion, Crushing Hammer, Earthen Vessel, Electric Generator, Pal Pad, Energy Retrieval, Rare Candy (stub)
+     工具(3): Choice Belt (+30 vs ex/V), Vitality Band (+10), Defiance Band (+30 behind on prizes)
+     + 7 个已有效果也注册了名称版本
+
+  6. index.ts — 接线 trainerNameEffects + 导出新 API
+
+  7. 测试: 新增 34 个测试 (trainer-effects-expanded.test.ts)
+     - 名称注册表: registerByName, getEffect名称回退, ID优先级, clearRegistry
+     - 新方法: searchDiscard, shuffleHandIntoDeck, switchOwnActive, revealTopCards, etc.
+     - 训练师效果: Iono, Judge, Nemona, Ultra Ball, Switch, Potion, Night Stretcher, Energy Search, Pokémon Catcher (正/反面), Super Rod, Pal Pad
+     - 工具伤害修改器: Vitality Band +10, Choice Belt +30 vs ex, Choice Belt 不加 vs 普通, Defiance Band +30 落后
+
+  文件变更: 11 个文件
+     modified: effect-registry.ts, effect-types.ts, effect-context.ts, trainers.ts, index.ts
+     modified: turn-actions.ts, game-actions.ts, game-controller.ts
+     modified: ActionMenu.tsx, BattleBoard.tsx
+     new: trainer-effects-expanded.test.ts
+
+  已知限制:
+     - Rare Candy: stub — 需要 canEvolve() 支持跳阶进化
+     - Kieran: +20 伤害需回合级修改器系统
+     - Exp. Share / Heavy Baton: 需要 on-KO 触发钩子
+     - 需要选择目标的效果自动选择第一个有效目标
+
+测试: 新增 34 个测试，总计 422 个测试全部通过（16 个测试套件）。TypeScript 编译 0 错误。

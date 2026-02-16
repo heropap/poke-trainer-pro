@@ -181,7 +181,7 @@
       "实现特殊规则（VSTAR Power 使用次数限制等）",
       "编写核心卡牌效果的集成测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 13
   }
 ]

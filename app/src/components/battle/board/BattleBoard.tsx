@@ -306,7 +306,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
       case "play_supporter":
       case "play_item": {
         // Direct play (no target needed)
-        const effectExists = hasEffect(card.cardId);
+        const effectExists = hasEffect(card.cardId, card.card.name);
         dispatchAction({ type: "play_card", cardId: card.instanceId });
         if (!effectExists) {
           showToast(`${card.card.name} — 效果未实现（卡已丢弃）`, "warning");
@@ -373,7 +373,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           return;
         }
         if (validTargets.length === 1) {
-          const effectExists = hasEffect(card.cardId);
+          const effectExists = hasEffect(card.cardId, card.card.name);
           dispatchAction({
             type: "play_card",
             cardId: card.instanceId,
@@ -417,7 +417,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         });
         break;
       case "equip_tool": {
-        const effectExists = hasEffect(card.cardId);
+        const effectExists = hasEffect(card.cardId, card.card.name);
         dispatchAction({
           type: "play_card",
           cardId: card.instanceId,

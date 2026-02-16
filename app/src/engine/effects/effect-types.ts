@@ -101,6 +101,50 @@ export interface EffectContext {
   /** Switch opponent's active with a bench Pokemon */
   switchOpponentActive(benchInstanceId: string): boolean;
 
+  /** Switch own active with a bench Pokemon (no retreat cost) */
+  switchOwnActive(benchInstanceId: string): boolean;
+
+  /**
+   * Search discard pile for cards matching a filter, return up to count.
+   * Found cards are removed from discard.
+   */
+  searchDiscard(
+    filter: (card: GameCard) => boolean,
+    count: number,
+    who?: "player" | "opponent"
+  ): GameCard[];
+
+  /** Shuffle entire hand into deck */
+  shuffleHandIntoDeck(who?: "player" | "opponent"): number;
+
+  /**
+   * Reveal (peek) the top N cards from deck and remove them.
+   * Caller decides what to do with them (add to hand, put back, etc.)
+   */
+  revealTopCards(count: number, who?: "player" | "opponent"): GameCard[];
+
+  /** Put cards on top of a player's deck (first card = top of deck) */
+  putOnTopOfDeck(cards: GameCard[], who?: "player" | "opponent"): void;
+
+  /** Shuffle specific cards into a player's deck */
+  shuffleIntoDeck(cards: GameCard[], who?: "player" | "opponent"): void;
+
+  /**
+   * Search discard for energy matching filter, attach to target.
+   * Returns the energy cards that were attached.
+   */
+  attachEnergyFromDiscard(
+    filter: (c: GameCard) => boolean,
+    count: number,
+    target: GameCard
+  ): GameCard[];
+
+  /**
+   * Pick up a Pokemon and all its attachments (energy, tools) from the field.
+   * Returns all cards (Pokemon + energy + tools) — caller decides where they go.
+   */
+  pickUpPokemon(instanceId: string, who?: "player" | "opponent"): GameCard[];
+
   /** Find a Pokemon on the field (active or bench) for either player */
   findPokemon(instanceId: string): GameCard | null;
 

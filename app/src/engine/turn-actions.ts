@@ -254,7 +254,7 @@ export function canRetreat(
 
   // Apply tool retreat cost modifiers
   for (const tool of player.active.attachedTools) {
-    const toolEffect = getEffect(tool.cardId);
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
     if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
       const ctx = createEffectContext(state, state.currentPlayer, tool);
       retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
@@ -388,7 +388,7 @@ export function playSupporter(
   );
 
   // Execute trainer effect if registered
-  const cardEffect = getEffect(card.cardId);
+  const cardEffect = getEffect(card.cardId, card.card.name);
   if (cardEffect?.trainer?.onPlay) {
     const ctx = createEffectContext(state, state.currentPlayer, card);
     cardEffect.trainer.onPlay(ctx);
@@ -479,7 +479,7 @@ export function playItem(
   );
 
   // Execute item effect if registered
-  const cardEffect = getEffect(card.cardId);
+  const cardEffect = getEffect(card.cardId, card.card.name);
   if (cardEffect?.trainer?.onPlay) {
     const ctx = createEffectContext(state, state.currentPlayer, card);
     cardEffect.trainer.onPlay(ctx);

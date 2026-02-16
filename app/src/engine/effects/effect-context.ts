@@ -6,7 +6,7 @@
  */
 
 import { GameState, GameCard, Player, StatusCondition, logEvent } from "../game-state";
-import { removeCard, addToBottom, shuffleZone, findCard, drawMultiple } from "../zones";
+import { removeCard, addToBottom, addToTop, shuffleZone, findCard, drawMultiple } from "../zones";
 import { flipCoin as coinFlip, flipCoins as coinFlips } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
 import { EffectContext } from "./effect-types";
@@ -281,6 +281,218 @@ export function createEffectContext(
       );
 
       return true;
+    },
+
+    // ─── Switch Own Active ───
+
+    switchOwnActive(benchInstanceId: string): boolean {
+      const p = state.players[playerIndex];
+
+      if (!p.active) return false;
+
+      const benchCard = findCard(p.bench, benchInstanceId);
+      if (!benchCard) return false;
+
+      const currentActive = p.active;
+      removeCard(p.bench, benchInstanceId);
+      addToBottom(p.bench, currentActive);
+      p.active = benchCard;
+
+      // Clear status conditions on the Pokemon that was switched out
+      currentActive.statusConditions = [];
+
+      logEvent(state, playerIndex, "retreat",
+        `${currentActive.card.name} 退回备战区，${benchCard.card.name} 成为了新的战斗宝可梦!`,
+        { newActive: benchCard.card.name, oldActive: currentActive.card.name }
+      );
+
+      return true;
+    },
+
+    // ─── Search Discard ───
+
+    searchDiscard(
+      filter: (card: GameCard) => boolean,
+      count: number,
+      who: "player" | "opponent" = "player"
+    ): GameCard[] {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      const found: GameCard[] = [];
+
+      for (let i = 0; i < p.discard.cards.length && found.length < count; i++) {
+        if (filter(p.discard.cards[i])) {
+          found.push(p.discard.cards[i]);
+        }
+      }
+
+      // Remove found cards from discard
+      for (const card of found) {
+        const idx = p.discard.cards.indexOf(card);
+        if (idx !== -1) {
+          p.discard.cards.splice(idx, 1);
+        }
+      }
+
+      if (found.length > 0) {
+        logEvent(state, playerIndex, "search_deck" as any,
+          `从弃牌堆中取回了 ${found.length} 张牌`,
+          { count: found.length }
+        );
+      }
+
+      return found;
+    },
+
+    // ─── Shuffle Hand Into Deck ───
+
+    shuffleHandIntoDeck(who: "player" | "opponent" = "player"): number {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      const count = p.hand.cards.length;
+
+      // Move all hand cards to deck
+      for (const card of p.hand.cards) {
+        addToBottom(p.deck, card);
+      }
+      p.hand.cards = [];
+
+      // Shuffle the deck
+      shuffleZone(p.deck);
+
+      if (count > 0) {
+        logEvent(state, playerIndex, "use_trainer" as any,
+          `${p.name} 将手中 ${count} 张牌洗入了牌组`,
+          { count }
+        );
+      }
+
+      return count;
+    },
+
+    // ─── Reveal Top Cards ───
+
+    revealTopCards(count: number, who: "player" | "opponent" = "player"): GameCard[] {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      const revealed = drawMultiple(p.deck, count);
+
+      if (revealed.length > 0) {
+        logEvent(state, playerIndex, "search_deck" as any,
+          `翻开了牌组顶部 ${revealed.length} 张牌`,
+          { count: revealed.length }
+        );
+      }
+
+      return revealed;
+    },
+
+    // ─── Put On Top Of Deck ───
+
+    putOnTopOfDeck(cards: GameCard[], who: "player" | "opponent" = "player"): void {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+
+      // Add in reverse order so first card in array ends up on top
+      for (let i = cards.length - 1; i >= 0; i--) {
+        addToTop(p.deck, cards[i]);
+      }
+    },
+
+    // ─── Shuffle Into Deck ───
+
+    shuffleIntoDeck(cards: GameCard[], who: "player" | "opponent" = "player"): void {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+
+      for (const card of cards) {
+        addToBottom(p.deck, card);
+      }
+      shuffleZone(p.deck);
+
+      if (cards.length > 0) {
+        logEvent(state, playerIndex, "use_trainer" as any,
+          `将 ${cards.length} 张牌洗入了牌组`,
+          { count: cards.length }
+        );
+      }
+    },
+
+    // ─── Attach Energy From Discard ───
+
+    attachEnergyFromDiscard(
+      filter: (c: GameCard) => boolean,
+      count: number,
+      target: GameCard
+    ): GameCard[] {
+      const p = state.players[playerIndex];
+      const attached: GameCard[] = [];
+
+      for (let i = 0; i < p.discard.cards.length && attached.length < count; i++) {
+        if (filter(p.discard.cards[i])) {
+          attached.push(p.discard.cards[i]);
+        }
+      }
+
+      // Remove from discard and attach
+      for (const energy of attached) {
+        const idx = p.discard.cards.indexOf(energy);
+        if (idx !== -1) {
+          p.discard.cards.splice(idx, 1);
+        }
+        target.attachedEnergy.push(energy);
+      }
+
+      if (attached.length > 0) {
+        logEvent(state, playerIndex, "attach_energy",
+          `从弃牌堆取回 ${attached.length} 张能量附加到 ${target.card.name}`,
+          { count: attached.length, targetName: target.card.name }
+        );
+      }
+
+      return attached;
+    },
+
+    // ─── Pick Up Pokemon ───
+
+    pickUpPokemon(instanceId: string, who: "player" | "opponent" = "player"): GameCard[] {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      const collected: GameCard[] = [];
+      let pokemon: GameCard | null = null;
+
+      // Check if it's the active Pokemon
+      if (p.active?.instanceId === instanceId) {
+        pokemon = p.active;
+        p.active = null;
+      } else {
+        // Check bench
+        pokemon = removeCard(p.bench, instanceId) ?? null;
+      }
+
+      if (!pokemon) return [];
+
+      // Collect all attached energy
+      for (const energy of pokemon.attachedEnergy) {
+        collected.push(energy);
+      }
+      pokemon.attachedEnergy = [];
+
+      // Collect all attached tools
+      for (const tool of pokemon.attachedTools) {
+        collected.push(tool);
+      }
+      pokemon.attachedTools = [];
+
+      // Reset Pokemon state
+      pokemon.damageCounters = 0;
+      pokemon.statusConditions = [];
+      pokemon.playedThisTurn = false;
+      pokemon.abilityUsedThisTurn = false;
+
+      // Add the Pokemon itself
+      collected.push(pokemon);
+
+      logEvent(state, playerIndex, "use_trainer" as any,
+        `${pokemon.card.name} 及其附加卡片被回收到手中`,
+        { pokemonName: pokemon.card.name, totalCards: collected.length }
+      );
+
+      return collected;
     },
 
     findPokemon(instanceId: string): GameCard | null {

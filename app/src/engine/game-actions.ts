@@ -639,7 +639,7 @@ export function performAttack(
 
   // 2. Check for registered attack effect
   let effectResult: AttackResult | null = null;
-  const cardEffect = getEffect(attacker.active!.cardId);
+  const cardEffect = getEffect(attacker.active!.cardId, attacker.active!.card.name);
 
   if (cardEffect?.attacks) {
     const attackEffect = cardEffect.attacks.find(a => a.name === attackName);
@@ -650,9 +650,14 @@ export function performAttack(
   }
 
   // 3. Determine final base damage (from effect or raw)
-  const baseDamage = effectResult ? effectResult.damage : rawBaseDamage;
+  let baseDamage = effectResult ? effectResult.damage : rawBaseDamage;
   const skipWeakness = effectResult?.skipWeakness ?? false;
   const skipResistance = effectResult?.skipResistance ?? false;
+
+  // 3b. Apply attacker tool damage modifiers (e.g. Choice Belt +30, Vitality Band +10)
+  if (baseDamage > 0 && attacker.active) {
+    baseDamage = applyAttackerToolDamageModifiers(state, attacker.active, baseDamage);
+  }
 
   // 4. Apply Weakness/Resistance
   let finalDamage = baseDamage;
@@ -826,12 +831,35 @@ function applyToolDamageModifiers(
 ): number {
   let modified = damage;
   for (const tool of target.attachedTools) {
-    const toolEffect = getEffect(tool.cardId);
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
     if (toolEffect?.tool?.whileAttached?.modifyIncomingDamage) {
       const ownerIndex = findOwnerIndex(state, target);
       if (ownerIndex !== null) {
         const ctx = createEffectContext(state, ownerIndex, tool);
         modified = toolEffect.tool.whileAttached.modifyIncomingDamage(ctx, modified);
+      }
+    }
+  }
+  return modified;
+}
+
+/**
+ * Apply attacker's tool damage modifiers (outgoing damage boost).
+ * Checks all attached tools for modifyDamage effects (e.g. Choice Belt, Vitality Band).
+ */
+function applyAttackerToolDamageModifiers(
+  state: GameState,
+  attacker: GameCard,
+  damage: number
+): number {
+  let modified = damage;
+  for (const tool of attacker.attachedTools) {
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
+    if (toolEffect?.tool?.whileAttached?.modifyDamage) {
+      const ownerIndex = findOwnerIndex(state, attacker);
+      if (ownerIndex !== null) {
+        const ctx = createEffectContext(state, ownerIndex, tool);
+        modified = toolEffect.tool.whileAttached.modifyDamage(ctx, modified);
       }
     }
   }
