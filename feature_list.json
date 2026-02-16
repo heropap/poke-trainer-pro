@@ -61,7 +61,7 @@
       "实现 Action 系统（定义合法动作、验证动作、执行动作）",
       "编写游戏状态管理的单元测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 4
   },
   {

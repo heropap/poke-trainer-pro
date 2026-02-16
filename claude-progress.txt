@@ -17,3 +17,26 @@ Notes: 创建了 4 个核心组件：CardImage（图片展示，懒加载，错�
 Feature: 卡组导入与验证
 Status: completed
 Notes: 实现了 PTCG Live 格式卡组文本解析器（deck-parser.ts），支持 Pokemon/Trainer/Energy 分类解析、多词卡牌名处理。建立了 PTCG Live 系列代码到 pokemon-tcg-data set ID 的映射（SVI→sv1, PAL→sv2 等，覆盖 SV + SwSh 系列）。实现了卡组验证：60张检查、4张限制（基础能量豁免）、Standard 合规性标记、未知系列/未找到卡牌警告。创建了 DeckImport UI 组件（文本框粘贴+示例卡组+验证结果表格）。更新了 /deck 页面。编写了 23 个单元测试，总计 67 个测试全部通过。
+
+=== Session 4 | 2026-02-16 03:30:00 ===
+Feature: 游戏引擎核心 - 卡牌导入到对战系统的完整桥接
+Status: completed
+Notes: 解决了卡牌导入成功后无法在对战系统中使用的核心问题。
+
+根因分析:
+1. 导入的卡组数据仅存在于 DeckImport 组件的局部 state 中，页面跳转后丢失
+2. 没有全局状态管理，卡组页和对战页之间无法通信
+3. 没有游戏引擎类型定义，卡牌数据无法转化为可参与对战的游戏卡牌
+4. 对战页面是空白占位符，没有卡组选择和游戏初始化逻辑
+
+实现内容:
+- deck-storage.ts: localStorage 持久化服务，支持保存/读取/删除卡组，提供 getDeckCardIds() 作为对战系统的主要接口
+- DeckContext.tsx: React Context 全局状态管理，DeckProvider 包裹在根布局中，跨页面共享卡组数据
+- engine/game-state.ts: 核心游戏状态类型（GameState, Player, Zone, GameCard），工厂函数和事件日志系统
+- engine/zones.ts: 区域管理工具（洗牌/抽牌/移动/查找），Fisher-Yates 洗牌算法
+- engine/battle-setup.ts: 卡组→对战桥接，loadDeckCards() 将存储的卡组 ID 解析为 GameCard 实例，initializeGame() 完成完整的对战初始化（洗牌→抽牌→奖励卡→开始回合）
+- BattlePageClient.tsx: 对战页面客户端组件，支持卡组选择/对战初始化/游戏状态展示/事件日志
+- 更新 DeckImport 和 DeckPageClient：导入后自动保存到 localStorage，显示已保存卡组列表
+- 修复 CardSearch 组件 React 19 兼容性问题（useMemo→useEffect 避免渲染期间 setState）
+
+测试: 新增 43 个测试（deck-storage 15个，game-engine 28个），总计 144 个测试全部通过。

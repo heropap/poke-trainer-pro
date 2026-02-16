@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/types/card";
 
 interface CardSearchProps {
@@ -24,7 +24,7 @@ export default function CardSearch({
   const [selectedSet, setSelectedSet] = useState("");
   const [standardOnly, setStandardOnly] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     let filtered = cards;
 
     if (query) {

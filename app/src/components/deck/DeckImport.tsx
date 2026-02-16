@@ -6,7 +6,7 @@ import { Card } from "@/types/card";
 
 interface DeckImportProps {
   cardLookup: (id: string) => Card | undefined;
-  onDeckImported?: (validation: DeckValidation) => void;
+  onDeckImported?: (validation: DeckValidation, deckText: string) => void;
 }
 
 const SAMPLE_DECK = `Pokémon: 15
@@ -50,7 +50,7 @@ export default function DeckImport({
     const parsed = parseDeckList(deckText);
     const result = validateDeck(parsed, cardLookup);
     setValidation(result);
-    onDeckImported?.(result);
+    onDeckImported?.(result, deckText);
   }, [deckText, cardLookup, onDeckImported]);
 
   const handleLoadSample = useCallback(() => {
