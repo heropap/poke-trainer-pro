@@ -116,7 +116,7 @@
       "实现游戏状态同步（服务端权威模型）",
       "编写 WebSocket 通信测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 8
   },
   {

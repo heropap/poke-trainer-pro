@@ -88,6 +88,12 @@ export default function BattlePageClient() {
     }
   }, [validDecks, selectedDeck1, selectedDeck2]);
 
+  // Online game ID (tracked separately from local games)
+  const [onlineGameId, setOnlineGameId] = useState<string | null>(null);
+
+  // Online error toast
+  const [onlineError, setOnlineError] = useState<string | null>(null);
+
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
@@ -101,29 +107,68 @@ export default function BattlePageClient() {
     function onGameStart(data: any) {
       console.log("Game started!", data);
       if (data.gameState) {
+        isLocalGame.current = false;
+        setBattleMode("online");
         setGameState(data.gameState);
       }
       if (typeof data.yourPlayerId === "number") {
         console.log("Assigned Player ID:", data.yourPlayerId);
         setMyPlayerId(data.yourPlayerId);
       }
+      if (data.gameId) {
+        setOnlineGameId(data.gameId);
+      }
     }
 
     function onStateUpdate(data: any) {
-      console.log("State update received", data);
       if (data.gameState) {
         setGameState(data.gameState);
       }
     }
 
+    function onGameOver(data: any) {
+      console.log("Game over!", data);
+      if (data.gameState) {
+        setGameState(data.gameState);
+      }
+    }
+
+    function onActionError(data: any) {
+      console.warn("[Online] Action error:", data.error);
+      setOnlineError(data.error || "操作失败");
+      // Clear error after 3s
+      setTimeout(() => setOnlineError(null), 3000);
+    }
+
+    function onPromotionRequired(data: any) {
+      console.log("[Online] Promotion required for player", data.playerIndex);
+      // The state update will have already been received;
+      // the BattleBoard will see that active is null and show promotion UI
+      // No extra handling needed — the user clicks a bench Pokemon to promote
+    }
+
+    function onError(data: any) {
+      console.error("[Socket] Error:", data.message);
+      setOnlineError(data.message || "服务器错误");
+      setTimeout(() => setOnlineError(null), 3000);
+    }
+
     socket.on("matchmaking:found", onMatchFound);
     socket.on("game:start", onGameStart);
     socket.on("game:state_update", onStateUpdate);
+    socket.on("game:over", onGameOver);
+    socket.on("game:action_error", onActionError);
+    socket.on("game:promotion_required", onPromotionRequired);
+    socket.on("error", onError);
 
     return () => {
       socket.off("matchmaking:found", onMatchFound);
       socket.off("game:start", onGameStart);
       socket.off("game:state_update", onStateUpdate);
+      socket.off("game:over", onGameOver);
+      socket.off("game:action_error", onActionError);
+      socket.off("game:promotion_required", onPromotionRequired);
+      socket.off("error", onError);
     };
   }, [socket]);
 
@@ -253,13 +298,13 @@ export default function BattlePageClient() {
     if (isLocalGame.current) {
       const result = processAction(gameState, gameState.currentPlayer, { type: "end_turn" });
       setGameState(result.newState);
-    } else if (socket) {
+    } else if (socket && onlineGameId) {
       socket.emit("game:action", {
-        gameId: gameState.gameId,
+        gameId: onlineGameId,
         action: { type: "end_turn" }
       });
     }
-  }, [socket, gameState]);
+  }, [socket, gameState, onlineGameId]);
 
   /**
    * Handle all game actions from BattleBoard for local play.
@@ -359,6 +404,10 @@ export default function BattlePageClient() {
     isLocalGame.current = false;
     setAiThinking(false);
     setAiLastAction("");
+    setOnlineGameId(null);
+    setOnlineError(null);
+    setMatchFound(false);
+    setMyPlayerId(null);
   }, []);
 
   const isLoading = decksLoading || cardsLoading;
@@ -410,15 +459,34 @@ export default function BattlePageClient() {
             if (isLocalGame.current) {
               return handleLocalAction(action as GameAction);
             } else {
-              if (socket && action.type) {
+              // Online mode: send action to server
+              if (socket && onlineGameId && action.type) {
                 socket.emit("game:action", {
-                  gameId: gameState.gameId,
+                  gameId: onlineGameId,
                   action
                 });
+                // Feedback comes asynchronously via game:action_error or game:state_update
+                return { success: true };
               }
+              return { success: false, error: "未连接服务器" };
             }
           }}
         />
+
+        {/* Online Error Toast */}
+        {onlineError && (
+          <div className="fixed left-1/2 top-16 z-[60] -translate-x-1/2 rounded-full bg-red-600/90 px-6 py-2 text-sm font-medium text-white shadow-xl backdrop-blur-md">
+            {onlineError}
+          </div>
+        )}
+
+        {/* Online Mode Indicator */}
+        {battleMode === "online" && gameState.phase !== "game_over" && (
+          <div className="fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-full bg-green-600/80 px-4 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-300"></div>
+            在线对战
+          </div>
+        )}
 
         {/* AI Thinking Indicator */}
         {isAITurn && aiThinking && gameState.phase !== "game_over" && (
@@ -436,30 +504,35 @@ export default function BattlePageClient() {
         )}
 
         {/* Game Over Overlay */}
-        {gameState.phase === "game_over" && gameState.winner && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
-            <div className="rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl">
-              <h2 className="text-3xl font-bold text-yellow-400">
-                {gameState.winner.playerIndex === 0 ? "🏆 胜利！" : "💔 失败"}
-              </h2>
-              <p className="mt-4 text-xl text-zinc-100">
-                {gameState.players[gameState.winner.playerIndex].name} 获胜！
-              </p>
-              <p className="mt-2 text-sm text-zinc-400">
-                {gameState.winner.condition === "prizes_taken" && "拿完了所有奖励卡"}
-                {gameState.winner.condition === "no_bench_pokemon" && "对方场上没有宝可梦了"}
-                {gameState.winner.condition === "deck_out" && "对方无法抽牌"}
-                {gameState.winner.condition === "concede" && "对方认输"}
-              </p>
-              <button
-                onClick={handleReturnToLobby}
-                className="mt-6 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500"
-              >
-                返回大厅
-              </button>
+        {gameState.phase === "game_over" && gameState.winner && (() => {
+          // Determine if the local player won
+          const localPlayerIndex = myPlayerId ?? 0;
+          const iWon = gameState.winner!.playerIndex === localPlayerIndex;
+          return (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
+              <div className="rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl">
+                <h2 className="text-3xl font-bold text-yellow-400">
+                  {iWon ? "🏆 胜利！" : "💔 失败"}
+                </h2>
+                <p className="mt-4 text-xl text-zinc-100">
+                  {gameState.players[gameState.winner!.playerIndex].name} 获胜！
+                </p>
+                <p className="mt-2 text-sm text-zinc-400">
+                  {gameState.winner!.condition === "prizes_taken" && "拿完了所有奖励卡"}
+                  {gameState.winner!.condition === "no_bench_pokemon" && "对方场上没有宝可梦了"}
+                  {gameState.winner!.condition === "deck_out" && "对方无法抽牌"}
+                  {gameState.winner!.condition === "concede" && "对方认输"}
+                </p>
+                <button
+                  onClick={handleReturnToLobby}
+                  className="mt-6 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500"
+                >
+                  返回大厅
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     );
   }

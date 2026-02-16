@@ -2,7 +2,7 @@
 import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { GameRoom } from "./src/server/game-room";
 import { Card } from "./src/types/card";
 import fs from "fs";
@@ -16,12 +16,25 @@ const port = 3000;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-// Global state for simple server
-let waitingPlayer: { socketId: string; deck: any } | null = null;
+// ─── Server State ───
+
+interface WaitingPlayer {
+  socketId: string;
+  deck: {
+    id: string;
+    name: string;
+    cards: string[];
+  };
+}
+
+let waitingPlayer: WaitingPlayer | null = null;
 const games: Map<string, GameRoom> = new Map();
+/** Map socketId → gameId so we can find a player's game on disconnect */
+const playerGameMap: Map<string, string> = new Map();
 let cardIndex: Map<string, Card> = new Map();
 
-// Load card data
+// ─── Load Card Data ───
+
 try {
   const dataPath = path.join(process.cwd(), "src/data/cards/_index.json");
   const data = JSON.parse(fs.readFileSync(dataPath, "utf-8"));
@@ -32,6 +45,66 @@ try {
 }
 
 const cardLookup = (id: string) => cardIndex.get(id);
+
+// ─── Helper: Send masked state to each player in a room ───
+
+function broadcastMaskedState(io: Server, game: GameRoom) {
+  const p1Socket = io.sockets.sockets.get(game.player1SocketId);
+  const p2Socket = io.sockets.sockets.get(game.player2SocketId);
+
+  if (p1Socket) {
+    p1Socket.emit("game:state_update", {
+      gameState: game.getMaskedState(game.player1SocketId),
+    });
+  }
+  if (p2Socket) {
+    p2Socket.emit("game:state_update", {
+      gameState: game.getMaskedState(game.player2SocketId),
+    });
+  }
+}
+
+function broadcastGameOver(io: Server, game: GameRoom) {
+  const p1Socket = io.sockets.sockets.get(game.player1SocketId);
+  const p2Socket = io.sockets.sockets.get(game.player2SocketId);
+
+  if (p1Socket) {
+    p1Socket.emit("game:over", {
+      gameState: game.getMaskedState(game.player1SocketId),
+      winner: game.state.winner,
+    });
+  }
+  if (p2Socket) {
+    p2Socket.emit("game:over", {
+      gameState: game.getMaskedState(game.player2SocketId),
+      winner: game.state.winner,
+    });
+  }
+}
+
+// ─── Cleanup stale games (every 5 minutes) ───
+
+const GAME_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function cleanupStaleGames() {
+  const now = Date.now();
+  for (const [gameId, game] of games) {
+    if (game.isGameOver() || now - game.lastActivityAt > GAME_TTL_MS) {
+      console.log(`[Server] Cleaning up game ${gameId}`);
+      // Clean playerGameMap entries
+      for (const [socketId, gId] of playerGameMap) {
+        if (gId === gameId) {
+          playerGameMap.delete(socketId);
+        }
+      }
+      games.delete(gameId);
+    }
+  }
+}
+
+setInterval(cleanupStaleGames, 5 * 60 * 1000);
+
+// ─── Start Server ───
 
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
@@ -56,45 +129,45 @@ app.prepare().then(() => {
   });
 
   // Socket.io event handling
-  io.on("connection", (socket) => {
-    console.log(`Client connected: ${socket.id}`);
+  io.on("connection", (socket: Socket) => {
+    console.log(`[Server] Client connected: ${socket.id}`);
 
-    // Join matchmaking queue
+    // ─── Matchmaking ───
+
     socket.on("matchmaking:join", (data) => {
-      // Data structure: { deckId, deckName, cards: string[] }
       const deckData = data;
-      console.log(`Player ${socket.id} joined matchmaking with deck: ${deckData?.deckName} (${deckData?.cards?.length} cards)`);
-      
+      console.log(`[Server] Player ${socket.id} joined matchmaking with deck: ${deckData?.deckName} (${deckData?.cards?.length} cards)`);
+
       if (!deckData || !deckData.cards || deckData.cards.length === 0) {
         socket.emit("error", { message: "Invalid deck data" });
         return;
       }
-      
-      const playerData = { 
-        socketId: socket.id, 
+
+      const playerData: WaitingPlayer = {
+        socketId: socket.id,
         deck: {
           id: deckData.deckId,
           name: deckData.deckName || "Unknown Deck",
-          cards: deckData.cards
-        }
+          cards: deckData.cards,
+        },
       };
 
       if (waitingPlayer) {
         // Match found
         const opponent = waitingPlayer;
-        
+
         // Prevent self-matching
         if (opponent.socketId === socket.id) return;
 
         waitingPlayer = null;
-        
+
         const gameId = `game-${Date.now()}`;
         socket.join(gameId);
-        
+
         const opponentSocket = io.sockets.sockets.get(opponent.socketId);
         if (opponentSocket) {
           opponentSocket.join(gameId);
-          
+
           // Create GameRoom
           const room = new GameRoom(
             gameId,
@@ -104,40 +177,38 @@ app.prepare().then(() => {
             "Player 2",
             cardLookup
           );
-          
+
           // Initialize game with real decks
           const success = room.initialize(opponent.deck, playerData.deck);
-          
+
           if (success) {
             games.set(gameId, room);
-            console.log(`Created and initialized game room ${gameId}`);
+            playerGameMap.set(opponent.socketId, gameId);
+            playerGameMap.set(socket.id, gameId);
+            console.log(`[Server] Created and initialized game room ${gameId}`);
 
             // Notify match found
             io.to(gameId).emit("matchmaking:found", {
               gameId,
-              opponent: { name: "Opponent" }
+              opponent: { name: "Opponent" },
             });
-            
-            // Send initial state to both players
-            // TODO: Mask state for each player in future
-            
-            // Send specific start event to Player 1
+
+            // Send masked initial state to each player individually
             opponentSocket.emit("game:start", {
-              gameState: room.state,
-              yourPlayerId: 0 // Player 1 is index 0
+              gameState: room.getMaskedState(opponent.socketId),
+              yourPlayerId: 0, // Player 1 is index 0
+              gameId,
             });
-            
-            // Send specific start event to Player 2
+
             socket.emit("game:start", {
-              gameState: room.state,
-              yourPlayerId: 1 // Player 2 is index 1
+              gameState: room.getMaskedState(socket.id),
+              yourPlayerId: 1, // Player 2 is index 1
+              gameId,
             });
-            
           } else {
-            console.error("Failed to initialize game");
+            console.error("[Server] Failed to initialize game");
             io.to(gameId).emit("error", { message: "Failed to start game" });
           }
-          
         } else {
           // Opponent disconnected, requeue current player
           waitingPlayer = playerData;
@@ -149,43 +220,112 @@ app.prepare().then(() => {
         socket.emit("matchmaking:searching");
       }
     });
-    
+
     socket.on("matchmaking:cancel", () => {
-      console.log(`Player ${socket.id} canceled matchmaking`);
-      // TODO: Remove from queue
+      console.log(`[Server] Player ${socket.id} canceled matchmaking`);
+      if (waitingPlayer && waitingPlayer.socketId === socket.id) {
+        waitingPlayer = null;
+      }
     });
+
+    // ─── Game Actions ───
 
     socket.on("game:action", (data) => {
       const { gameId, action } = data;
       const game = games.get(gameId);
 
-      if (game) {
-        const result = game.handleAction(socket.id, action);
-        if (result.success) {
-          // Broadcast updated state to all players in the room
-          io.to(gameId).emit("game:state_update", {
-            gameState: game.state
-          });
+      if (!game) {
+        socket.emit("error", { message: "Game not found" });
+        return;
+      }
 
-          // If the game ended, also emit a game_over event
-          if (result.gameEnded) {
-            io.to(gameId).emit("game:over", {
-              gameState: game.state,
-              winner: game.state.winner
+      if (!game.hasPlayer(socket.id)) {
+        socket.emit("error", { message: "Not a player in this game" });
+        return;
+      }
+
+      const result = game.handleAction(socket.id, action);
+
+      if (result.success) {
+        // Broadcast masked state to each player
+        broadcastMaskedState(io, game);
+
+        // If promotion is required, notify the specific player
+        if (result.promotionRequired && result.promotionPlayerIndex !== undefined) {
+          const promotionSocketId =
+            result.promotionPlayerIndex === 0
+              ? game.player1SocketId
+              : game.player2SocketId;
+          const promotionSocket = io.sockets.sockets.get(promotionSocketId);
+          if (promotionSocket) {
+            promotionSocket.emit("game:promotion_required", {
+              playerIndex: result.promotionPlayerIndex,
             });
           }
-        } else {
-          socket.emit("game:action_error", {
-            error: result.error || "Invalid action"
-          });
+        }
+
+        // If the game ended, emit a game_over event
+        if (result.gameEnded) {
+          broadcastGameOver(io, game);
         }
       } else {
-        socket.emit("error", { message: "Game not found" });
+        socket.emit("game:action_error", {
+          error: result.error || "Invalid action",
+        });
       }
     });
 
+    // ─── Disconnection ───
+
     socket.on("disconnect", () => {
-      console.log(`Client disconnected: ${socket.id}`);
+      console.log(`[Server] Client disconnected: ${socket.id}`);
+
+      // Remove from matchmaking queue
+      if (waitingPlayer && waitingPlayer.socketId === socket.id) {
+        waitingPlayer = null;
+        console.log(`[Server] Removed disconnected player from matchmaking queue`);
+      }
+
+      // Handle mid-game disconnection
+      const gameId = playerGameMap.get(socket.id);
+      if (gameId) {
+        const game = games.get(gameId);
+        if (game && !game.isGameOver()) {
+          console.log(`[Server] Player ${socket.id} disconnected from game ${gameId}, auto-concede`);
+
+          const result = game.handleDisconnect(socket.id);
+          if (result && result.success) {
+            // Notify the remaining player
+            broadcastMaskedState(io, game);
+            broadcastGameOver(io, game);
+          }
+        }
+        playerGameMap.delete(socket.id);
+      }
+    });
+
+    // ─── Reconnection (rejoin existing game) ───
+
+    socket.on("game:reconnect", (data: { gameId: string }) => {
+      const game = games.get(data.gameId);
+      if (!game) {
+        socket.emit("error", { message: "Game not found or expired" });
+        return;
+      }
+
+      // Check if this socket was one of the original players
+      // (In practice, we'd need a persistent player ID system; for now, this is a placeholder)
+      if (game.hasPlayer(socket.id)) {
+        socket.join(data.gameId);
+        const playerIndex = game.getPlayerIndex(socket.id);
+        socket.emit("game:start", {
+          gameState: game.getMaskedState(socket.id),
+          yourPlayerId: playerIndex,
+          gameId: data.gameId,
+        });
+      } else {
+        socket.emit("error", { message: "Not a player in this game" });
+      }
     });
   });
 
