@@ -13,7 +13,7 @@
  * - Game over detection
  */
 
-import { GameState, logEvent } from "./game-state";
+import { GameState, GameCard, logEvent } from "./game-state";
 import {
   getCurrentPlayer,
   getOpponent,
@@ -38,6 +38,8 @@ import {
   concede,
   checkWinCondition,
 } from "./game-actions";
+import { getEffect } from "./effects/effect-registry";
+import { createEffectContext } from "./effects/effect-context";
 
 // ───────────────────────────────────────────────
 // Action Types (from UI)
@@ -51,11 +53,13 @@ export interface GameAction {
     | "evolve"
     | "retreat"
     | "promote"
-    | "concede";
+    | "concede"
+    | "use_ability";
   cardId?: string;
   targetZone?: "active" | "bench" | "attach";
   targetId?: string;
   attackName?: string;
+  abilityName?: string;
   energyToDiscard?: string[];
   benchInstanceId?: string;
 }
@@ -139,6 +143,9 @@ export function processAction(
     case "concede":
       result = handleConcede(state, playerIndex);
       break;
+    case "use_ability":
+      result = handleUseAbility(state, playerIndex, action);
+      break;
     default:
       result = {
         success: false,
@@ -212,6 +219,14 @@ function handlePlayCard(
   if (card.card.supertype === "Trainer") {
     if (card.card.subtypes.includes("Supporter")) {
       const res = taPlaySupporter(state, action.cardId);
+      return { success: res.success, error: res.error, newState: { ...state } };
+    }
+    if (card.card.subtypes.includes("Pokémon Tool")) {
+      // Tool cards need a target Pokemon to attach to
+      if (!action.targetId) {
+        return { success: false, error: "工具卡需要指定装备目标", newState: { ...state } };
+      }
+      const res = taPlayItem(state, action.cardId, action.targetId);
       return { success: res.success, error: res.error, newState: { ...state } };
     }
     if (card.card.subtypes.includes("Item")) {
@@ -390,6 +405,78 @@ function handleConcede(
     gameEnded: res.gameEnded,
     newState: { ...state }
   };
+}
+
+function handleUseAbility(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.cardId || !action.abilityName) {
+    return { success: false, error: "缺少卡牌 ID 或特性名称", newState: { ...state } };
+  }
+
+  if (state.phase !== "main") {
+    return { success: false, error: "只能在主阶段使用特性", newState: { ...state } };
+  }
+
+  const player = state.players[playerIndex];
+
+  // Find the Pokemon with this ability (could be active or bench)
+  let sourceCard: GameCard | null = null;
+  if (player.active?.instanceId === action.cardId) {
+    sourceCard = player.active;
+  } else {
+    sourceCard = player.bench.cards.find(c => c.instanceId === action.cardId) ?? null;
+  }
+
+  if (!sourceCard) {
+    return { success: false, error: "场上找不到该宝可梦", newState: { ...state } };
+  }
+
+  // Check if the card has the named ability in its data
+  const abilityData = sourceCard.card.abilities?.find(a => a.name === action.abilityName);
+  if (!abilityData) {
+    return { success: false, error: `${sourceCard.card.name} 没有名为 ${action.abilityName} 的特性`, newState: { ...state } };
+  }
+
+  // Check if there's a registered effect for this ability
+  const cardEffect = getEffect(sourceCard.cardId);
+  const abilityEffect = cardEffect?.abilities?.find(a => a.name === action.abilityName);
+
+  if (!abilityEffect) {
+    return { success: false, error: `${action.abilityName} 的效果尚未实现`, newState: { ...state } };
+  }
+
+  if (abilityEffect.type !== "activated") {
+    return { success: false, error: `${action.abilityName} 不是主动使用的特性`, newState: { ...state } };
+  }
+
+  // Check if already used this turn (for once-per-turn abilities)
+  if (sourceCard.abilityUsedThisTurn) {
+    return { success: false, error: `${action.abilityName} 本回合已经使用过了`, newState: { ...state } };
+  }
+
+  const ctx = createEffectContext(state, playerIndex, sourceCard);
+
+  // Check activation condition
+  if (abilityEffect.canActivate && !abilityEffect.canActivate(ctx)) {
+    return { success: false, error: `${action.abilityName} 当前无法使用`, newState: { ...state } };
+  }
+
+  // Execute the ability
+  logEvent(state, playerIndex, "use_ability",
+    `${player.name} 使用了 ${sourceCard.card.name} 的特性: ${action.abilityName}`,
+    { cardName: sourceCard.card.name, abilityName: action.abilityName }
+  );
+
+  if (abilityEffect.onActivate) {
+    abilityEffect.onActivate(ctx);
+  }
+
+  sourceCard.abilityUsedThisTurn = true;
+
+  return { success: true, newState: { ...state } };
 }
 
 // ───────────────────────────────────────────────

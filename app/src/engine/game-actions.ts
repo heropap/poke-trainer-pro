@@ -16,6 +16,9 @@ import {
   addToBottom,
   isZoneEmpty
 } from "./zones";
+import { getEffect } from "./effects/effect-registry";
+import { createEffectContext } from "./effects/effect-context";
+import type { AttackResult } from "./effects/effect-types";
 
 export interface PlayCardResult {
   success: boolean;
@@ -542,7 +545,17 @@ export function concede(
 
 /**
  * Perform Attack with full damage calculation, weakness/resistance,
- * multi-prize knockout, and bench promotion handling.
+ * multi-prize knockout, bench promotion handling, AND card effect integration.
+ *
+ * Flow:
+ * 1. canAttack validation
+ * 2. Check effect registry for custom attack logic
+ * 3. If effect exists: call onAttack() to get modified damage + side effects
+ * 4. Apply weakness/resistance to the (possibly modified) base damage
+ * 5. Apply tool damage modifiers (incoming damage reduction)
+ * 6. Apply damage to defender
+ * 7. Process effect side effects (bench damage, self damage, status, energy discard)
+ * 8. Check KO, prizes, win condition
  */
 export function performAttack(
   state: GameState,
@@ -558,22 +571,55 @@ export function performAttack(
   const defender = state.players[defenderIndex];
   const activeAttack = attacker.active!.card.attacks!.find(a => a.name === attackName)!;
 
-  // 1. Calculate Base Damage
-  const baseDamage = parseInt(activeAttack.damage || "0", 10);
+  // 1. Calculate Base Damage from card data
+  const rawBaseDamage = parseInt(activeAttack.damage || "0", 10);
 
-  // 2. Apply Weakness/Resistance
+  // 2. Check for registered attack effect
+  let effectResult: AttackResult | null = null;
+  const cardEffect = getEffect(attacker.active!.cardId);
+
+  if (cardEffect?.attacks) {
+    const attackEffect = cardEffect.attacks.find(a => a.name === attackName);
+    if (attackEffect?.onAttack) {
+      const ctx = createEffectContext(state, playerIndex, attacker.active!);
+      effectResult = attackEffect.onAttack(ctx, rawBaseDamage);
+    }
+  }
+
+  // 3. Determine final base damage (from effect or raw)
+  const baseDamage = effectResult ? effectResult.damage : rawBaseDamage;
+  const skipWeakness = effectResult?.skipWeakness ?? false;
+  const skipResistance = effectResult?.skipResistance ?? false;
+
+  // 4. Apply Weakness/Resistance
   let finalDamage = baseDamage;
   let weaknessApplied = false;
   let resistanceApplied = false;
 
   if (baseDamage > 0 && defender.active) {
-    const result = calculateDamage(baseDamage, attacker.active!, defender.active);
-    finalDamage = result.finalDamage;
-    weaknessApplied = result.wasWeakness;
-    resistanceApplied = result.wasResistance;
+    if (!skipWeakness && !skipResistance) {
+      const result = calculateDamage(baseDamage, attacker.active!, defender.active);
+      finalDamage = result.finalDamage;
+      weaknessApplied = result.wasWeakness;
+      resistanceApplied = result.wasResistance;
+    } else if (!skipWeakness) {
+      const wm = calculateWeakness(attacker.active!.card.types || [], defender.active);
+      finalDamage = baseDamage * wm;
+      weaknessApplied = wm > 1;
+    } else if (!skipResistance) {
+      const rd = calculateResistance(attacker.active!.card.types || [], defender.active);
+      finalDamage = Math.max(0, baseDamage - rd);
+      resistanceApplied = rd > 0;
+    }
   }
 
-  // 3. Apply Damage
+  // 5. Apply tool damage modifiers (incoming damage reduction on defender)
+  if (finalDamage > 0 && defender.active) {
+    finalDamage = applyToolDamageModifiers(state, defender.active, finalDamage);
+    if (finalDamage < 0) finalDamage = 0;
+  }
+
+  // 6. Apply Damage to defender's active
   if (finalDamage > 0 && defender.active) {
     defender.active.damageCounters += finalDamage / 10;
 
@@ -590,7 +636,6 @@ export function performAttack(
   } else if (baseDamage === 0) {
     logEvent(state, playerIndex, "attack", `${attacker.active!.card.name} 使用了 ${attackName}`);
   } else {
-    // Damage was reduced to 0 by resistance
     logEvent(state, playerIndex, "damage", `${attacker.active!.card.name} 使用 ${attackName}，但伤害被抵消了`, {
       baseDamage,
       finalDamage: 0,
@@ -598,39 +643,158 @@ export function performAttack(
     });
   }
 
-  // 4. Check KO
-  // Capture the defender's active card info BEFORE knockout processing
-  // (because checkKnockout will move it to discard and set active to null)
+  // 7. Process effect side effects
+  if (effectResult) {
+    // Bench damage
+    if (effectResult.benchDamage) {
+      for (const bd of effectResult.benchDamage) {
+        bd.target.damageCounters += bd.damage / 10;
+        logEvent(state, playerIndex, "damage",
+          `${attacker.active!.card.name} 的效果对 ${bd.target.card.name} 造成了 ${bd.damage} 点伤害`);
+      }
+    }
+
+    // Self damage
+    if (effectResult.selfDamage && effectResult.selfDamage > 0 && attacker.active) {
+      attacker.active.damageCounters += effectResult.selfDamage / 10;
+      logEvent(state, playerIndex, "damage",
+        `${attacker.active.card.name} 对自己造成了 ${effectResult.selfDamage} 点伤害`);
+    }
+
+    // Status effects
+    if (effectResult.statusEffects) {
+      for (const se of effectResult.statusEffects) {
+        const target = se.target === "defender" ? defender.active : attacker.active;
+        if (target) {
+          // Mutually exclusive statuses
+          if (se.status === "asleep" || se.status === "confused" || se.status === "paralyzed") {
+            target.statusConditions = target.statusConditions.filter(
+              s => s !== "asleep" && s !== "confused" && s !== "paralyzed"
+            );
+          }
+          if (!target.statusConditions.includes(se.status)) {
+            target.statusConditions.push(se.status);
+          }
+          logEvent(state, playerIndex, "status_effect",
+            `${target.card.name} 陷入了${statusToText(se.status)}状态!`,
+            { status: se.status });
+        }
+      }
+    }
+
+    // Energy discard
+    if (effectResult.discardEnergy && effectResult.discardEnergy > 0 && attacker.active) {
+      const count = Math.min(effectResult.discardEnergy, attacker.active.attachedEnergy.length);
+      for (let i = 0; i < count; i++) {
+        const e = attacker.active.attachedEnergy.pop();
+        if (e) addToBottom(attacker.discard, e);
+      }
+      if (count > 0) {
+        logEvent(state, playerIndex, "use_trainer",
+          `${attacker.active.card.name} 丢弃了 ${count} 个附加能量`);
+      }
+    }
+  }
+
+  // 8. Check KO on defender's active
   const defenderActiveBeforeKO = defender.active;
   const prizeCountForKO = defenderActiveBeforeKO ? getPrizeCount(defenderActiveBeforeKO) : 1;
 
   if (defenderActiveBeforeKO && checkKnockout(state, defenderIndex, "active")) {
     takePrizes(state, playerIndex, prizeCountForKO);
 
-    // Check Win (Prizes taken all)
     if (checkWinCondition(state)) {
       return { success: true, gameEnded: true };
     }
 
-    // Check if defender has bench Pokemon for promotion
     if (!defender.active && !isZoneEmpty(defender.bench)) {
-      // If only one bench Pokemon, auto-promote
       if (defender.bench.cards.length === 1) {
         autoPromoteBench(state, defenderIndex);
       }
-      // If multiple bench Pokemon, the defender needs to choose
-      // We set a special flag in the state for the UI to handle
-      // For now we'll track this via the "promote_required" phase concept
-      // But since GamePhase doesn't have "promote_required", we'll use
-      // a convention: keep active as null and let the controller handle it
     }
 
-    // Check win again after promotion (no bench = lose)
     if (checkWinCondition(state)) {
       return { success: true, gameEnded: true };
     }
   }
 
-  // 5. Return success (turn ending is handled by the controller)
+  // Check KO on defender's bench (from bench damage)
+  if (effectResult?.benchDamage) {
+    for (let i = defender.bench.cards.length - 1; i >= 0; i--) {
+      const benchCard = defender.bench.cards[i];
+      const hp = parseInt(benchCard.card.hp || "0", 10);
+      if (hp > 0 && benchCard.damageCounters * 10 >= hp) {
+        const benchPrize = getPrizeCount(benchCard);
+        if (checkKnockout(state, defenderIndex, "bench", i)) {
+          takePrizes(state, playerIndex, benchPrize);
+          if (checkWinCondition(state)) {
+            return { success: true, gameEnded: true };
+          }
+        }
+      }
+    }
+  }
+
+  // Check KO on self (from self damage)
+  if (effectResult?.selfDamage && attacker.active) {
+    const selfHp = parseInt(attacker.active.card.hp || "0", 10);
+    if (selfHp > 0 && attacker.active.damageCounters * 10 >= selfHp) {
+      const selfPrize = getPrizeCount(attacker.active);
+      if (checkKnockout(state, playerIndex, "active")) {
+        takePrizes(state, defenderIndex, selfPrize);
+        if (checkWinCondition(state)) {
+          return { success: true, gameEnded: true };
+        }
+      }
+    }
+  }
+
   return { success: true };
+}
+
+/**
+ * Apply tool damage modifiers for incoming damage on a Pokemon.
+ * Checks all attached tools for modifyIncomingDamage effects.
+ */
+function applyToolDamageModifiers(
+  state: GameState,
+  target: GameCard,
+  damage: number
+): number {
+  let modified = damage;
+  for (const tool of target.attachedTools) {
+    const toolEffect = getEffect(tool.cardId);
+    if (toolEffect?.tool?.whileAttached?.modifyIncomingDamage) {
+      const ownerIndex = findOwnerIndex(state, target);
+      if (ownerIndex !== null) {
+        const ctx = createEffectContext(state, ownerIndex, tool);
+        modified = toolEffect.tool.whileAttached.modifyIncomingDamage(ctx, modified);
+      }
+    }
+  }
+  return modified;
+}
+
+/**
+ * Find which player owns a GameCard.
+ */
+function findOwnerIndex(state: GameState, card: GameCard): 0 | 1 | null {
+  for (let i = 0; i < 2; i++) {
+    const p = state.players[i as 0 | 1];
+    if (p.active?.instanceId === card.instanceId) return i as 0 | 1;
+    if (p.bench.cards.some(c => c.instanceId === card.instanceId)) return i as 0 | 1;
+  }
+  return null;
+}
+
+/** Helper for status condition text */
+function statusToText(status: string): string {
+  switch (status) {
+    case "poisoned": return "中毒";
+    case "burned": return "灼伤";
+    case "asleep": return "睡眠";
+    case "confused": return "混乱";
+    case "paralyzed": return "麻痹";
+    default: return status;
+  }
 }

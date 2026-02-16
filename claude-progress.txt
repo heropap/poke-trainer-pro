@@ -180,3 +180,58 @@ Notes: 实现了完整的 AI 对战系统，支持人类玩家 vs AI 的本地�
 - 打 Basic 到 bench 时优先低 HP（保留高 HP 的用于后续进化或撤退）
 
 测试: 新增 32 个测试（ai-player.test.ts），总计 312 个测试全部通过（13 个测试套件）。
+
+=== Session 9 | 2026-02-16 ===
+Feature: 卡牌效果框架 - 动态效果加载系统
+Status: completed
+Notes: 实现了完整的卡牌效果框架，使对战中的卡牌效果（攻击特效、训练师、工具、特性、状态异常）真正生效。
+
+实现内容:
+1. engine/effects/effect-types.ts: 核心类型定义
+   - EffectContext: 传递给效果函数的上下文，包含 20+ 工具方法（damage, heal, drawCards, searchDeck, flipCoin, applyStatus, switchOpponentActive 等）
+   - AttackEffect/AttackResult: 攻击效果和结果（修改伤害、附带状态、bench伤害、自伤、能量丢弃）
+   - AbilityEffect: 特性（activated/passive/on_enter 三种类型）
+   - TrainerEffect: 训练师效果（canPlay 条件 + onPlay 执行）
+   - ToolEffect: 工具效果（whileAttached 持续修改：伤害/撤退费/受击减伤）
+   - CardEffectDef: 卡牌效果注册结构
+
+2. engine/effects/effect-registry.ts: 效果注册中心
+   - Map<string, CardEffectDef> 存储
+   - registerEffect/registerAll/getEffect/hasEffect/clearRegistry
+
+3. engine/effects/effect-context.ts: 上下文工厂
+   - createEffectContext(): 创建 EffectContext 实例
+   - 实现所有工具方法，每个方法操作 GameState 并记录 logEvent
+
+4. engine/effects/coin.ts: 硬币翻转系统
+   - flipCoin()/flipCoins() + 可注入 randomFn 用于测试
+
+5. engine/effects/status-effects.ts: 状态异常回合间处理
+   - processBetweenTurns(): 中毒(10伤害)、灼伤(20伤害+翻币治愈)、睡眠(翻币醒来)、麻痹(自动恢复)
+   - KO 检查和奖励卡处理
+
+6. engine/effects/cards/trainers.ts: 7种训练师效果（17个卡牌ID）
+   - Boss's Orders（交换对手备战区）、Professor's Research（弃手抽7）、Pokemon Center Lady（治疗60+清状态）
+   - Nest Ball（搜索基础宝可梦到备战区）、Energy Switch（移动能量）
+   - Air Balloon（撤退费-2）、Sacred Charm（受击-30）
+
+7. engine/effects/cards/attacks.ts: 10种攻击效果
+   - 中毒攻击（Tangela, Shroodle）、硬币翻转伤害（Tyrogue）、自伤攻击（Corphish, Electrike）
+   - 备战区伤害（Stonjourner）、能量丢弃攻击（Mega Camerupt ex, Kyogre）
+   - 从牌组搜索能量附加（Exeggcute）、按能量数加伤害（Exeggutor）
+
+8. 引擎集成:
+   - game-actions.ts: performAttack() 重写，集成效果注册表查找、AttackResult 处理、工具伤害减免
+   - turn-actions.ts: playSupporter/playItem 集成效果执行、endTurn 集成状态异常处理、canRetreat 集成工具减费
+   - game-controller.ts: 新增 use_ability 动作类型和 handleUseAbility 处理器
+   - game-state.ts: 新增 abilityUsedThisTurn 字段、4种新事件类型
+   - ai-player.ts: 新增 Item/Supporter 使用优先级（Priority 5/7）
+
+关键决策:
+- 向后兼容: 无注册效果的卡牌走原有逻辑（parseInt baseDamage），312 旧测试不受影响
+- 效果在 performAttack 的弱点/抵抗力计算之前执行，返回修改后的 baseDamage
+- 训练师效果在移到弃牌堆之前执行（确保 searchDeck 等操作正确）
+- 工具卡检测 subtype 包含 "Tool"，附加到目标宝可梦而非丢弃
+- 状态异常互斥: asleep/confused/paralyzed 三者互斥，新状态覆盖旧状态
+
+测试: 新增 39 个测试（card-effects.test.ts），总计 351 个测试全部通过（14 个测试套件）。

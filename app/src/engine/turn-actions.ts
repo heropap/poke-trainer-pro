@@ -21,6 +21,9 @@ import {
   logEvent,
 } from "./game-state";
 import { removeCard, addToBottom, findCard } from "./zones";
+import { getEffect } from "./effects/effect-registry";
+import { createEffectContext } from "./effects/effect-context";
+import { processBetweenTurns } from "./effects/status-effects";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -246,8 +249,18 @@ export function canRetreat(
     return fail("备战区没有宝可梦可以替换");
   }
 
-  // Check retreat cost
-  const retreatCost = player.active.card.convertedRetreatCost ?? 0;
+  // Check retreat cost (with tool modifiers)
+  let retreatCost = player.active.card.convertedRetreatCost ?? 0;
+
+  // Apply tool retreat cost modifiers
+  for (const tool of player.active.attachedTools) {
+    const toolEffect = getEffect(tool.cardId);
+    if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
+      const ctx = createEffectContext(state, state.currentPlayer, tool);
+      retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
+    }
+  }
+  if (retreatCost < 0) retreatCost = 0;
 
   if (energyToDiscard.length < retreatCost) {
     return fail(
@@ -351,8 +364,8 @@ export function canPlaySupporter(
 }
 
 /**
- * Play a supporter card from hand. The card's effect should be resolved
- * separately by the card effect system. This handles the common mechanics.
+ * Play a supporter card from hand.
+ * If a registered effect exists, execute it before discarding.
  */
 export function playSupporter(
   state: GameState,
@@ -365,7 +378,6 @@ export function playSupporter(
   const card = removeCard(player.hand, supporterInstanceId)!;
 
   player.supporterUsedThisTurn = true;
-  addToBottom(player.discard, card);
 
   logEvent(
     state,
@@ -374,6 +386,15 @@ export function playSupporter(
     `${player.name} 使用了 ${card.card.name}`,
     { cardName: card.card.name }
   );
+
+  // Execute trainer effect if registered
+  const cardEffect = getEffect(card.cardId);
+  if (cardEffect?.trainer?.onPlay) {
+    const ctx = createEffectContext(state, state.currentPlayer, card);
+    cardEffect.trainer.onPlay(ctx);
+  }
+
+  addToBottom(player.discard, card);
 
   return ok();
 }
@@ -411,11 +432,14 @@ export function canPlayItem(
 }
 
 /**
- * Play an item card from hand. Card effect resolved separately.
+ * Play an item card from hand.
+ * If it's a Pokemon Tool, attach it instead of discarding.
+ * Otherwise execute effect and discard.
  */
 export function playItem(
   state: GameState,
-  itemInstanceId: string
+  itemInstanceId: string,
+  targetInstanceId?: string
 ): ActionResult {
   const check = canPlayItem(state, itemInstanceId);
   if (!check.success) return check;
@@ -423,7 +447,28 @@ export function playItem(
   const player = getCurrentPlayer(state);
   const card = removeCard(player.hand, itemInstanceId)!;
 
-  addToBottom(player.discard, card);
+  // Check if it's a Pokemon Tool — attach instead of discard
+  if (card.card.subtypes.includes("Pokémon Tool") && targetInstanceId) {
+    const target = findTarget(player, targetInstanceId);
+    if (!target) {
+      // Put card back in hand
+      player.hand.cards.push(card);
+      return fail("目标宝可梦不在场上");
+    }
+    if (target.attachedTools.length > 0) {
+      player.hand.cards.push(card);
+      return fail("该宝可梦已经装备了工具卡");
+    }
+    target.attachedTools.push(card);
+    logEvent(
+      state,
+      state.currentPlayer,
+      "use_trainer",
+      `${player.name} 将 ${card.card.name} 装备到了 ${target.card.name}`,
+      { toolName: card.card.name, targetName: target.card.name }
+    );
+    return ok();
+  }
 
   logEvent(
     state,
@@ -432,6 +477,15 @@ export function playItem(
     `${player.name} 使用了 ${card.card.name}`,
     { cardName: card.card.name }
   );
+
+  // Execute item effect if registered
+  const cardEffect = getEffect(card.cardId);
+  if (cardEffect?.trainer?.onPlay) {
+    const ctx = createEffectContext(state, state.currentPlayer, card);
+    cardEffect.trainer.onPlay(ctx);
+  }
+
+  addToBottom(player.discard, card);
 
   return ok();
 }
@@ -505,25 +559,36 @@ export function playBasicToBench(
 
 /**
  * End the current player's turn.
- * Resets per-turn flags and switches to the opponent.
+ * Processes between-turns status effects, resets flags, switches player.
  */
 export function endTurn(state: GameState): ActionResult {
   if (state.phase !== "main" && state.phase !== "attack") {
     return fail("当前阶段不能结束回合");
   }
 
+  const currentPlayerIndex = state.currentPlayer;
   const player = getCurrentPlayer(state);
+
+  // Process between-turns status effects (poison, burn, asleep, paralyzed)
+  processBetweenTurns(state, currentPlayerIndex);
+
+  // Check if status damage caused a game over
+  if (state.phase === "game_over") {
+    return ok();
+  }
 
   // Reset per-turn flags
   player.energyAttachedThisTurn = false;
   player.supporterUsedThisTurn = false;
 
-  // Reset playedThisTurn for all of this player's Pokemon
+  // Reset playedThisTurn and abilityUsedThisTurn for all of this player's Pokemon
   if (player.active) {
     player.active.playedThisTurn = false;
+    player.active.abilityUsedThisTurn = false;
   }
   for (const card of player.bench.cards) {
     card.playedThisTurn = false;
+    card.abilityUsedThisTurn = false;
   }
 
   // Switch player

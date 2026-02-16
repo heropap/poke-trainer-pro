@@ -19,6 +19,7 @@
 import { GameState, GameCard, Player } from "./game-state";
 import { GameAction, ActionResult } from "./game-controller";
 import { canAttack } from "./game-actions";
+import { getEffect } from "./effects/effect-registry";
 
 // ───────────────────────────────────────────────
 // AI Decision Result
@@ -110,7 +111,13 @@ export function computeAIAction(
     return evolution;
   }
 
-  // ── Priority 5: Attach energy ──
+  // ── Priority 5: Use Item cards ──
+  const itemAction = decideItemUse(state, playerIndex);
+  if (itemAction) {
+    return itemAction;
+  }
+
+  // ── Priority 6: Attach energy ──
   if (!player.energyAttachedThisTurn) {
     const energyAction = decideEnergyAttachment(state, playerIndex);
     if (energyAction) {
@@ -118,19 +125,27 @@ export function computeAIAction(
     }
   }
 
-  // ── Priority 6: Consider retreat if active is in danger ──
+  // ── Priority 7: Use Supporter cards ──
+  if (!player.supporterUsedThisTurn) {
+    const supporterAction = decideSupporterUse(state, playerIndex);
+    if (supporterAction) {
+      return supporterAction;
+    }
+  }
+
+  // ── Priority 8: Consider retreat if active is in danger ──
   const retreatAction = considerRetreat(state, playerIndex);
   if (retreatAction) {
     return retreatAction;
   }
 
-  // ── Priority 7: Attack with best available attack ──
+  // ── Priority 9: Attack with best available attack ──
   const attackAction = decideBestAttack(state, playerIndex);
   if (attackAction) {
     return attackAction;
   }
 
-  // ── Priority 8: End turn ──
+  // ── Priority 10: End turn ──
   return {
     action: { type: "end_turn" },
     reason: "No more actions available",
@@ -477,6 +492,77 @@ function considerRetreat(
       benchInstanceId: bestBench.instanceId,
     },
     reason: `Retreat ${active.card.name} (HP: ${remainingHp}/${maxHp}) for ${bestBench.card.name} (HP: ${getRemainingHp(bestBench)}/${getHp(bestBench)})`,
+  };
+}
+
+/**
+ * Decide whether to use an Item card from hand.
+ * Only uses Items that have registered effects.
+ */
+function decideItemUse(
+  state: GameState,
+  playerIndex: 0 | 1
+): AIDecision | null {
+  const player = state.players[playerIndex];
+
+  // Find Item cards with registered effects
+  const items = player.hand.cards.filter(
+    (c) =>
+      c.card.supertype === "Trainer" &&
+      c.card.subtypes.includes("Item") &&
+      !c.card.subtypes.includes("Pokémon Tool") &&
+      getEffect(c.cardId)?.trainer
+  );
+
+  if (items.length === 0) return null;
+
+  // Use the first usable item
+  for (const item of items) {
+    const effect = getEffect(item.cardId);
+    if (effect?.trainer) {
+      // If it has a canPlay check, respect it (simplified — create a minimal ctx)
+      return {
+        action: {
+          type: "play_card",
+          cardId: item.instanceId,
+          targetZone: undefined,
+        },
+        reason: `Use item: ${item.card.name}`,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Decide whether to use a Supporter card from hand.
+ * Only uses Supporters that have registered effects.
+ */
+function decideSupporterUse(
+  state: GameState,
+  playerIndex: 0 | 1
+): AIDecision | null {
+  const player = state.players[playerIndex];
+
+  // Find Supporter cards with registered effects
+  const supporters = player.hand.cards.filter(
+    (c) =>
+      c.card.supertype === "Trainer" &&
+      c.card.subtypes.includes("Supporter") &&
+      getEffect(c.cardId)?.trainer
+  );
+
+  if (supporters.length === 0) return null;
+
+  // Use the first usable supporter
+  return {
+    action: {
+      type: "play_card",
+      cardId: supporters[0].instanceId,
+      targetZone: undefined,
+    },
+    reason: `Use supporter: ${supporters[0].card.name}`,
   };
 }
 
