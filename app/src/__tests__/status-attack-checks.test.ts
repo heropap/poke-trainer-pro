@@ -5,7 +5,7 @@
  *
  * Rules:
  * - Paralyzed Pokemon CANNOT attack or retreat
- * - Asleep Pokemon CANNOT attack (but CAN retreat by paying cost, which clears sleep)
+ * - Asleep Pokemon CANNOT attack or retreat
  * - Confused Pokemon can attempt to attack, but must flip a coin:
  *   - Heads: attack proceeds normally
  *   - Tails: 30 damage to self, attack fails
@@ -219,14 +219,15 @@ describe("Status Condition Attack Checks", () => {
       expect(canAttack(state, 0, "Test Attack")).toBe(true);
     });
 
-    it("CAN retreat when asleep (paying retreat cost)", () => {
+    it("cannot retreat when asleep", () => {
       const state = setupBattleState();
       state.players[0].active!.statusConditions = ["asleep"];
 
       const energyId = state.players[0].active!.attachedEnergy[0].instanceId;
-      // Asleep Pokemon CAN retreat in PTCG
+      // PTCG Rule: Asleep Pokemon CANNOT retreat (same as Paralyzed)
       const result = canRetreat(state, [energyId]);
-      expect(result.success).toBe(true);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("睡眠");
     });
 
     it("asleep blocks attack even with sufficient energy", () => {

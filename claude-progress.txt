@@ -609,3 +609,29 @@ Notes:
      new: rule-fixes-15b.test.ts
 
 测试: 新增 21 个测试，总计 501 个测试全部通过（19 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 15c | 2026-02-16 ===
+Feature: 系统级规则修复 — 先攻方支持者限制 + 睡眠阻止撤退
+Status: completed
+Notes:
+  基于 PTCG 官方规则手册深度审计，修复 2 个系统级规则违规：
+
+  Fix 1 — 先攻方第一回合不能使用支持者卡 [CRITICAL]
+  - canPlaySupporter() 缺少首回合限制
+  - PTCG 规则: "The player who goes first cannot attack or play a Supporter card on their first turn."
+  - 修复: 在 canPlaySupporter() 添加 state.turn===1 && state.isFirstTurn 检查
+  - 与 canAttack() 的首回合攻击限制使用相同条件
+
+  Fix 2 — 睡眠状态阻止撤退 [CRITICAL]
+  - canRetreat() 只检查了麻痹，遗漏了睡眠
+  - PTCG 规则: "If a Pokémon is Asleep, it can't attack or retreat."
+  - 修复: 在 canRetreat() 麻痹检查后添加 asleep 检查
+  - 修正了 Session 15 和 15b 中基于错误理解编写的 2 个测试用例
+
+  文件变更: 4 个文件
+     modified: turn-actions.ts (2 处修改)
+     modified: status-attack-checks.test.ts (修正 1 个错误测试)
+     modified: rule-fixes-15b.test.ts (修正 1 个错误测试)
+     new: rule-fixes-15c.test.ts (16 个新测试)
+
+测试: 新增 16 个测试，总计 517 个测试全部通过（20 个测试套件）。TypeScript 编译 0 错误。

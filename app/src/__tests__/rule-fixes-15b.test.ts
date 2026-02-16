@@ -153,20 +153,19 @@ describe("Bug 1: Retreat clears status conditions", () => {
     expect(retreatedPokemon!.statusConditions).toEqual([]);
   });
 
-  it("clears asleep status on retreat", () => {
+  it("asleep blocks retreat (cannot test status clearing via retreat)", () => {
     const state = setupBattleState();
-    // Note: asleep doesn't block retreat in PTCG
+    // PTCG Rule: Asleep Pokemon CANNOT retreat (same as Paralyzed)
     state.players[0].active!.statusConditions = ["asleep"];
 
     const energyId = state.players[0].active!.attachedEnergy[0].instanceId;
     const benchId = state.players[0].bench.cards[0].instanceId;
 
-    retreat(state, [energyId], benchId);
-
-    const retreatedPokemon = state.players[0].bench.cards.find(
-      c => c.card.name === "Charizard"
-    );
-    expect(retreatedPokemon!.statusConditions).toEqual([]);
+    const result = retreat(state, [energyId], benchId);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("睡眠");
+    // Pokemon stays active with asleep status
+    expect(state.players[0].active!.statusConditions).toContain("asleep");
   });
 
   it("clears confused status on retreat", () => {

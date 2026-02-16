@@ -254,6 +254,11 @@ export function canRetreat(
     return fail("麻痹状态的宝可梦不能撤退");
   }
 
+  // ─── Status condition check: Asleep Pokemon cannot retreat ───
+  if (player.active.statusConditions.includes("asleep")) {
+    return fail("睡眠状态的宝可梦不能撤退");
+  }
+
   // Check retreat cost (with tool modifiers)
   let retreatCost = player.active.card.convertedRetreatCost ?? 0;
 
@@ -354,6 +359,11 @@ export function canPlaySupporter(
 
   if (player.supporterUsedThisTurn) {
     return fail("每回合只能使用一张支持者卡");
+  }
+
+  // ─── PTCG Rule: Going-first player cannot play Supporter on their first turn ───
+  if (state.turn === 1 && state.isFirstTurn) {
+    return fail("先攻方第一回合不能使用支持者卡");
   }
 
   const card = findCard(player.hand, supporterInstanceId);
