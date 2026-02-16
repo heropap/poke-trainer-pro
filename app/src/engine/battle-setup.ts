@@ -11,9 +11,9 @@
  * 3. Create GameCard instances for each card
  * 4. Shuffle the deck
  * 5. Draw initial hand (7 cards)
- * 6. Check for mulligan (no basic Pokemon in hand)
- * 7. Set prize cards (6 cards)
- * 8. Transition to main game phase
+ * 6. (Optional) Execute preparation phase (mulligan, placement, prizes, coin flip)
+ * 7. (Optional) Set prize cards (if not using full preparation)
+ * 8. Transition to first turn's draw phase
  */
 
 import { Card } from "@/types/card";
@@ -27,9 +27,7 @@ import {
 } from "./game-state";
 import { shuffleZone, drawMultiple, addCards, hasBasicPokemon } from "./zones";
 import { StoredDeck, getDeckCardIds, checkDeckIntegrity } from "@/services/deck-storage";
-
-const INITIAL_HAND_SIZE = 7;
-const PRIZE_CARD_COUNT = 6;
+import { executePreparation, INITIAL_HAND_SIZE, PRIZE_CARD_COUNT } from "./battle-prepare";
 
 export interface SetupResult {
   success: boolean;
@@ -43,6 +41,17 @@ export interface DeckLoadResult {
   missingCards: string[];
   totalLoaded: number;
   totalExpected: number;
+}
+
+export interface InitializeGameOptions {
+  /**
+   * Run the full preparation phase (mulligan, basic placement, coin flip).
+   * When false (default), only draws hands and sets prizes (legacy behavior).
+   * When true, executes the complete PTCG setup procedure.
+   */
+  fullPreparation?: boolean;
+  /** Optional random function for coin flip (for testing) */
+  randomFn?: () => number;
 }
 
 /**
@@ -100,14 +109,17 @@ export function loadDeckCards(
  * @param cardLookup Function to resolve card IDs
  * @param player1Name Display name for player 1
  * @param player2Name Display name for player 2
+ * @param options Configuration options (fullPreparation, randomFn)
  */
 export function initializeGame(
   deck1: StoredDeck,
   deck2: StoredDeck,
   cardLookup: (id: string) => Card | undefined,
   player1Name = "玩家 1",
-  player2Name = "玩家 2"
+  player2Name = "玩家 2",
+  options: InitializeGameOptions = {}
 ): SetupResult {
+  const { fullPreparation = false, randomFn } = options;
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -198,41 +210,51 @@ export function initializeGame(
     logEvent(state, p as 0 | 1, "draw_card", `${player.name} 抽了 ${drawn.length} 张初始手牌`);
   }
 
-  // ─── Check mulligan ───
+  // ─── Full preparation OR legacy setup ───
 
-  for (let p = 0; p < 2; p++) {
-    const player = state.players[p as 0 | 1];
-    if (!hasBasicPokemon(player.hand)) {
-      logEvent(
-        state,
-        p as 0 | 1,
-        "mulligan",
-        `${player.name} 手牌中没有基础宝可梦，需要重抽 (Mulligan)`
-      );
-      warnings.push(`${player.name} 需要 Mulligan（手牌无基础宝可梦）`);
-      // Mulligan logic will be handled in the turn flow system
-      // For now, just flag it
+  if (fullPreparation) {
+    // Full PTCG setup: mulligan → placement → prizes → coin flip
+    const prepResult = executePreparation(state, randomFn);
+
+    if (!prepResult.success) {
+      errors.push(...prepResult.errors);
+      return { success: false, gameState: state, errors, warnings: [...warnings, ...prepResult.warnings] };
     }
+
+    warnings.push(...prepResult.warnings);
+  } else {
+    // Legacy behavior: check mulligan (warn only), set prizes, transition to draw
+    for (let p = 0; p < 2; p++) {
+      const player = state.players[p as 0 | 1];
+      if (!hasBasicPokemon(player.hand)) {
+        logEvent(
+          state,
+          p as 0 | 1,
+          "mulligan",
+          `${player.name} 手牌中没有基础宝可梦，需要重抽 (Mulligan)`
+        );
+        warnings.push(`${player.name} 需要 Mulligan（手牌无基础宝可梦）`);
+      }
+    }
+
+    // Set prize cards
+    for (let p = 0; p < 2; p++) {
+      const player = state.players[p as 0 | 1];
+      const prizes = drawMultiple(player.deck, PRIZE_CARD_COUNT);
+      addCards(player.prizes, prizes);
+
+      logEvent(state, p as 0 | 1, "game_start", `${player.name} 设置了 ${prizes.length} 张奖励卡`);
+    }
+
+    // Transition to draw phase
+    state.phase = "draw";
+    state.turn = 1;
+
+    logEvent(state, 0, "game_start", `第 1 回合开始，${state.players[0].name} 先手`);
   }
-
-  // ─── Set prize cards ───
-
-  for (let p = 0; p < 2; p++) {
-    const player = state.players[p as 0 | 1];
-    const prizes = drawMultiple(player.deck, PRIZE_CARD_COUNT);
-    addCards(player.prizes, prizes);
-
-    logEvent(state, p as 0 | 1, "game_start", `${player.name} 设置了 ${prizes.length} 张奖励卡`);
-  }
-
-  // Transition to draw phase
-  state.phase = "draw";
-  state.turn = 1;
-
-  logEvent(state, 0, "game_start", `第 1 回合开始，${state.players[0].name} 先手`);
 
   console.log(
-    `[BattleSetup] Game initialized: ${player1Name} (${state.players[0].deck.cards.length} in deck, ${state.players[0].hand.cards.length} in hand) vs ${player2Name} (${state.players[1].deck.cards.length} in deck, ${state.players[1].hand.cards.length} in hand)`
+    `[BattleSetup] Game initialized: ${player1Name} (deck: ${state.players[0].deck.cards.length}, hand: ${state.players[0].hand.cards.length}, active: ${state.players[0].active?.card.name ?? "none"}) vs ${player2Name} (deck: ${state.players[1].deck.cards.length}, hand: ${state.players[1].hand.cards.length}, active: ${state.players[1].active?.card.name ?? "none"})`
   );
 
   return { success: true, gameState: state, errors, warnings };

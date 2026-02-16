@@ -5,7 +5,7 @@ import { Card } from "@/types/card";
 import { useDeckContext } from "@/components/deck/DeckContext";
 import { StoredDeck } from "@/services/deck-storage";
 import { initializeGame, SetupResult } from "@/engine/battle-setup";
-import { GameState } from "@/engine/game-state";
+import { GameState, GameCard } from "@/engine/game-state";
 import { zoneSize } from "@/engine/zones";
 import Link from "next/link";
 
@@ -57,7 +57,7 @@ export default function BattlePageClient() {
     console.log(`  Player 1: ${deck1.name}`);
     console.log(`  Player 2: ${deck2.name}`);
 
-    const result = initializeGame(deck1, deck2, cardLookup, "玩家 1", "AI 对手");
+    const result = initializeGame(deck1, deck2, cardLookup, "玩家 1", "AI 对手", { fullPreparation: true });
     setSetupResult(result);
 
     if (result.success && result.gameState) {
@@ -104,10 +104,12 @@ export default function BattlePageClient() {
         <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
           <div>
             <p className="font-medium text-green-700 dark:text-green-300">
-              对战进行中 — 第 {gameState.turn} 回合
+              对战进行中 — 第 {gameState.turn} 回合 — {gameState.phase === "draw" ? "抽牌阶段" : gameState.phase === "main" ? "主阶段" : gameState.phase === "attack" ? "攻击阶段" : gameState.phase}
             </p>
             <p className="text-sm text-green-600 dark:text-green-400">
               {gameState.players[0].name} vs {gameState.players[1].name}
+              {" | "}
+              当前回合: {gameState.players[gameState.currentPlayer].name}
             </p>
           </div>
           <button
@@ -121,44 +123,14 @@ export default function BattlePageClient() {
           </button>
         </div>
 
-        {/* Player zones summary */}
-        <div className="grid grid-cols-2 gap-6">
+        {/* Battle field — both players */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {gameState.players.map((player, idx) => (
-            <div
+            <PlayerField
               key={player.id}
-              className={`rounded-lg border p-4 ${
-                gameState.currentPlayer === idx
-                  ? "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950"
-                  : "border-zinc-200 dark:border-zinc-700"
-              }`}
-            >
-              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-                {player.name}
-                {gameState.currentPlayer === idx && (
-                  <span className="ml-2 text-sm text-blue-500">（当前回合）</span>
-                )}
-              </h3>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div className="text-zinc-500">
-                  牌组: <span className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.deck)}</span>
-                </div>
-                <div className="text-zinc-500">
-                  手牌: <span className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.hand)}</span>
-                </div>
-                <div className="text-zinc-500">
-                  奖励卡: <span className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.prizes)}</span>
-                </div>
-                <div className="text-zinc-500">
-                  备战区: <span className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.bench)}</span>
-                </div>
-                <div className="text-zinc-500">
-                  战斗区: <span className="font-medium text-zinc-700 dark:text-zinc-300">{player.active ? player.active.card.name : "无"}</span>
-                </div>
-                <div className="text-zinc-500">
-                  弃牌堆: <span className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.discard)}</span>
-                </div>
-              </div>
-            </div>
+              player={player}
+              isCurrentPlayer={gameState.currentPlayer === idx}
+            />
           ))}
         </div>
 
@@ -166,7 +138,7 @@ export default function BattlePageClient() {
         {gameState.log.length > 0 && (
           <div className="rounded-lg border border-zinc-200 dark:border-zinc-700">
             <h3 className="border-b border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-700 dark:border-zinc-700 dark:text-zinc-300">
-              对战日志
+              对战日志 ({gameState.log.length} 条)
             </h3>
             <div className="max-h-64 overflow-y-auto p-3">
               {gameState.log.map((event, i) => (
@@ -288,6 +260,139 @@ export default function BattlePageClient() {
           </Link>
         </p>
       )}
+    </div>
+  );
+}
+
+// ─── Sub-components ───
+
+function PlayerField({
+  player,
+  isCurrentPlayer,
+}: {
+  player: GameState["players"][0];
+  isCurrentPlayer: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-lg border p-4 ${
+        isCurrentPlayer
+          ? "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950"
+          : "border-zinc-200 dark:border-zinc-700"
+      }`}
+    >
+      <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+        {player.name}
+        {isCurrentPlayer && (
+          <span className="ml-2 text-sm text-blue-500">(当前回合)</span>
+        )}
+      </h3>
+
+      {/* Active Pokemon */}
+      <div className="mt-3 rounded-lg border border-zinc-300 bg-white p-3 dark:border-zinc-600 dark:bg-zinc-800">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+          战斗区
+        </p>
+        {player.active ? (
+          <GameCardMini card={player.active} />
+        ) : (
+          <p className="mt-1 text-sm text-zinc-400">空</p>
+        )}
+      </div>
+
+      {/* Bench */}
+      <div className="mt-2 rounded-lg border border-zinc-300 bg-white p-3 dark:border-zinc-600 dark:bg-zinc-800">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+          备战区 ({zoneSize(player.bench)}/5)
+        </p>
+        {zoneSize(player.bench) > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-2">
+            {player.bench.cards.map((gc) => (
+              <GameCardMini key={gc.instanceId} card={gc} compact />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-zinc-400">空</p>
+        )}
+      </div>
+
+      {/* Stats row */}
+      <div className="mt-3 grid grid-cols-4 gap-2 text-center text-sm">
+        <div>
+          <p className="text-xs text-zinc-400">牌组</p>
+          <p className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.deck)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-400">手牌</p>
+          <p className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.hand)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-400">奖励卡</p>
+          <p className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.prizes)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-zinc-400">弃牌堆</p>
+          <p className="font-medium text-zinc-700 dark:text-zinc-300">{zoneSize(player.discard)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GameCardMini({ card, compact }: { card: GameCard; compact?: boolean }) {
+  const hp = card.card.hp ? parseInt(card.card.hp, 10) : 0;
+  const currentHp = hp > 0 ? hp - card.damageCounters * 10 : 0;
+
+  if (compact) {
+    return (
+      <div className="rounded border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-600">
+        <span className="font-medium text-zinc-700 dark:text-zinc-300">
+          {card.card.name}
+        </span>
+        {hp > 0 && (
+          <span className="ml-1 text-zinc-400">
+            {currentHp}/{hp}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1 flex items-center gap-3">
+      <div>
+        <p className="font-medium text-zinc-800 dark:text-zinc-200">
+          {card.card.name}
+        </p>
+        <div className="flex items-center gap-3 text-xs text-zinc-500">
+          {hp > 0 && (
+            <span>
+              HP: {currentHp}/{hp}
+            </span>
+          )}
+          {card.card.types && card.card.types.length > 0 && (
+            <span>
+              {card.card.types.join("/")}
+            </span>
+          )}
+          {card.statusConditions.length > 0 && (
+            <span className="text-red-500">
+              {card.statusConditions.join(", ")}
+            </span>
+          )}
+        </div>
+        {card.card.attacks && card.card.attacks.length > 0 && (
+          <div className="mt-1 text-xs text-zinc-500">
+            {card.card.attacks.map((a, i) => (
+              <span key={i}>
+                {a.name}
+                {a.damage ? ` (${a.damage})` : ""}
+                {i < card.card.attacks!.length - 1 ? " | " : ""}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

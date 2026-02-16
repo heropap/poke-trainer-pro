@@ -40,3 +40,37 @@ Notes: 解决了卡牌导入成功后无法在对战系统中使用的核心问�
 - 修复 CardSearch 组件 React 19 兼容性问题（useMemo→useEffect 避免渲染期间 setState）
 
 测试: 新增 43 个测试（deck-storage 15个，game-engine 28个），总计 144 个测试全部通过。
+
+=== Session 5 | 2026-02-16 09:00:00 ===
+Feature: 对战准备阶段 - Mulligan 处理、奖励卡设置、基础宝可梦放置
+Status: completed
+Notes: 实现了完整的 PTCG 对战准备阶段流程。
+
+实现内容:
+- engine/battle-prepare.ts: 新建准备阶段模块，包含:
+  - performSingleMulligan(): 单次 Mulligan（手牌洗回牌组，重抽 7 张）
+  - resolveMulligans(): 完整 Mulligan 解决流程（双方同时处理，对手可额外抽牌，最大 20 轮安全限制）
+  - flipCoin(): 掷硬币决定先攻（支持注入 randomFn 用于测试）
+  - validatePlacement(): 验证基础宝可梦放置合法性（类型检查、数量限制、重复检查）
+  - placeBasicPokemon(): 将手牌中的基础宝可梦放置到战斗区和备战区
+  - autoPlaceBasicPokemon(): AI 自动放置策略（最高 HP 放战斗区，其余放备战区）
+  - setPrizeCards(): 设置 6 张奖励卡
+  - executePreparation(): 编排完整准备流程（Mulligan→放置→奖励卡→掷硬币→进入抽牌阶段）
+
+- engine/battle-setup.ts: 重构 initializeGame()，新增 InitializeGameOptions 接口:
+  - fullPreparation=true: 调用 executePreparation() 执行完整 PTCG 流程
+  - fullPreparation=false (默认): 保持向后兼容的旧行为
+  - 这样设计确保已有测试不受影响
+
+- BattlePageClient.tsx: 增强对战界面:
+  - 新增 PlayerField 子组件，显示战斗区（Active Pokemon）和备战区（Bench）
+  - 新增 GameCardMini 子组件，展示宝可梦名称、HP、属性、技能、状态
+  - 显示当前回合和阶段信息
+  - 对战页面使用 fullPreparation: true
+
+关键决策:
+- initializeGame 使用 options 对象参数而非位置参数，便于扩展
+- Mulligan 双方同时处理（符合官方规则），额外抽牌在最后一次性结算
+- 自动放置策略选择最高 HP 作为战斗宝可梦，适合 AI 和快速开始模式
+
+测试: 新增 38 个测试（battle-prepare.test.ts），总计 182 个测试全部通过（9 个测试套件）。

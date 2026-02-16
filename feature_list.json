@@ -75,7 +75,7 @@
       "实现基础宝可梦放置（战斗区 + 备战区）",
       "编写准备阶段流程测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 5
   },
   {
