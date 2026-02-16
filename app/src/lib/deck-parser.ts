@@ -53,6 +53,12 @@ const SET_CODE_MAP: Record<string, string> = {
   SVP: "svp",
   PR: "svp",
 
+  // Mega Evolution era
+  MEG: "me1", // Mega Evolution
+  PFL: "me2", // Phantasmal Flames
+  ASC: "me2pt5", // Ascended Heroes
+  MEE: "sve", // Mega Evolution Energy (basic energies, same as SVE)
+
   // Sword & Shield era (for expanded/older decks)
   SSH: "swsh1",
   RCL: "swsh2",

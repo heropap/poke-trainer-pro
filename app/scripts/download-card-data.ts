@@ -10,8 +10,9 @@ import * as https from "https";
 const BASE_URL =
   "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en";
 
-// Scarlet & Violet era sets (Standard-legal)
-const SV_SETS = [
+// Standard-legal sets
+const STANDARD_SETS = [
+  // Scarlet & Violet era
   "sv1",
   "sv2",
   "sv3",
@@ -28,6 +29,10 @@ const SV_SETS = [
   "sv10",
   "sve",
   "svp",
+  // Mega Evolution era
+  "me1",
+  "me2",
+  "me2pt5",
 ];
 
 const OUTPUT_DIR = path.join(__dirname, "..", "src", "data", "cards");
@@ -75,14 +80,14 @@ async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   // Download all sets
-  for (const setId of SV_SETS) {
+  for (const setId of STANDARD_SETS) {
     await downloadSet(setId);
   }
 
   // Build combined index
   console.log("\nBuilding combined index...");
   const allCards: Record<string, unknown>[] = [];
-  const files = fs.readdirSync(OUTPUT_DIR).filter((f) => f.endsWith(".json"));
+  const files = fs.readdirSync(OUTPUT_DIR).filter((f) => f.endsWith(".json") && f !== "_index.json");
 
   for (const file of files) {
     const data = JSON.parse(
