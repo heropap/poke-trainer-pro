@@ -1,0 +1,602 @@
+/**
+ * Turn Actions Module
+ *
+ * Implements all actions a player can perform during the main phase:
+ * - Attach Energy (once per turn)
+ * - Evolve Pokemon (not on first turn played)
+ * - Retreat Active Pokemon (pay retreat cost)
+ * - Play Supporter (once per turn)
+ * - Play Item card
+ * - Play Basic Pokemon to Bench
+ *
+ * Each action has:
+ * 1. A legality check (can this action be performed?)
+ * 2. An execution function (perform the action, mutates state, logs event)
+ */
+
+import {
+  GameState,
+  GameCard,
+  Player,
+  logEvent,
+} from "./game-state";
+import { removeCard, addToBottom, findCard } from "./zones";
+
+// ───────────────────────────────────────────────
+// Action Result type
+// ───────────────────────────────────────────────
+
+export interface ActionResult {
+  success: boolean;
+  error?: string;
+}
+
+function ok(): ActionResult {
+  return { success: true };
+}
+
+function fail(error: string): ActionResult {
+  return { success: false, error };
+}
+
+// ───────────────────────────────────────────────
+// Helper: Get the current player
+// ───────────────────────────────────────────────
+
+export function getCurrentPlayer(state: GameState): Player {
+  return state.players[state.currentPlayer];
+}
+
+export function getOpponent(state: GameState): Player {
+  return state.players[state.currentPlayer === 0 ? 1 : 0];
+}
+
+// ───────────────────────────────────────────────
+// 1. Attach Energy
+// ───────────────────────────────────────────────
+
+/**
+ * Check if the current player can attach an energy card.
+ */
+export function canAttachEnergy(
+  state: GameState,
+  energyInstanceId: string,
+  targetInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段附加能量");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  if (player.energyAttachedThisTurn) {
+    return fail("每回合只能附加一次能量");
+  }
+
+  const energyCard = findCard(player.hand, energyInstanceId);
+  if (!energyCard) {
+    return fail("手牌中找不到该能量卡");
+  }
+
+  if (energyCard.card.supertype !== "Energy") {
+    return fail("所选卡牌不是能量卡");
+  }
+
+  // Target must be active or on bench
+  const target = findTarget(player, targetInstanceId);
+  if (!target) {
+    return fail("目标宝可梦不在场上");
+  }
+
+  return ok();
+}
+
+/**
+ * Attach an energy card from hand to a Pokemon.
+ */
+export function attachEnergy(
+  state: GameState,
+  energyInstanceId: string,
+  targetInstanceId: string
+): ActionResult {
+  const check = canAttachEnergy(state, energyInstanceId, targetInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const energyCard = removeCard(player.hand, energyInstanceId)!;
+  const target = findTarget(player, targetInstanceId)!;
+
+  target.attachedEnergy.push(energyCard);
+  player.energyAttachedThisTurn = true;
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "attach_energy",
+    `${player.name} 将 ${energyCard.card.name} 附加到 ${target.card.name}`,
+    { energyCardId: energyCard.cardId, targetCardId: target.cardId }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 2. Evolve Pokemon
+// ───────────────────────────────────────────────
+
+/**
+ * Check if an evolution is legal.
+ */
+export function canEvolve(
+  state: GameState,
+  evolutionInstanceId: string,
+  targetInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段进化宝可梦");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  const evolutionCard = findCard(player.hand, evolutionInstanceId);
+  if (!evolutionCard) {
+    return fail("手牌中找不到该进化卡");
+  }
+
+  if (evolutionCard.card.supertype !== "Pokémon") {
+    return fail("所选卡牌不是宝可梦卡");
+  }
+
+  if (
+    !evolutionCard.card.subtypes.includes("Stage 1") &&
+    !evolutionCard.card.subtypes.includes("Stage 2")
+  ) {
+    return fail("所选卡牌不是进化卡");
+  }
+
+  const target = findTarget(player, targetInstanceId);
+  if (!target) {
+    return fail("目标宝可梦不在场上");
+  }
+
+  // Check evolution chain
+  if (!evolutionCard.card.evolvesFrom) {
+    return fail("进化卡缺少进化来源信息");
+  }
+
+  if (target.card.name !== evolutionCard.card.evolvesFrom) {
+    return fail(
+      `${evolutionCard.card.name} 不能从 ${target.card.name} 进化（需要 ${evolutionCard.card.evolvesFrom}）`
+    );
+  }
+
+  // Cannot evolve a Pokemon that was played this turn
+  if (target.playedThisTurn) {
+    return fail("不能进化本回合刚入场的宝可梦");
+  }
+
+  // Cannot evolve on the first turn of the game
+  if (state.isFirstTurn) {
+    return fail("游戏第一回合不能进化宝可梦");
+  }
+
+  return ok();
+}
+
+/**
+ * Evolve a Pokemon. The evolution card goes on top; the pre-evolution
+ * stays as the underlying card data. Energy, tools, and damage transfer.
+ */
+export function evolvePokemon(
+  state: GameState,
+  evolutionInstanceId: string,
+  targetInstanceId: string
+): ActionResult {
+  const check = canEvolve(state, evolutionInstanceId, targetInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const evolutionCard = removeCard(player.hand, evolutionInstanceId)!;
+  const target = findTarget(player, targetInstanceId)!;
+
+  const previousName = target.card.name;
+
+  // Transfer properties: energy, tools, damage stay
+  // Card data updates to evolution
+  target.card = evolutionCard.card;
+  target.cardId = evolutionCard.cardId;
+  // Evolution removes all status conditions
+  target.statusConditions = [];
+  // Mark as played this turn (can't evolve again)
+  target.playedThisTurn = true;
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "evolve_pokemon",
+    `${player.name} 将 ${previousName} 进化为 ${target.card.name}`,
+    { from: previousName, to: target.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 3. Retreat
+// ───────────────────────────────────────────────
+
+/**
+ * Check if the active Pokemon can retreat.
+ */
+export function canRetreat(
+  state: GameState,
+  energyToDiscard: string[]
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段撤退");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  if (!player.active) {
+    return fail("没有战斗宝可梦");
+  }
+
+  if (player.bench.cards.length === 0) {
+    return fail("备战区没有宝可梦可以替换");
+  }
+
+  // Check retreat cost
+  const retreatCost = player.active.card.convertedRetreatCost ?? 0;
+
+  if (energyToDiscard.length < retreatCost) {
+    return fail(
+      `撤退需要丢弃 ${retreatCost} 个能量，只选择了 ${energyToDiscard.length} 个`
+    );
+  }
+
+  // Verify all energy instanceIds exist on the active Pokemon
+  for (const eid of energyToDiscard) {
+    const found = player.active.attachedEnergy.find(
+      (e) => e.instanceId === eid
+    );
+    if (!found) {
+      return fail(`能量 ${eid} 不在战斗宝可梦身上`);
+    }
+  }
+
+  return ok();
+}
+
+/**
+ * Retreat the active Pokemon. Discard energy, swap with bench Pokemon.
+ */
+export function retreat(
+  state: GameState,
+  energyToDiscard: string[],
+  benchInstanceId: string
+): ActionResult {
+  const check = canRetreat(state, energyToDiscard);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+
+  // Verify bench target exists
+  const benchCard = findCard(player.bench, benchInstanceId);
+  if (!benchCard) {
+    return fail("备战区找不到指定的宝可梦");
+  }
+
+  const active = player.active!;
+
+  // Discard energy from active Pokemon
+  for (const eid of energyToDiscard) {
+    const idx = active.attachedEnergy.findIndex((e) => e.instanceId === eid);
+    if (idx !== -1) {
+      const discarded = active.attachedEnergy.splice(idx, 1)[0];
+      addToBottom(player.discard, discarded);
+    }
+  }
+
+  // Swap: active → bench, bench target → active
+  removeCard(player.bench, benchInstanceId);
+  addToBottom(player.bench, active);
+  player.active = benchCard;
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "retreat",
+    `${player.name} 将 ${active.card.name} 撤退，换上 ${benchCard.card.name}`,
+    { retreated: active.card.name, promoted: benchCard.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 4. Play Supporter
+// ───────────────────────────────────────────────
+
+/**
+ * Check if a supporter card can be played.
+ */
+export function canPlaySupporter(
+  state: GameState,
+  supporterInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段使用支持者");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  if (player.supporterUsedThisTurn) {
+    return fail("每回合只能使用一张支持者卡");
+  }
+
+  const card = findCard(player.hand, supporterInstanceId);
+  if (!card) {
+    return fail("手牌中找不到该卡牌");
+  }
+
+  if (
+    card.card.supertype !== "Trainer" ||
+    !card.card.subtypes.includes("Supporter")
+  ) {
+    return fail("所选卡牌不是支持者卡");
+  }
+
+  return ok();
+}
+
+/**
+ * Play a supporter card from hand. The card's effect should be resolved
+ * separately by the card effect system. This handles the common mechanics.
+ */
+export function playSupporter(
+  state: GameState,
+  supporterInstanceId: string
+): ActionResult {
+  const check = canPlaySupporter(state, supporterInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const card = removeCard(player.hand, supporterInstanceId)!;
+
+  player.supporterUsedThisTurn = true;
+  addToBottom(player.discard, card);
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "use_supporter",
+    `${player.name} 使用了 ${card.card.name}`,
+    { cardName: card.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 5. Play Item
+// ───────────────────────────────────────────────
+
+/**
+ * Check if an item card can be played.
+ */
+export function canPlayItem(
+  state: GameState,
+  itemInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段使用物品卡");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  const card = findCard(player.hand, itemInstanceId);
+  if (!card) {
+    return fail("手牌中找不到该卡牌");
+  }
+
+  if (
+    card.card.supertype !== "Trainer" ||
+    !card.card.subtypes.includes("Item")
+  ) {
+    return fail("所选卡牌不是物品卡");
+  }
+
+  return ok();
+}
+
+/**
+ * Play an item card from hand. Card effect resolved separately.
+ */
+export function playItem(
+  state: GameState,
+  itemInstanceId: string
+): ActionResult {
+  const check = canPlayItem(state, itemInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const card = removeCard(player.hand, itemInstanceId)!;
+
+  addToBottom(player.discard, card);
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "use_trainer",
+    `${player.name} 使用了 ${card.card.name}`,
+    { cardName: card.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 6. Play Basic Pokemon to Bench
+// ───────────────────────────────────────────────
+
+/**
+ * Check if a basic Pokemon can be placed on the bench.
+ */
+export function canPlayBasicToBench(
+  state: GameState,
+  pokemonInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段放置宝可梦");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  const card = findCard(player.hand, pokemonInstanceId);
+  if (!card) {
+    return fail("手牌中找不到该卡牌");
+  }
+
+  if (
+    card.card.supertype !== "Pokémon" ||
+    !card.card.subtypes.includes("Basic")
+  ) {
+    return fail("只能将基础宝可梦放到备战区");
+  }
+
+  if (player.bench.cards.length >= 5) {
+    return fail("备战区已满（最多 5 只）");
+  }
+
+  return ok();
+}
+
+/**
+ * Play a basic Pokemon from hand to the bench.
+ */
+export function playBasicToBench(
+  state: GameState,
+  pokemonInstanceId: string
+): ActionResult {
+  const check = canPlayBasicToBench(state, pokemonInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const card = removeCard(player.hand, pokemonInstanceId)!;
+
+  card.playedThisTurn = true;
+  addToBottom(player.bench, card);
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "play_pokemon",
+    `${player.name} 将 ${card.card.name} 放到备战区`,
+    { cardName: card.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 7. End Turn
+// ───────────────────────────────────────────────
+
+/**
+ * End the current player's turn.
+ * Resets per-turn flags and switches to the opponent.
+ */
+export function endTurn(state: GameState): ActionResult {
+  if (state.phase !== "main" && state.phase !== "attack") {
+    return fail("当前阶段不能结束回合");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  // Reset per-turn flags
+  player.energyAttachedThisTurn = false;
+  player.supporterUsedThisTurn = false;
+
+  // Reset playedThisTurn for all of this player's Pokemon
+  if (player.active) {
+    player.active.playedThisTurn = false;
+  }
+  for (const card of player.bench.cards) {
+    card.playedThisTurn = false;
+  }
+
+  // Switch player
+  state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
+  state.turn++;
+  state.isFirstTurn = false;
+  state.phase = "draw";
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "draw_card",
+    `回合 ${state.turn}: ${state.players[state.currentPlayer].name} 的回合`,
+    { turn: state.turn }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 8. Draw Card (start of turn)
+// ───────────────────────────────────────────────
+
+/**
+ * Draw a card at the start of the turn.
+ */
+export function drawCard(state: GameState): ActionResult {
+  if (state.phase !== "draw") {
+    return fail("只能在抽牌阶段抽牌");
+  }
+
+  const player = getCurrentPlayer(state);
+
+  if (player.deck.cards.length === 0) {
+    // Deck out — opponent wins
+    state.phase = "game_over";
+    state.winner = {
+      playerIndex: state.currentPlayer === 0 ? 1 : 0,
+      condition: "deck_out",
+    };
+    logEvent(
+      state,
+      state.currentPlayer,
+      "game_over",
+      `${player.name} 无法抽牌，对手获胜！`,
+      { condition: "deck_out" }
+    );
+    return ok();
+  }
+
+  const drawn = player.deck.cards.shift()!;
+  player.hand.cards.push(drawn);
+
+  state.phase = "main";
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "draw_card",
+    `${player.name} 抽了一张牌`,
+    { cardName: drawn.card.name }
+  );
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// Helper: Find a Pokemon target (active or bench)
+// ───────────────────────────────────────────────
+
+function findTarget(player: Player, instanceId: string): GameCard | null {
+  if (player.active && player.active.instanceId === instanceId) {
+    return player.active;
+  }
+  return findCard(player.bench, instanceId) ?? null;
+}

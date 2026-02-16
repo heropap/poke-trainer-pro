@@ -89,7 +89,7 @@
       "实现物品卡使用",
       "编写各动作的合法性检查测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 6
   },
   {

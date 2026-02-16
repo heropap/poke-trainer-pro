@@ -74,3 +74,22 @@ Notes: 实现了完整的 PTCG 对战准备阶段流程。
 - 自动放置策略选择最高 HP 作为战斗宝可梦，适合 AI 和快速开始模式
 
 测试: 新增 38 个测试（battle-prepare.test.ts），总计 182 个测试全部通过（9 个测试套件）。
+
+=== Session 6 | 2026-02-16 10:00:00 ===
+Feature: 回合内动作实现 - 附能、进化、撤退、使用支持者/物品
+Status: completed
+Notes: 实现了完整的 PTCG 主阶段动作系统（turn-actions.ts）。
+
+实现内容:
+- attachEnergy(): 附加能量（每回合一次限制），支持战斗区和备战区目标
+- evolvePokemon(): 进化宝可梦（首回合禁用、刚入场禁用、进化链检查），进化保留能量/伤害但清除状态异常
+- retreat(): 撤退（消耗撤退费用丢弃能量，与备战区宝可梦交换）
+- playSupporter(): 使用支持者（每回合一次限制）
+- playItem(): 使用物品卡（不限次数）
+- playBasicToBench(): 放置基础宝可梦到备战区（最多 5 只）
+- drawCard(): 抽牌阶段抽牌（牌组为空触发 deck_out 败北）
+- endTurn(): 结束回合（重置标记、切换玩家、推进回合数）
+
+每个动作都有独立的 canXxx() 合法性检查和 xxx() 执行函数，全部记录事件日志。
+
+测试: 新增 31 个测试（turn-actions.test.ts），总计 213 个测试全部通过（10 个测试套件）。
