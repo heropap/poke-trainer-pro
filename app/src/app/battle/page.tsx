@@ -1,4 +1,5 @@
 import BattlePageClient from "./BattlePageClient";
+import { SocketProvider } from "@/components/socket/SocketContext";
 
 export default function BattlePage() {
   return (
@@ -10,7 +11,9 @@ export default function BattlePage() {
         选择卡组，开始 Pokemon TCG 对战。
       </p>
       <div className="mt-8">
-        <BattlePageClient />
+        <SocketProvider>
+          <BattlePageClient />
+        </SocketProvider>
       </div>
     </div>
   );

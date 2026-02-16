@@ -93,3 +93,48 @@ Notes: 实现了完整的 PTCG 主阶段动作系统（turn-actions.ts）。
 每个动作都有独立的 canXxx() 合法性检查和 xxx() 执行函数，全部记录事件日志。
 
 测试: 新增 31 个测试（turn-actions.test.ts），总计 213 个测试全部通过（10 个测试套件）。
+
+=== Session 7 | 2026-02-16 14:00:00 ===
+Feature: 伤害与击倒系统 + 本地游戏控制器
+Status: completed
+Notes: 实现了完整的 PTCG 伤害计算和击倒系统，并构建了本地游戏控制器使 UI 操作能直接驱动引擎。
+
+实现内容:
+1. engine/game-actions.ts 增强:
+   - calculateWeakness(): 弱点伤害计算（SV 时代 ×2）
+   - calculateResistance(): 抵抗力减伤计算（-30）
+   - calculateDamage(): 完整伤害公式（基础 × 弱点 - 抵抗力，最低 0）
+   - getPrizeCount(): 多奖励卡规则（普通=1张，ex/V/VSTAR/GX=2张，VMAX=3张）
+   - performAttack(): 重写完整攻击流程（伤害计算→弱点/抵抗→击倒判定→奖励卡→胜负判定→备战区提升）
+   - promoteBenchPokemon(): 指定备战区宝可梦提升到战斗区
+   - autoPromoteBench(): 自动提升第一只备战区宝可梦
+   - concede(): 认输（触发 game_over）
+   - canAttack(): 增加主阶段检查
+
+2. engine/game-controller.ts（全新模块）:
+   - processAction(): 主入口，路由所有玩家操作到对应引擎函数
+   - 支持动作: play_card, attack, end_turn, evolve, retreat, promote, concede
+   - 回合验证（不是你的回合时拒绝操作，promote/concede 例外）
+   - 自动抽牌（结束回合后自动为下个玩家抽牌）
+   - 攻击后自动结束回合并抽牌
+   - KO 后自动提升（单只备战区宝可梦时）或提示用户选择
+   - startFirstTurn(): 游戏开始时的首回合处理
+
+3. engine/index.ts: 解决 turn-actions 和 game-actions 的导出冲突
+   - 分别显式导出不冲突的函数
+   - 注释说明冲突函数需从各自模块直接导入
+
+4. BattlePageClient.tsx 重大更新:
+   - 本地模式: 所有 UI 操作通过 GameController 路由到引擎
+   - 在线模式: 通过 Socket.IO 发送操作（保持兼容）
+   - 新增游戏结束覆盖层（显示获胜者、胜利条件、返回按钮）
+   - startFirstTurn() 在本地对战初始化后自动处理首回合抽牌
+
+关键决策:
+- 伤害公式: (基础伤害 × 弱点倍率) - 抵抗力减免，符合官方规则
+- 击倒前捕获 prize count（因为 checkKnockout 会将卡牌移入弃牌堆）
+- 单只备战区宝可梦时自动提升，多只时通过 ActionResult 通知 UI 让玩家选择
+- GameController 使用 shallow clone ({ ...state }) 触发 React 重新渲染
+- TypeScript phase 类型缩窄问题通过 `as string` 解决（引擎函数会原地修改 phase）
+
+测试: 新增 67 个测试（damage-knockout 48个，game-controller 19个），总计 280 个测试全部通过（12 个测试套件）。

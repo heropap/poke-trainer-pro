@@ -1,0 +1,422 @@
+/**
+ * Local Game Controller
+ *
+ * Connects the BattleBoard UI actions to the game engine for local play.
+ * Routes all player actions (play card, attack, end turn, etc.)
+ * through the appropriate engine functions and manages game flow.
+ *
+ * This controller handles:
+ * - Turn flow: draw → main → attack → end turn → opponent draw → ...
+ * - Action routing: play_card, attack, end_turn, evolve, retreat, concede
+ * - Auto-draw at turn start
+ * - Bench promotion after KO
+ * - Game over detection
+ */
+
+import { GameState, logEvent } from "./game-state";
+import {
+  getCurrentPlayer,
+  getOpponent,
+  endTurn as engineEndTurn,
+  drawCard as engineDrawCard,
+} from "./turn-actions";
+import {
+  attachEnergy as taAttachEnergy,
+  evolvePokemon as taEvolvePokemon,
+  retreat as taRetreat,
+  playSupporter as taPlaySupporter,
+  playItem as taPlayItem,
+  playBasicToBench as taPlayBasicToBench,
+} from "./turn-actions";
+import {
+  playActive,
+  playBench,
+  attachEnergy as gaAttachEnergy,
+  performAttack,
+  promoteBenchPokemon,
+  autoPromoteBench,
+  concede,
+  checkWinCondition,
+} from "./game-actions";
+
+// ───────────────────────────────────────────────
+// Action Types (from UI)
+// ───────────────────────────────────────────────
+
+export interface GameAction {
+  type:
+    | "play_card"
+    | "attack"
+    | "end_turn"
+    | "evolve"
+    | "retreat"
+    | "promote"
+    | "concede";
+  cardId?: string;
+  targetZone?: "active" | "bench" | "attach";
+  targetId?: string;
+  attackName?: string;
+  energyToDiscard?: string[];
+  benchInstanceId?: string;
+}
+
+export interface ActionResult {
+  success: boolean;
+  error?: string;
+  gameEnded?: boolean;
+  /** When true, the UI should prompt the defender to choose a bench Pokemon */
+  promotionRequired?: boolean;
+  /** Index of the player who needs to promote */
+  promotionPlayerIndex?: 0 | 1;
+  /** Updated game state after the action */
+  newState: GameState;
+}
+
+// ───────────────────────────────────────────────
+// Game Controller
+// ───────────────────────────────────────────────
+
+/**
+ * Process a player action and return the updated game state.
+ *
+ * This is the main entry point for all local game actions.
+ * The state is mutated in place (engine functions mutate), but
+ * we return a shallow clone to trigger React re-renders.
+ *
+ * @param state - Current game state (will be mutated)
+ * @param playerIndex - Which player is performing the action (0 or 1)
+ * @param action - The action to perform
+ * @returns ActionResult with the updated state
+ */
+export function processAction(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  // Game already over
+  if (state.phase === "game_over") {
+    return {
+      success: false,
+      error: "游戏已结束",
+      newState: { ...state }
+    };
+  }
+
+  // Turn validation: is it this player's turn?
+  // Exception: "promote" can happen when it's not your turn (after your active is KO'd)
+  // Exception: "concede" can happen anytime
+  if (action.type !== "promote" && action.type !== "concede") {
+    if (state.currentPlayer !== playerIndex) {
+      return {
+        success: false,
+        error: "不是你的回合",
+        newState: { ...state }
+      };
+    }
+  }
+
+  let result: ActionResult;
+
+  switch (action.type) {
+    case "play_card":
+      result = handlePlayCard(state, playerIndex, action);
+      break;
+    case "attack":
+      result = handleAttack(state, playerIndex, action);
+      break;
+    case "end_turn":
+      result = handleEndTurn(state, playerIndex);
+      break;
+    case "evolve":
+      result = handleEvolve(state, playerIndex, action);
+      break;
+    case "retreat":
+      result = handleRetreat(state, playerIndex, action);
+      break;
+    case "promote":
+      result = handlePromote(state, playerIndex, action);
+      break;
+    case "concede":
+      result = handleConcede(state, playerIndex);
+      break;
+    default:
+      result = {
+        success: false,
+        error: `未知操作: ${(action as any).type}`,
+        newState: { ...state }
+      };
+  }
+
+  return result;
+}
+
+// ───────────────────────────────────────────────
+// Action Handlers
+// ───────────────────────────────────────────────
+
+function handlePlayCard(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.cardId) {
+    return { success: false, error: "缺少卡牌 ID", newState: { ...state } };
+  }
+
+  if (state.phase !== "main") {
+    return { success: false, error: "只能在主阶段打出卡牌", newState: { ...state } };
+  }
+
+  const player = state.players[playerIndex];
+  const card = player.hand.cards.find(c => c.instanceId === action.cardId);
+  if (!card) {
+    return { success: false, error: "手牌中找不到该卡牌", newState: { ...state } };
+  }
+
+  // Route based on card type and target zone
+  if (action.targetZone === "active") {
+    // Play Basic Pokemon to Active
+    const res = playActive(state, playerIndex, action.cardId);
+    return { ...res, newState: { ...state } };
+  }
+
+  if (action.targetZone === "bench") {
+    // Play Basic Pokemon to Bench
+    const res = playBench(state, playerIndex, action.cardId);
+    return { ...res, newState: { ...state } };
+  }
+
+  if (action.targetZone === "attach" && action.targetId) {
+    // Attach energy to a Pokemon
+    const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
+    return { ...res, newState: { ...state } };
+  }
+
+  // Auto-detect based on card type
+  if (card.card.supertype === "Pokémon" && card.card.subtypes.includes("Basic")) {
+    // If no active, play to active; otherwise bench
+    if (!player.active) {
+      const res = playActive(state, playerIndex, action.cardId);
+      return { ...res, newState: { ...state } };
+    } else {
+      const res = playBench(state, playerIndex, action.cardId);
+      return { ...res, newState: { ...state } };
+    }
+  }
+
+  if (card.card.supertype === "Energy" && action.targetId) {
+    const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
+    return { ...res, newState: { ...state } };
+  }
+
+  if (card.card.supertype === "Trainer") {
+    if (card.card.subtypes.includes("Supporter")) {
+      const res = taPlaySupporter(state, action.cardId);
+      return { success: res.success, error: res.error, newState: { ...state } };
+    }
+    if (card.card.subtypes.includes("Item")) {
+      const res = taPlayItem(state, action.cardId);
+      return { success: res.success, error: res.error, newState: { ...state } };
+    }
+  }
+
+  return { success: false, error: "无法确定如何打出该卡牌", newState: { ...state } };
+}
+
+function handleAttack(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.attackName) {
+    return { success: false, error: "缺少攻击名称", newState: { ...state } };
+  }
+
+  if (state.phase !== "main") {
+    return { success: false, error: "只能在主阶段攻击", newState: { ...state } };
+  }
+
+  const res = performAttack(state, playerIndex, action.attackName);
+
+  if (!res.success) {
+    return { success: false, error: res.error, newState: { ...state } };
+  }
+
+  if (res.gameEnded) {
+    return { success: true, gameEnded: true, newState: { ...state } };
+  }
+
+  // After attack, check if opponent needs to promote
+  const defenderIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;
+  const defender = state.players[defenderIndex];
+
+  if (!defender.active && defender.bench.cards.length > 0) {
+    // Defender needs to promote — but if only 1 bench, auto-promote
+    if (defender.bench.cards.length === 1) {
+      autoPromoteBench(state, defenderIndex);
+    } else {
+      // Signal to UI that promotion is needed before turn ends
+      // We'll end the attacker's turn, then the defender must promote
+      // before their draw phase
+      const endRes = engineEndTurn(state);
+      if (endRes.success) {
+        // Now it's the defender's turn but they need to promote first
+        return {
+          success: true,
+          promotionRequired: true,
+          promotionPlayerIndex: defenderIndex,
+          newState: { ...state }
+        };
+      }
+    }
+  }
+
+  // End the attacker's turn (attack ends the turn in PTCG)
+  const endRes = engineEndTurn(state);
+
+  // Auto-draw for the new turn's player
+  // Note: engineEndTurn mutates state.phase to "draw", but TS can't track this
+  const phaseAfterEnd = state.phase as string;
+  if (endRes.success && phaseAfterEnd === "draw") {
+    engineDrawCard(state);
+    const phaseAfterDraw = state.phase as string;
+    if (phaseAfterDraw === "game_over") {
+      return { success: true, gameEnded: true, newState: { ...state } };
+    }
+  }
+
+  return { success: true, newState: { ...state } };
+}
+
+function handleEndTurn(
+  state: GameState,
+  playerIndex: 0 | 1
+): ActionResult {
+  if (state.phase !== "main") {
+    return { success: false, error: "当前阶段不能结束回合", newState: { ...state } };
+  }
+
+  // End the turn
+  const res = engineEndTurn(state);
+
+  if (!res.success) {
+    return { success: false, error: res.error, newState: { ...state } };
+  }
+
+  // Auto-draw for the new turn's player
+  // Note: engineEndTurn mutates state.phase to "draw", but TS can't track this
+  const phaseAfterEnd = state.phase as string;
+  if (phaseAfterEnd === "draw") {
+    engineDrawCard(state);
+    const phaseAfterDraw = state.phase as string;
+    if (phaseAfterDraw === "game_over") {
+      return { success: true, gameEnded: true, newState: { ...state } };
+    }
+  }
+
+  return { success: true, newState: { ...state } };
+}
+
+function handleEvolve(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.cardId || !action.targetId) {
+    return { success: false, error: "缺少进化卡或目标 ID", newState: { ...state } };
+  }
+
+  const res = taEvolvePokemon(state, action.cardId, action.targetId);
+  return { success: res.success, error: res.error, newState: { ...state } };
+}
+
+function handleRetreat(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.benchInstanceId) {
+    return { success: false, error: "缺少替换目标", newState: { ...state } };
+  }
+
+  const energyToDiscard = action.energyToDiscard || [];
+  const res = taRetreat(state, energyToDiscard, action.benchInstanceId);
+  return { success: res.success, error: res.error, newState: { ...state } };
+}
+
+function handlePromote(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): ActionResult {
+  if (!action.benchInstanceId) {
+    return { success: false, error: "缺少备战区宝可梦 ID", newState: { ...state } };
+  }
+
+  const player = state.players[playerIndex];
+
+  // Verify this player actually needs to promote
+  if (player.active) {
+    return { success: false, error: "战斗区已有宝可梦", newState: { ...state } };
+  }
+
+  const res = promoteBenchPokemon(state, playerIndex, action.benchInstanceId);
+
+  if (!res.success) {
+    return { success: false, error: res.error, newState: { ...state } };
+  }
+
+  // If it was the draw phase and we just promoted, auto-draw
+  const phaseAfterPromote = state.phase as string;
+  if (phaseAfterPromote === "draw") {
+    engineDrawCard(state);
+    const phaseAfterDraw = state.phase as string;
+    if (phaseAfterDraw === "game_over") {
+      return { success: true, gameEnded: true, newState: { ...state } };
+    }
+  }
+
+  return { success: true, newState: { ...state } };
+}
+
+function handleConcede(
+  state: GameState,
+  playerIndex: 0 | 1
+): ActionResult {
+  const res = concede(state, playerIndex);
+  return {
+    success: res.success,
+    error: res.error,
+    gameEnded: res.gameEnded,
+    newState: { ...state }
+  };
+}
+
+// ───────────────────────────────────────────────
+// Helper: Start a new game's first turn
+// ───────────────────────────────────────────────
+
+/**
+ * After game initialization (setup phase), start the first player's turn.
+ * This handles the transition from "setup" → "draw" → "main".
+ */
+export function startFirstTurn(state: GameState): GameState {
+  const currentPhase = state.phase as string;
+  if (currentPhase === "main") {
+    // Already in main phase
+    return { ...state };
+  }
+
+  if (currentPhase === "draw") {
+    // In draw phase, perform the draw
+    engineDrawCard(state);
+    return { ...state };
+  }
+
+  // Transition to draw phase for the first player
+  state.phase = "draw";
+  state.turn = 1;
+
+  engineDrawCard(state);
+  return { ...state };
+}
