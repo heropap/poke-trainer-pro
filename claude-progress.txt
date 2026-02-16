@@ -356,3 +356,63 @@ Notes: 发现并修复了 game-controller.ts handlePlayCard() 中的路由顺序
    - 现在返回结果供 BattleBoard 展示
 
 测试: 351 个测试全部通过。TypeScript 编译 0 错误。
+
+=== Session 12 | 2026-02-16 ===
+Feature: 自动化集成测试 - 卡牌打出全路径覆盖
+Status: completed
+Notes: 编写了全面的集成测试，覆盖所有卡牌类型通过 processAction play_card 路由的完整路径。
+
+实现内容:
+- card-play-integration.test.ts（全新测试文件，37个测试）:
+
+  1. Basic Pokemon Play（5个测试）:
+     - 指定 bench/active 放置
+     - 自动检测（active 空→active，否则→bench）
+     - 备战区满时拒绝
+
+  2. Energy Attachment（5个测试）:
+     - 附加到 active/bench
+     - targetZone=attach + targetId 路由正确
+     - 缺少 targetId 报错
+     - 每回合只能附加一次
+
+  3. Supporter Play（3个测试）:
+     - 成功打出进入弃牌堆
+     - 每回合一张限制
+     - 忽略 targetId（不需要目标）
+
+  4. Item Play（2个测试）:
+     - 成功打出进入弃牌堆
+     - 不受每回合限制
+
+  5. Pokemon Tool（5个测试）:
+     - 装备到 active/bench
+     - 缺少 targetId 报错
+     - **核心回归测试**: targetZone=attach 不走能量路径（Session 11b 修复验证）
+     - 已有工具时拒绝
+
+  6. Evolution（4个测试）:
+     - Stage 1 成功进化
+     - 缺少 targetId 报错
+     - 本回合刚入场禁止进化
+     - 进化链不匹配报错
+
+  7. Error Cases（5个测试）:
+     - 非 main phase 拒绝
+     - 对方回合拒绝
+     - 缺少 cardId/不存在的 cardId
+     - 游戏结束后拒绝
+
+  8. Multi-Step Turn Flows（3个测试）:
+     - 能量→物品→宝可梦同回合组合
+     - 支持者→工具→结束回合流程
+     - 5步完整回合: 宝可梦→能量→工具→支持者→物品→结束
+
+  9. Card Type Routing Regression（5个测试）:
+     - Tool + targetZone=attach → 走工具路径不走能量
+     - Energy + targetZone=attach → 正确附加
+     - Supporter + 错误 targetZone → 仍走支持者路径
+     - Item + 错误 targetZone → 仍走物品路径
+     - Basic + targetZone=attach → 自动检测放置
+
+测试: 新增 37 个测试，总计 388 个测试全部通过（15 个测试套件）。TypeScript 编译 0 错误。
