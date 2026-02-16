@@ -43,6 +43,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
     });
 
+    socketInstance.on("connect_error", (error) => {
+      console.warn("[Socket] Connection error:", error.message);
+      setIsConnected(false);
+    });
+
     setSocket(socketInstance);
 
     return () => {

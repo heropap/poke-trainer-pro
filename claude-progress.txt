@@ -635,3 +635,42 @@ Notes:
      new: rule-fixes-15c.test.ts (16 个新测试)
 
 测试: 新增 16 个测试，总计 517 个测试全部通过（20 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 16 | 2026-02-16 ===
+Feature: 运行时排查 + 关键修复 — 可能导致"无法对战"的 4 个嫌疑点
+Status: completed
+Notes:
+  用户报告"无法正常对战"，尽管 517 个单元测试全通过。对 4 个嫌疑点逐一排查：
+
+  嫌疑 1 — 动作日志侧边栏缺失导致 UI 崩溃 → ✅ 安全
+  - UI 从未引用 ActionLog 组件，state.log 存在但不渲染
+  - 不会导致任何崩溃
+
+  嫌疑 2 — Socket.IO 通信链路断裂 → 🔴 关键问题
+  - 发现: npm run dev (纯 Next.js) 和 npm run dev:socket (统一服务器) 是两个不同命令
+  - server.ts 是统一 HTTP 服务器(Next.js + Socket.IO 共享端口 3000)
+  - 但用户可能只运行 npm run dev，导致 Socket.IO 永远不启动
+  - 修复: package.json 的 "dev" 改为指向统一服务器(ts-node server.ts)
+  - 修复: SocketContext 添加 connect_error 事件处理，不再静默失败
+
+  嫌疑 3 — 未实现卡牌效果导致注册表未命中 → ✅ 安全
+  - 所有 getEffect() 使用 ?. 安全链，返回 null 时静默降级
+  - 训练师卡无效果 → 打出后无效但不崩溃(卡牌正常弃置)
+  - 攻击无效果 → 回退到卡面基础伤害
+  - AI 只选择有注册效果的训练师卡使用
+
+  嫌疑 4 — AI 决策死循环 → 🟡 中高风险
+  - executeAITurn() 递归 setTimeout 无动作上限
+  - 理论上某些边缘状态可导致无限循环
+  - 修复: 添加 AI_MAX_ACTIONS_PER_TURN = 30 安全上限
+  - 超过上限自动强制 end_turn
+
+  验证:
+  - 统一服务器 (npm run dev) 成功启动，HTTP 200
+  - Socket.IO polling 端点正常响应(返回 sid + websocket upgrade)
+  - 全部 566 个测试通过（21 个测试套件），0 TS 错误
+
+  文件变更: 3 个文件
+     modified: package.json (dev 指向统一服务器)
+     modified: SocketContext.tsx (添加 connect_error 处理)
+     modified: BattlePageClient.tsx (AI 动作上限 + 提示文字更新)

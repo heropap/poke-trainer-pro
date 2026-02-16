@@ -20,6 +20,8 @@ type BattleMode = "ai" | "local" | "online";
 // ─── AI Turn Execution Delay (ms) ───
 const AI_ACTION_DELAY = 800;
 const AI_TURN_START_DELAY = 600;
+/** Maximum actions the AI can take per turn to prevent infinite loops */
+const AI_MAX_ACTIONS_PER_TURN = 30;
 
 export default function BattlePageClient() {
   const { validDecks, loading: decksLoading } = useDeckContext();
@@ -179,7 +181,7 @@ export default function BattlePageClient() {
    * This runs recursively: after each action, if the AI still
    * has the turn, it computes and executes the next action.
    */
-  const executeAITurn = useCallback((currentState: GameState) => {
+  const executeAITurn = useCallback((currentState: GameState, actionCount: number = 0) => {
     if (currentState.phase === "game_over") {
       setAiThinking(false);
       return;
@@ -190,6 +192,18 @@ export default function BattlePageClient() {
 
     if (currentState.currentPlayer !== aiIndex) {
       // Not AI's turn anymore
+      setAiThinking(false);
+      setAiLastAction("");
+      return;
+    }
+
+    // Safety: prevent infinite action loops
+    if (actionCount >= AI_MAX_ACTIONS_PER_TURN) {
+      console.warn(`[AI] Hit max actions per turn (${AI_MAX_ACTIONS_PER_TURN}), forcing end turn`);
+      const endResult = processAction(currentState, aiIndex, { type: "end_turn" });
+      if (endResult.success) {
+        setGameState(endResult.newState);
+      }
       setAiThinking(false);
       setAiLastAction("");
       return;
@@ -225,7 +239,7 @@ export default function BattlePageClient() {
         return;
       }
 
-      console.log(`[AI] ${freshDecision.reason}`);
+      console.log(`[AI] (${actionCount + 1}/${AI_MAX_ACTIONS_PER_TURN}) ${freshDecision.reason}`);
       setAiLastAction(freshDecision.reason);
 
       const result = processAction(latestState, aiIndex, freshDecision.action);
@@ -247,7 +261,7 @@ export default function BattlePageClient() {
             // Get the latest state from ref again
             const nextState = gameStateRef.current;
             if (nextState && nextState.currentPlayer === aiIndex) {
-              executeAITurn(nextState);
+              executeAITurn(nextState, actionCount + 1);
             } else {
               setAiThinking(false);
               setAiLastAction("");
@@ -679,7 +693,7 @@ export default function BattlePageClient() {
           {/* Socket Status */}
           <div className={`flex items-center gap-2 text-sm ${isConnected ? 'text-green-600' : 'text-amber-600'}`}>
             <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-            {isConnected ? '已连接服务器' : '未连接服务器 (请使用 npm run dev:socket 启动)'}
+            {isConnected ? '已连接服务器' : '未连接服务器 (请使用 npm run dev 启动统一服务器)'}
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
