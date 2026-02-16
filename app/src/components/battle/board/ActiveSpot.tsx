@@ -28,7 +28,7 @@ export function ActiveSpot({
   const { setNodeRef: setPokemonRef, isOver: isOverPokemon } = useDroppable({
     id: "active-pokemon",
     disabled: !card || isOpponent,
-    data: { current: card }
+    data: { instanceId: card?.instanceId }
   });
 
   return (

@@ -158,16 +158,26 @@ app.prepare().then(() => {
     socket.on("game:action", (data) => {
       const { gameId, action } = data;
       const game = games.get(gameId);
-      
+
       if (game) {
-        const success = game.handleAction(socket.id, action);
-        if (success) {
+        const result = game.handleAction(socket.id, action);
+        if (result.success) {
           // Broadcast updated state to all players in the room
           io.to(gameId).emit("game:state_update", {
             gameState: game.state
           });
+
+          // If the game ended, also emit a game_over event
+          if (result.gameEnded) {
+            io.to(gameId).emit("game:over", {
+              gameState: game.state,
+              winner: game.state.winner
+            });
+          }
         } else {
-          socket.emit("error", { message: "Invalid action" });
+          socket.emit("game:action_error", {
+            error: result.error || "Invalid action"
+          });
         }
       } else {
         socket.emit("error", { message: "Game not found" });

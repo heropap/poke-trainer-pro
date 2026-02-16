@@ -64,9 +64,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         });
       } else if (targetZone === "active-pokemon" || String(targetZone).startsWith("bench-pokemon-")) {
         // Attaching energy/tools to an existing pokemon
-        // Target ID needs to be the instanceId of the pokemon
-        const targetInstanceId = over.data.current?.instanceId;
-        
+        // over.data.current holds { instanceId: string } set by ActiveSpot/BenchSpot
+        const targetInstanceId = (over.data.current as any)?.instanceId;
+
         if (targetInstanceId) {
           onAction?.({
             type: "play_card",

@@ -19,7 +19,7 @@ export function BenchSpot({ card, index, onClick }: BenchSpotProps) {
   const { setNodeRef: setPokemonRef, isOver: isOverPokemon } = useDroppable({
     id: `bench-pokemon-${index}`,
     disabled: !card,
-    data: { current: card }
+    data: { instanceId: card?.instanceId }
   });
 
   return (

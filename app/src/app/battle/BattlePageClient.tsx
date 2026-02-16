@@ -130,11 +130,20 @@ export default function BattlePageClient() {
     }
   }, [gameState]);
 
-  const handleStartBattle = useCallback(() => {
+  /**
+   * Start a local battle.
+   * Accepts an optional overrideDeck2Id so that the caller can pass
+   * a deck ID directly without waiting for React state to update.
+   */
+  const handleStartBattle = useCallback((overrideDeck2Id?: string) => {
     const deck1 = validDecks.find((d) => d.id === selectedDeck1);
-    const deck2 = validDecks.find((d) => d.id === selectedDeck2);
+    const deck2Id = overrideDeck2Id || selectedDeck2;
+    const deck2 = validDecks.find((d) => d.id === deck2Id);
 
-    if (!deck1 || !deck2) return;
+    if (!deck1 || !deck2) {
+      console.warn("[BattlePage] Missing deck:", { deck1: !!deck1, deck2: !!deck2, selectedDeck1, deck2Id });
+      return;
+    }
 
     console.log("[BattlePage] Starting local battle...");
     console.log(`  Player 1: ${deck1.name}`);
@@ -224,7 +233,11 @@ export default function BattlePageClient() {
       <div className="fixed inset-0 z-50 bg-zinc-950">
         <BattleBoard
           gameState={gameState}
-          currentPlayerId={myPlayerId === 1 ? "p2" : "p1"}
+          currentPlayerId={
+            isLocalGame.current
+              ? (gameState.currentPlayer === 0 ? "p1" : "p2") // Local: show from current player's perspective
+              : (myPlayerId === 1 ? "p2" : "p1") // Online: fixed perspective
+          }
           onAction={(action: any) => {
             if (isLocalGame.current) {
               // Route all actions through the local GameController
@@ -373,9 +386,18 @@ export default function BattlePageClient() {
         
         <button
           onClick={() => {
-              // Quick start local
-              if (validDecks.length >= 2 && !selectedDeck2) setSelectedDeck2(validDecks[1].id || validDecks[0].id);
-              handleStartBattle();
+              // Determine deck2 immediately (don't rely on async state)
+              let deck2Id = selectedDeck2;
+              if (!deck2Id && validDecks.length >= 2) {
+                deck2Id = validDecks[1].id;
+                setSelectedDeck2(deck2Id); // also update state for display
+              } else if (!deck2Id && validDecks.length === 1) {
+                // Only 1 deck: use the same deck for both sides (mirror match)
+                deck2Id = validDecks[0].id;
+                setSelectedDeck2(deck2Id);
+              }
+              // Pass deck2Id directly to avoid React state race condition
+              handleStartBattle(deck2Id);
           }}
           disabled={!selectedDeck1}
           className="w-full rounded-lg border border-zinc-300 bg-white px-6 py-3 text-base font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"

@@ -1,30 +1,25 @@
 
-import { 
-  GameState, 
-  Player, 
-  GameCard, 
-  createGameState, 
-  createGameCard, 
+import {
+  GameState,
+  Player,
+  GameCard,
+  createGameState,
+  createGameCard,
   createZone,
-  logEvent 
+  logEvent
 } from "../engine/game-state";
-import { 
-  shuffleZone, 
-  drawMultiple, 
-  addCards, 
-  hasBasicPokemon 
+import {
+  shuffleZone,
+  drawMultiple,
+  addCards,
+  hasBasicPokemon
 } from "../engine/zones";
-import { 
-  executePreparation, 
-  INITIAL_HAND_SIZE, 
-  PRIZE_CARD_COUNT 
+import {
+  executePreparation,
+  INITIAL_HAND_SIZE,
+  PRIZE_CARD_COUNT
 } from "../engine/battle-prepare";
-import { 
-  playActive,
-  playBench,
-  attachEnergy,
-  performAttack
-} from "../engine/game-actions";
+import { processAction, startFirstTurn, GameAction, ActionResult } from "../engine/game-controller";
 import { Card } from "../types/card";
 
 // Interface for what we need from a stored deck on the server
@@ -56,6 +51,8 @@ export class GameRoom {
     
     // Initialize empty game state
     this.state = createGameState(p1Name, p2Name);
+    // Sync gameState.gameId with room id so the client can reference it
+    this.state.gameId = id;
   }
 
   /**
@@ -91,12 +88,15 @@ export class GameRoom {
 
     // Execute preparation (Mulligan, etc.)
     const prepResult = executePreparation(this.state, Math.random);
-    
+
     if (!prepResult.success) {
       console.error("Preparation failed:", prepResult.errors);
       return false;
     }
-    
+
+    // Start the first turn (transition from setup/draw → main phase)
+    this.state = startFirstTurn(this.state);
+
     return true;
   }
 
@@ -125,70 +125,19 @@ export class GameRoom {
   }
 
   /**
-   * Handle a player action
+   * Handle a player action using the unified GameController.
+   * Returns the ActionResult so the server can broadcast the updated state.
    */
-  public handleAction(socketId: string, action: any): boolean {
-    const playerIndex = socketId === this.player1SocketId ? 0 : 1;
-    
-    // Basic validation: is it this player's turn?
-    if (this.state.currentPlayer !== playerIndex) {
-      console.warn(`Player ${playerIndex} tried to act out of turn`);
-      return false;
+  public handleAction(socketId: string, action: any): ActionResult {
+    const playerIndex = (socketId === this.player1SocketId ? 0 : 1) as 0 | 1;
+
+    const result = processAction(this.state, playerIndex, action as GameAction);
+
+    if (result.success) {
+      // processAction returns a shallow clone; update our authoritative state
+      this.state = result.newState;
     }
 
-    switch (action.type) {
-      case "end_turn":
-        this.endTurn();
-        break;
-      case "play_card":
-        // Handle playing a card (Active, Bench, or Attach)
-        if (action.targetZone === "active") {
-          playActive(this.state, playerIndex, action.cardId);
-        } else if (action.targetZone === "bench") {
-          playBench(this.state, playerIndex, action.cardId);
-        } else if (action.targetZone === "attach" && action.targetId) {
-          attachEnergy(this.state, playerIndex, action.cardId, action.targetId);
-        }
-        break;
-      case "attack":
-        const result = performAttack(this.state, playerIndex, action.attackName);
-        if (result.success) {
-          if (!result.gameEnded) {
-            this.endTurn();
-          }
-        } else {
-          console.warn(`Attack failed: ${result.error}`);
-          return false;
-        }
-        break;
-      default:
-        console.warn(`Unknown action type: ${action.type}`);
-        return false;
-    }
-    
-    return true;
-  }
-
-  private endTurn(): void {
-    // Basic turn switching logic
-    this.state.currentPlayer = this.state.currentPlayer === 0 ? 1 : 0;
-    this.state.turn++;
-    
-    const currentPlayer = this.state.players[this.state.currentPlayer];
-    currentPlayer.energyAttachedThisTurn = false;
-    currentPlayer.supporterUsedThisTurn = false;
-    
-    // Draw a card for the new turn player
-    const drawn = drawMultiple(currentPlayer.deck, 1);
-    if (drawn.length > 0) {
-      addCards(currentPlayer.hand, drawn);
-      logEvent(this.state, this.state.currentPlayer, "draw_card", `${currentPlayer.name} 抽了一张牌`);
-    } else {
-      logEvent(this.state, this.state.currentPlayer, "game_over", `${currentPlayer.name} 牌组耗尽，无法抽牌！`);
-    }
-    
-    this.state.phase = "main"; // Simplified phase transition
-    
-    logEvent(this.state, this.state.currentPlayer, "game_start", `第 ${this.state.turn} 回合开始，轮到 ${currentPlayer.name}`);
+    return result;
   }
 }
