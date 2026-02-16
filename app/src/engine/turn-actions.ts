@@ -316,6 +316,9 @@ export function retreat(
     }
   }
 
+  // PTCG Rule: leaving the Active spot clears ALL status conditions
+  active.statusConditions = [];
+
   // Swap: active → bench, bench target → active
   removeCard(player.bench, benchInstanceId);
   addToBottom(player.bench, active);
@@ -574,10 +577,20 @@ export function endTurn(state: GameState): ActionResult {
   const currentPlayerIndex = state.currentPlayer;
   const player = getCurrentPlayer(state);
 
-  // Process between-turns status effects (poison, burn, asleep, paralyzed)
+  // Process between-turns status effects for BOTH players (PTCG rule)
+  // Current player's active Pokemon checked first, then opponent's
   processBetweenTurns(state, currentPlayerIndex);
 
   // Check if status damage caused a game over
+  if ((state.phase as string) === "game_over") {
+    return ok();
+  }
+
+  // Process opponent's active Pokemon status effects
+  const opponentIndex = (currentPlayerIndex === 0 ? 1 : 0) as 0 | 1;
+  processBetweenTurns(state, opponentIndex);
+
+  // Check again if opponent's status damage caused a game over
   if ((state.phase as string) === "game_over") {
     return ok();
   }

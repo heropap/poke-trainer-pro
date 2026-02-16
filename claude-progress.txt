@@ -571,3 +571,41 @@ Notes:
      new: status-attack-checks.test.ts
 
 测试: 新增 29 个测试，总计 480 个测试全部通过（18 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 15b | 2026-02-16 ===
+Feature: PTCG 核心规则审计 + 4 个严重 Bug 修复
+Status: completed
+Notes:
+  用户质疑引擎是否真正了解 PTCG 规则。做了完整的规则审计，发现 4 个严重错误：
+
+  Bug 1 — 撤退不清除状态异常 [CRITICAL]
+  - turn-actions.ts retreat() 函数未清除撤退宝可梦的状态
+  - 修复: 在 swap 之前加 active.statusConditions = []
+  - PTCG 规则: 任何宝可梦离开战斗区时清除所有状态
+
+  Bug 2 — switchOpponentActive 不清除状态 [CRITICAL]
+  - effect-context.ts switchOpponentActive() 未清除被换下宝可梦状态
+  - 对比: switchOwnActive() 已正确实现清除
+  - 修复: 加 currentActive.statusConditions = []
+
+  Bug 3 — 回合结束只处理当前玩家的状态异常 [CRITICAL]
+  - endTurn() 只调用 processBetweenTurns(currentPlayer)
+  - PTCG 规则: Between Turns 双方活跃宝可梦都要处理状态
+  - 场景: A 攻击使 B 中毒 → A 回合结束 → B 应该受 10 毒伤 → 但引擎没处理
+  - 修复: 调用两次 processBetweenTurns，先当前玩家再对手
+
+  Bug 4 — handleAttack 多 bench 升级路径提前调用 endTurn [HIGH]
+  - 对手被 KO 后有多只 bench 时，endTurn 在升级选择前就执行了
+  - 导致 between-turns 状态处理在宝可梦不完整时就运行
+  - 修复: 移除 handleAttack 中的提前 endTurn，改到 handlePromote 中执行
+
+  审计确认已正确实现的规则:
+  - 回合结构、首回合限制、进化规则、能量附加限制
+  - 无限次撤退（符合官方）、支持者限制、弱点/抵抗力
+  - 奖励卡计数、三个胜利条件、KO 丢弃附件、能量类型检查
+
+  文件变更: 4 个文件
+     modified: turn-actions.ts, effect-context.ts, game-controller.ts
+     new: rule-fixes-15b.test.ts
+
+测试: 新增 21 个测试，总计 501 个测试全部通过（19 个测试套件）。TypeScript 编译 0 错误。

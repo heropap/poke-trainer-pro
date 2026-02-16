@@ -275,6 +275,9 @@ export function createEffectContext(
       addToBottom(opp.bench, currentActive);
       opp.active = benchCard;
 
+      // PTCG Rule: leaving the Active spot clears ALL status conditions
+      currentActive.statusConditions = [];
+
       logEvent(state, playerIndex, "retreat",
         `${source.card.name} 的效果将 ${benchCard.card.name} 拖到了战斗区!`,
         { newActive: benchCard.card.name, oldActive: currentActive.card.name }

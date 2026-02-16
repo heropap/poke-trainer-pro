@@ -288,19 +288,17 @@ function handleAttack(
     if (defender.bench.cards.length === 1) {
       autoPromoteBench(state, defenderIndex);
     } else {
-      // Signal to UI that promotion is needed before turn ends
-      // We'll end the attacker's turn, then the defender must promote
-      // before their draw phase
-      const endRes = engineEndTurn(state);
-      if (endRes.success) {
-        // Now it's the defender's turn but they need to promote first
-        return {
-          success: true,
-          promotionRequired: true,
-          promotionPlayerIndex: defenderIndex,
-          newState: { ...state }
-        };
-      }
+      // Multiple bench: signal UI that defender must choose promotion
+      // Do NOT call endTurn here — it will be called in handlePromote
+      // after the defender selects which Pokemon to promote.
+      // This ensures between-turns status processing happens with
+      // all Pokemon properly on the field.
+      return {
+        success: true,
+        promotionRequired: true,
+        promotionPlayerIndex: defenderIndex,
+        newState: { ...state }
+      };
     }
   }
 
@@ -399,9 +397,24 @@ function handlePromote(
     return { success: false, error: res.error, newState: { ...state } };
   }
 
-  // If it was the draw phase and we just promoted, auto-draw
+  // If we're still in "main" phase, this promotion was triggered after a KO
+  // during the opponent's attack. We need to end the attacker's turn now.
   const phaseAfterPromote = state.phase as string;
-  if (phaseAfterPromote === "draw") {
+  if (phaseAfterPromote === "main") {
+    // End the attacker's turn (between-turns processing happens here)
+    const endRes = engineEndTurn(state);
+
+    // Auto-draw for the new turn's player
+    const phaseAfterEnd = state.phase as string;
+    if (endRes.success && phaseAfterEnd === "draw") {
+      engineDrawCard(state);
+      const phaseAfterDraw = state.phase as string;
+      if (phaseAfterDraw === "game_over") {
+        return { success: true, gameEnded: true, newState: { ...state } };
+      }
+    }
+  } else if (phaseAfterPromote === "draw") {
+    // Legacy path: already in draw phase, just draw
     engineDrawCard(state);
     const phaseAfterDraw = state.phase as string;
     if (phaseAfterDraw === "game_over") {
