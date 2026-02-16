@@ -168,7 +168,7 @@
       "针对 ex 环境调整评估权重",
       "编写 AI 决策测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 12
   },
   {

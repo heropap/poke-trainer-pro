@@ -10,7 +10,16 @@ import { initializeGame, SetupResult } from "@/engine/battle-setup";
 import { GameState, GameCard } from "@/engine/game-state";
 import { zoneSize } from "@/engine/zones";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
+import { computeAIAction, AIDecision } from "@/engine/ai-player";
 import Link from "next/link";
+
+// ─── Battle Mode Types ───
+
+type BattleMode = "ai" | "local" | "online";
+
+// ─── AI Turn Execution Delay (ms) ───
+const AI_ACTION_DELAY = 800;
+const AI_TURN_START_DELAY = 600;
 
 export default function BattlePageClient() {
   const { validDecks, loading: decksLoading } = useDeckContext();
@@ -26,6 +35,30 @@ export default function BattlePageClient() {
 
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
+  const [battleMode, setBattleMode] = useState<BattleMode>("ai");
+  const [lobbyTab, setLobbyTab] = useState<"ai" | "online">("ai");
+
+  // AI state
+  const [aiThinking, setAiThinking] = useState(false);
+  const [aiLastAction, setAiLastAction] = useState<string>("");
+  const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref to hold the latest gameState for AI async callbacks
+  const gameStateRef = useRef<GameState | null>(null);
+
+  // Track whether we're in local mode or online mode
+  const isLocalGame = useRef(false);
+
+  // Keep ref in sync
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Cleanup AI timer on unmount
+  useEffect(() => {
+    return () => {
+      if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    };
+  }, []);
 
   // Load card data
   useEffect(() => {
@@ -63,7 +96,6 @@ export default function BattlePageClient() {
       console.log("Match found!", data);
       setIsMatchmaking(false);
       setMatchFound(true);
-      // Wait for game_start event
     }
 
     function onGameStart(data: any) {
@@ -95,18 +127,133 @@ export default function BattlePageClient() {
     };
   }, [socket]);
 
-  // Track whether we're in local mode or online mode
-  const isLocalGame = useRef(false);
+  // ─── AI Turn Execution ───
+
+  /**
+   * Execute a single AI action with a delay.
+   * This runs recursively: after each action, if the AI still
+   * has the turn, it computes and executes the next action.
+   */
+  const executeAITurn = useCallback((currentState: GameState) => {
+    if (currentState.phase === "game_over") {
+      setAiThinking(false);
+      return;
+    }
+
+    // AI is player index 1
+    const aiIndex = 1 as const;
+
+    if (currentState.currentPlayer !== aiIndex) {
+      // Not AI's turn anymore
+      setAiThinking(false);
+      setAiLastAction("");
+      return;
+    }
+
+    setAiThinking(true);
+
+    const decision = computeAIAction(currentState, aiIndex);
+    if (!decision) {
+      setAiThinking(false);
+      return;
+    }
+
+    // Execute the action after a delay so the player can see it
+    aiTimerRef.current = setTimeout(() => {
+      // Use the ref to get the absolute latest state
+      const latestState = gameStateRef.current;
+      if (!latestState || latestState.phase === "game_over") {
+        setAiThinking(false);
+        return;
+      }
+
+      // Re-check it's still AI's turn
+      if (latestState.currentPlayer !== aiIndex) {
+        setAiThinking(false);
+        return;
+      }
+
+      // Re-compute decision with latest state (state might have changed)
+      const freshDecision = computeAIAction(latestState, aiIndex);
+      if (!freshDecision) {
+        setAiThinking(false);
+        return;
+      }
+
+      console.log(`[AI] ${freshDecision.reason}`);
+      setAiLastAction(freshDecision.reason);
+
+      const result = processAction(latestState, aiIndex, freshDecision.action);
+
+      if (result.success) {
+        setGameState(result.newState);
+
+        // If game ended or turn switched, stop
+        if (result.gameEnded || result.newState.phase === "game_over") {
+          setAiThinking(false);
+          setAiLastAction("");
+          return;
+        }
+
+        // If it's still AI's turn (e.g., played a card but didn't attack yet),
+        // continue executing actions after a short delay
+        if (result.newState.currentPlayer === aiIndex) {
+          aiTimerRef.current = setTimeout(() => {
+            // Get the latest state from ref again
+            const nextState = gameStateRef.current;
+            if (nextState && nextState.currentPlayer === aiIndex) {
+              executeAITurn(nextState);
+            } else {
+              setAiThinking(false);
+              setAiLastAction("");
+            }
+          }, AI_ACTION_DELAY);
+        } else {
+          // Turn switched to human
+          setAiThinking(false);
+          setAiLastAction("");
+        }
+      } else {
+        console.warn(`[AI] Action failed: ${result.error}, ending turn`);
+        // If AI action fails, try to end turn
+        const endResult = processAction(latestState, aiIndex, { type: "end_turn" });
+        if (endResult.success) {
+          setGameState(endResult.newState);
+        }
+        setAiThinking(false);
+        setAiLastAction("");
+      }
+    }, AI_ACTION_DELAY);
+  }, []);
+
+  /**
+   * Trigger AI turn when it becomes AI's turn (only in AI mode).
+   */
+  useEffect(() => {
+    if (!gameState || battleMode !== "ai" || !isLocalGame.current) return;
+    if (gameState.phase === "game_over") return;
+
+    // AI is player 1
+    if (gameState.currentPlayer === 1 && !aiThinking) {
+      // Small delay before AI starts its turn
+      aiTimerRef.current = setTimeout(() => {
+        const latest = gameStateRef.current;
+        if (latest && latest.currentPlayer === 1) {
+          executeAITurn(latest);
+        }
+      }, AI_TURN_START_DELAY);
+    }
+  }, [gameState, battleMode, aiThinking, executeAITurn]);
+
+  // ─── Action Handlers ───
 
   const handleEndTurn = useCallback(() => {
     if (!gameState) return;
 
     if (isLocalGame.current) {
-      // Local game: use GameController
       const result = processAction(gameState, gameState.currentPlayer, { type: "end_turn" });
       setGameState(result.newState);
     } else if (socket) {
-      // Online game: emit via socket
       socket.emit("game:action", {
         gameId: gameState.gameId,
         action: { type: "end_turn" }
@@ -116,9 +263,16 @@ export default function BattlePageClient() {
 
   /**
    * Handle all game actions from BattleBoard for local play.
+   * In AI mode, only player 0 (human) can issue actions this way.
    */
   const handleLocalAction = useCallback((action: GameAction) => {
     if (!gameState || !isLocalGame.current) return;
+
+    // In AI mode, block actions during AI's turn
+    if (battleMode === "ai" && gameState.currentPlayer !== 0) {
+      console.warn("[AI Mode] It's the AI's turn, action blocked");
+      return;
+    }
 
     const playerIndex = gameState.currentPlayer;
     const result = processAction(gameState, playerIndex, action);
@@ -128,14 +282,12 @@ export default function BattlePageClient() {
     } else {
       console.warn(`[LocalGame] Action failed: ${result.error}`);
     }
-  }, [gameState]);
+  }, [gameState, battleMode]);
 
   /**
-   * Start a local battle.
-   * Accepts an optional overrideDeck2Id so that the caller can pass
-   * a deck ID directly without waiting for React state to update.
+   * Start a local/AI battle.
    */
-  const handleStartBattle = useCallback((overrideDeck2Id?: string) => {
+  const handleStartBattle = useCallback((overrideDeck2Id?: string, mode?: BattleMode) => {
     const deck1 = validDecks.find((d) => d.id === selectedDeck1);
     const deck2Id = overrideDeck2Id || selectedDeck2;
     const deck2 = validDecks.find((d) => d.id === deck2Id);
@@ -145,35 +297,35 @@ export default function BattlePageClient() {
       return;
     }
 
-    console.log("[BattlePage] Starting local battle...");
-    console.log(`  Player 1: ${deck1.name}`);
-    console.log(`  Player 2: ${deck2.name}`);
+    const effectiveMode = mode || battleMode;
+    const p2Name = effectiveMode === "ai" ? "AI 对手" : "玩家 2";
 
-    const result = initializeGame(deck1, deck2, cardLookup, "玩家 1", "AI 对手", { fullPreparation: true });
+    console.log(`[BattlePage] Starting ${effectiveMode} battle...`);
+    console.log(`  Player 1: ${deck1.name}`);
+    console.log(`  Player 2 (${p2Name}): ${deck2.name}`);
+
+    const result = initializeGame(deck1, deck2, cardLookup, "玩家", p2Name, { fullPreparation: true });
     setSetupResult(result);
 
     if (result.success && result.gameState) {
-      // Mark as local game
       isLocalGame.current = true;
-      setMyPlayerId(0); // Player 1 = index 0
+      setBattleMode(effectiveMode);
+      setMyPlayerId(0);
 
-      // Start the first turn (draw phase → main phase)
       const readyState = startFirstTurn(result.gameState);
       setGameState(readyState);
-      console.log("[BattlePage] Local game started successfully");
+      console.log(`[BattlePage] ${effectiveMode} game started successfully`);
     } else {
       console.error("[BattlePage] Game initialization failed:", result.errors);
     }
-  }, [selectedDeck1, selectedDeck2, validDecks, cardLookup]);
+  }, [selectedDeck1, selectedDeck2, validDecks, cardLookup, battleMode]);
 
   const handleStartMatchmaking = useCallback(() => {
     if (!socket || !selectedDeck1) return;
-    
-    // Get the full deck object to send card IDs
+
     const deck = validDecks.find(d => d.id === selectedDeck1);
     if (!deck) return;
 
-    // Convert to simple card ID list for server
     const cardIds: string[] = [];
     deck.cards.forEach(c => {
       if (c.found && c.cardId) {
@@ -183,8 +335,9 @@ export default function BattlePageClient() {
       }
     });
 
+    setBattleMode("online");
     setIsMatchmaking(true);
-    socket.emit("matchmaking:join", { 
+    socket.emit("matchmaking:join", {
       deckId: selectedDeck1,
       deckName: deck.name,
       cards: cardIds
@@ -196,6 +349,15 @@ export default function BattlePageClient() {
     setIsMatchmaking(false);
     socket.emit("matchmaking:cancel");
   }, [socket]);
+
+  const handleReturnToLobby = useCallback(() => {
+    if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
+    setGameState(null);
+    setSetupResult(null);
+    isLocalGame.current = false;
+    setAiThinking(false);
+    setAiLastAction("");
+  }, []);
 
   const isLoading = decksLoading || cardsLoading;
 
@@ -213,7 +375,7 @@ export default function BattlePageClient() {
           尚未导入卡组
         </p>
         <p className="mt-2 text-sm text-zinc-500">
-          请先在卡组页面导入至少两副合法卡组，才能开始对战。
+          请先在卡组页面导入至少一副合法卡组，才能开始对战。
         </p>
         <Link
           href="/deck"
@@ -225,25 +387,27 @@ export default function BattlePageClient() {
     );
   }
 
+  // ─── Game In Progress ───
 
-
-  // Game in progress — show game state
   if (gameState) {
+    const isAIMode = battleMode === "ai";
+    const isAITurn = isAIMode && gameState.currentPlayer === 1;
+
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950">
         <BattleBoard
           gameState={gameState}
           currentPlayerId={
-            isLocalGame.current
-              ? (gameState.currentPlayer === 0 ? "p1" : "p2") // Local: show from current player's perspective
-              : (myPlayerId === 1 ? "p2" : "p1") // Online: fixed perspective
+            isAIMode
+              ? "p1" // AI mode: always from player's perspective
+              : battleMode === "local"
+                ? (gameState.currentPlayer === 0 ? "p1" : "p2") // Local hot-seat
+                : (myPlayerId === 1 ? "p2" : "p1") // Online: fixed perspective
           }
           onAction={(action: any) => {
             if (isLocalGame.current) {
-              // Route all actions through the local GameController
               handleLocalAction(action as GameAction);
             } else {
-              // Online mode: send via socket
               if (socket && action.type) {
                 socket.emit("game:action", {
                   gameId: gameState.gameId,
@@ -253,12 +417,28 @@ export default function BattlePageClient() {
             }
           }}
         />
+
+        {/* AI Thinking Indicator */}
+        {isAITurn && aiThinking && gameState.phase !== "game_over" && (
+          <div className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 flex items-center gap-3 rounded-full bg-zinc-800/90 px-6 py-2 shadow-xl backdrop-blur-md">
+            <div className="h-3 w-3 animate-pulse rounded-full bg-yellow-400"></div>
+            <span className="text-sm font-medium text-zinc-200">
+              AI 思考中...
+            </span>
+            {aiLastAction && (
+              <span className="text-xs text-zinc-400">
+                {aiLastAction}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Game Over Overlay */}
         {gameState.phase === "game_over" && gameState.winner && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
             <div className="rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl">
               <h2 className="text-3xl font-bold text-yellow-400">
-                🏆 游戏结束
+                {gameState.winner.playerIndex === 0 ? "🏆 胜利！" : "💔 失败"}
               </h2>
               <p className="mt-4 text-xl text-zinc-100">
                 {gameState.players[gameState.winner.playerIndex].name} 获胜！
@@ -270,11 +450,7 @@ export default function BattlePageClient() {
                 {gameState.winner.condition === "concede" && "对方认输"}
               </p>
               <button
-                onClick={() => {
-                  setGameState(null);
-                  setSetupResult(null);
-                  isLocalGame.current = false;
-                }}
+                onClick={handleReturnToLobby}
                 className="mt-6 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500"
               >
                 返回大厅
@@ -303,15 +479,10 @@ export default function BattlePageClient() {
     );
   }
 
-  // Deck selection phase
+  // ─── Lobby: Deck Selection ───
+
   return (
     <div className="space-y-6">
-      {/* Socket Status */}
-      <div className={`flex items-center gap-2 text-sm ${isConnected ? 'text-green-600' : 'text-amber-600'}`}>
-        <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`}></div>
-        {isConnected ? '已连接服务器' : '未连接服务器 (请使用 npm run dev:socket 启动)'}
-      </div>
-
       {/* Setup errors */}
       {setupResult && !setupResult.success && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
@@ -328,84 +499,176 @@ export default function BattlePageClient() {
         </div>
       )}
 
-      {/* Mode Selection Tabs (Visual only for now) */}
+      {/* Mode Selection Tabs */}
       <div className="border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex gap-6">
-          <button className="border-b-2 border-transparent px-1 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
-            本地/AI 对战
+          <button
+            onClick={() => setLobbyTab("ai")}
+            className={`border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+              lobbyTab === "ai"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            AI 对战
           </button>
-          <button className="border-b-2 border-blue-500 px-1 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">
+          <button
+            onClick={() => setLobbyTab("online")}
+            className={`border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+              lobbyTab === "online"
+                ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
             在线匹配 (Beta)
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {/* Player 1 deck */}
-        <div>
-          <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            选择你的卡组
-          </label>
-          <select
-            value={selectedDeck1}
-            onChange={(e) => setSelectedDeck1(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          >
-            <option value="">选择卡组...</option>
-            {validDecks.map((deck) => (
-              <option key={deck.id} value={deck.id}>
-                {deck.name} ({deck.totalCards} 张)
-              </option>
-            ))}
-          </select>
-          {selectedDeck1 && (
-            <DeckPreview deck={validDecks.find((d) => d.id === selectedDeck1)} />
-          )}
-        </div>
+      {/* AI Tab Content */}
+      {lobbyTab === "ai" && (
+        <>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Player deck */}
+            <div>
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                选择你的卡组
+              </label>
+              <select
+                value={selectedDeck1}
+                onChange={(e) => setSelectedDeck1(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">选择卡组...</option>
+                {validDecks.map((deck) => (
+                  <option key={deck.id} value={deck.id}>
+                    {deck.name} ({deck.totalCards} 张)
+                  </option>
+                ))}
+              </select>
+              {selectedDeck1 && (
+                <DeckPreview deck={validDecks.find((d) => d.id === selectedDeck1)} />
+              )}
+            </div>
 
-        {/* Local AI Setup (Optional) */}
-        <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
-           <h4 className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">在线匹配说明</h4>
-           <p className="text-sm text-zinc-500">
-             点击下方按钮开始寻找对手。匹配成功后将自动进入对战。
-             <br/>
-             <span className="text-xs opacity-75">目前仅支持模拟匹配 (3秒后自动成功)</span>
-           </p>
-        </div>
-      </div>
+            {/* AI opponent deck */}
+            <div>
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                AI 对手卡组
+              </label>
+              <select
+                value={selectedDeck2}
+                onChange={(e) => setSelectedDeck2(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">选择卡组...</option>
+                {validDecks.map((deck) => (
+                  <option key={deck.id} value={deck.id}>
+                    {deck.name} ({deck.totalCards} 张)
+                  </option>
+                ))}
+              </select>
+              {selectedDeck2 && (
+                <DeckPreview deck={validDecks.find((d) => d.id === selectedDeck2)} />
+              )}
+              <p className="mt-2 text-xs text-zinc-400">
+                AI 会自动操作对手的卡组。选择同一副卡组进行镜像对战。
+              </p>
+            </div>
+          </div>
 
-      {/* Action Buttons */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <button
-          onClick={handleStartMatchmaking}
-          disabled={!selectedDeck1 || !isConnected}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isConnected ? '开始在线匹配' : '服务器未连接'}
-        </button>
-        
-        <button
-          onClick={() => {
-              // Determine deck2 immediately (don't rely on async state)
+          <button
+            onClick={() => {
               let deck2Id = selectedDeck2;
               if (!deck2Id && validDecks.length >= 2) {
                 deck2Id = validDecks[1].id;
-                setSelectedDeck2(deck2Id); // also update state for display
+                setSelectedDeck2(deck2Id);
               } else if (!deck2Id && validDecks.length === 1) {
-                // Only 1 deck: use the same deck for both sides (mirror match)
                 deck2Id = validDecks[0].id;
                 setSelectedDeck2(deck2Id);
               }
-              // Pass deck2Id directly to avoid React state race condition
-              handleStartBattle(deck2Id);
-          }}
-          disabled={!selectedDeck1}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-6 py-3 text-base font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
-        >
-          本地测试对战
-        </button>
-      </div>
+              handleStartBattle(deck2Id, "ai");
+            }}
+            disabled={!selectedDeck1}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 text-base font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-red-600 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="text-lg">⚔️</span>
+            开始 AI 对战
+          </button>
+        </>
+      )}
 
+      {/* Online Tab Content */}
+      {lobbyTab === "online" && (
+        <>
+          {/* Socket Status */}
+          <div className={`flex items-center gap-2 text-sm ${isConnected ? 'text-green-600' : 'text-amber-600'}`}>
+            <div className={`h-2 w-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'}`}></div>
+            {isConnected ? '已连接服务器' : '未连接服务器 (请使用 npm run dev:socket 启动)'}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Player deck */}
+            <div>
+              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                选择你的卡组
+              </label>
+              <select
+                value={selectedDeck1}
+                onChange={(e) => setSelectedDeck1(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">选择卡组...</option>
+                {validDecks.map((deck) => (
+                  <option key={deck.id} value={deck.id}>
+                    {deck.name} ({deck.totalCards} 张)
+                  </option>
+                ))}
+              </select>
+              {selectedDeck1 && (
+                <DeckPreview deck={validDecks.find((d) => d.id === selectedDeck1)} />
+              )}
+            </div>
+
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+              <h4 className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">在线匹配说明</h4>
+              <p className="text-sm text-zinc-500">
+                点击下方按钮开始寻找对手。匹配成功后将自动进入对战。
+                <br/>
+                <span className="text-xs opacity-75">需要两个浏览器窗口同时匹配</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <button
+              onClick={handleStartMatchmaking}
+              disabled={!selectedDeck1 || !isConnected}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isConnected ? '开始在线匹配' : '服务器未连接'}
+            </button>
+
+            <button
+              onClick={() => {
+                let deck2Id = selectedDeck2;
+                if (!deck2Id && validDecks.length >= 2) {
+                  deck2Id = validDecks[1].id;
+                  setSelectedDeck2(deck2Id);
+                } else if (!deck2Id && validDecks.length === 1) {
+                  deck2Id = validDecks[0].id;
+                  setSelectedDeck2(deck2Id);
+                }
+                handleStartBattle(deck2Id, "local");
+              }}
+              disabled={!selectedDeck1}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-6 py-3 text-base font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+            >
+              本地双人对战
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

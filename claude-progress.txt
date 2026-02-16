@@ -138,3 +138,45 @@ Notes: 实现了完整的 PTCG 伤害计算和击倒系统，并构建了本地�
 - TypeScript phase 类型缩窄问题通过 `as string` 解决（引擎函数会原地修改 phase）
 
 测试: 新增 67 个测试（damage-knockout 48个，game-controller 19个），总计 280 个测试全部通过（12 个测试套件）。
+
+=== Session 8 | 2026-02-16 ===
+Feature: AI 对手 - 基于启发式评估的 SimpleBot
+Status: completed
+Notes: 实现了完整的 AI 对战系统，支持人类玩家 vs AI 的本地对战闭环。
+
+实现内容:
+1. engine/ai-player.ts（全新模块）:
+   - computeAIAction(): 主入口，基于优先级的决策系统
+   - computeAITurnActions(): 计算完整回合的动作序列
+   - 8级优先级: promote → play basic active → play basic bench → evolve → attach energy → retreat → attack → end turn
+   - 能量附加评分: active优先(+100)、需要能量攻击(+50)、高伤害目标加分
+   - 攻击选择: 选择可用的最高伤害攻击（通过 canAttack 验证）
+   - 撤退策略: active HP < 30% 且 bench 有更健康的宝可梦且能支付撤退费用
+   - 进化策略: 优先进化 active 宝可梦
+   - Promotion: 选择剩余 HP 最高的 bench 宝可梦
+
+2. BattlePageClient.tsx 重大重写:
+   - 新增 BattleMode 类型: "ai" | "local" | "online"
+   - AI 模式: 人类(Player 0) vs AI(Player 1)，AI 自动回合执行
+   - executeAITurn(): 递归执行 AI 动作，每个动作间 800ms 延迟
+   - useRef 追踪最新 gameState，避免 setTimeout 闭包问题
+   - AI 思考中指示器（脉冲动画）
+   - AI 回合时玩家操作被锁定
+   - 大厅 UI 重设计: AI 标签页/在线标签页
+   - AI 卡组选择（可与人类用相同或不同卡组）
+   - 正确的清理逻辑（unmount 和返回大厅时清除 timer）
+
+3. 之前修复的 bug（同 session）:
+   - 本地对战按钮 race condition: setState 异步但立即读取
+   - 远程匹配: GameRoom.handleAction 改用统一的 processAction
+   - DnD 能量附加: droppable data 格式修正
+   - 本地模式视角: 动态 currentPlayerId
+
+关键决策:
+- AI 固定为 Player 1，棋盘始终从 Player 0 视角显示
+- AI 动作之间加延迟模拟思考时间，提升用户体验
+- 使用 computeAIAction 逐步执行而非批量执行，确保每个动作都基于最新状态
+- 进化时优先进化 active（增强攻击能力）
+- 打 Basic 到 bench 时优先低 HP（保留高 HP 的用于后续进化或撤退）
+
+测试: 新增 32 个测试（ai-player.test.ts），总计 312 个测试全部通过（13 个测试套件）。
