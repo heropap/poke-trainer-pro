@@ -142,7 +142,7 @@
       "实现卡牌拖拽放置",
       "编写 UI 交互测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 10
   },
   {

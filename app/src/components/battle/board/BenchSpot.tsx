@@ -8,9 +8,19 @@ interface BenchSpotProps {
   card: GameCard | null;
   index: number;
   onClick?: () => void;
+  /** Whether this spot is a valid target in target selection mode */
+  isTargetable?: boolean;
+  /** Callback when clicked as a target */
+  onTargetClick?: () => void;
 }
 
-export function BenchSpot({ card, index, onClick }: BenchSpotProps) {
+export function BenchSpot({
+  card,
+  index,
+  onClick,
+  isTargetable = false,
+  onTargetClick,
+}: BenchSpotProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `bench-spot-${index}`,
   });
@@ -25,13 +35,31 @@ export function BenchSpot({ card, index, onClick }: BenchSpotProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`relative flex h-[140px] w-[100px] items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50/30 transition-colors dark:border-zinc-700 dark:bg-zinc-900/30 ${
-        !card ? "hover:border-blue-400 hover:bg-blue-50/30" : ""
+      className={`relative flex h-[140px] w-[100px] items-center justify-center rounded-lg border border-dashed transition-all ${
+        // Targetable state: green glowing border
+        isTargetable && card
+          ? "border-green-400 bg-green-500/10 shadow-lg shadow-green-500/20 cursor-pointer animate-pulse"
+          : !card
+          ? "border-zinc-300 bg-zinc-50/30 hover:border-blue-400 hover:bg-blue-50/30 dark:border-zinc-700 dark:bg-zinc-900/30"
+          : "border-zinc-300 bg-zinc-50/30 dark:border-zinc-700 dark:bg-zinc-900/30"
       } ${isOver && !card ? "border-green-500 bg-green-500/20" : ""}`}
-      onClick={onClick}
+      onClick={() => {
+        if (isTargetable && card && onTargetClick) {
+          onTargetClick();
+        } else if (onClick) {
+          onClick();
+        }
+      }}
     >
       {card ? (
-        <div ref={setPokemonRef} className={`relative h-full w-full ${isOverPokemon ? "ring-4 ring-yellow-400 rounded-lg" : ""}`}>
+        <div
+          ref={setPokemonRef}
+          className={`relative h-full w-full ${
+            isOverPokemon ? "rounded-lg ring-4 ring-yellow-400" : ""
+          } ${
+            isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
+          }`}
+        >
           <VisualCard card={card} scale={0.65} showHp={true} showEnergy={true} />
         </div>
       ) : (

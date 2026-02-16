@@ -285,3 +285,45 @@ Notes: 修复了多个阻止训练师卡和攻击系统正常工作的关键问�
 - 能量显示紧凑化: 同类型能量合并显示（如 Rx2 而非两个单独的 R 标签）
 
 测试: 351 个测试全部通过，无新增测试（本次为 bugfix + UI 增强）。TypeScript 编译 0 错误。
+
+=== Session 11 | 2026-02-16 ===
+Feature: 对战 UI - PTCG Live 风格 UX 交互
+Status: completed
+Notes: 修复了训练师卡无法点击使用的根因，并实现了 PTCG Live 风格的完整交互系统。
+
+根因分析:
+- @dnd-kit 的 useDraggable hook 在外层 div 展开 {...listeners}，拦截所有 pointer 事件（onPointerDown）
+- 导致内层 VisualCard 的 onClick 永远无法触发
+- Session 10 添加的点击使用功能从未生效
+
+修复与实现:
+1. BattleBoard.tsx — PointerSensor + activationConstraint: { distance: 5 }
+   - 普通点击不会移动 5px → onClick 正常触发
+   - 拖拽手势自然超过 5px → 拖拽仍有效
+   - 这是 @dnd-kit 官方推荐的点击+拖拽共存方案
+
+2. BattleBoard.tsx — 选择状态 + 目标选择模式
+   - selectedCardId/targeting 状态管理
+   - computePlayableCardIds(): 计算当前回合可用的卡牌
+   - handleMenuAction(): 路由卡牌动作（直接使用/进入目标选择模式）
+   - handleTargetClick(): 目标选择完成后执行动作
+   - Escape 键取消选择，回合切换自动重置选择
+
+3. ActionMenu.tsx（新文件）— 浮动操作菜单
+   - 根据卡牌类型显示不同操作: Item→使用, Supporter→使用, Tool→装备, Basic→放置, Stage→进化, Energy→附加
+   - 效果未注册的训练师卡: 橙色 "!" 标记 + 警告文字
+
+4. Hand.tsx — 可用/不可用/选中视觉状态
+   - 可用卡: 黄色微光环，hover 上提
+   - 不可用卡: 半透明 + 去饱和 + 禁止光标
+   - 已选中卡: 大幅上提 + 蓝色高亮环
+   - 目标选择模式: 手牌全部变暗
+
+5. ActiveSpot.tsx + BenchSpot.tsx — 目标选择支持
+   - 新增 isTargetable + onTargetClick props
+   - 有效目标: 绿色发光边框 + 脉冲动画
+
+6. Toast 通知系统
+   - 效果未实现 → 橙色警告，操作失败 → 红色错误，3 秒消失
+
+测试: 351 个测试全部通过。TypeScript 编译 0 错误。
