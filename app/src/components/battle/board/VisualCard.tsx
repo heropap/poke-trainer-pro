@@ -111,7 +111,11 @@ export function VisualCard({
       onClick={onClick}
     >
       {/* Card Image */}
-      <div className="h-full w-full overflow-hidden rounded-lg bg-zinc-800 shadow-md">
+      <div className={`h-full w-full overflow-hidden rounded-lg shadow-md ${
+        card.card.rarity === "Proxy"
+          ? "bg-gradient-to-br from-amber-900 via-zinc-800 to-amber-900"
+          : "bg-zinc-800"
+      }`}>
         {card.card.images?.small ? (
           <img
             src={card.card.images.small}
@@ -120,11 +124,25 @@ export function VisualCard({
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-indigo-900 p-2 text-center text-xs text-white">
-            {card.card.name}
+          <div className={`flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-white ${
+            card.card.rarity === "Proxy"
+              ? "bg-gradient-to-br from-amber-900/80 via-zinc-800/80 to-amber-900/80"
+              : "bg-indigo-900"
+          }`}>
+            <span className="font-semibold">{card.card.name}</span>
+            {card.card.rarity === "Proxy" && card.card.hp && (
+              <span className="mt-1 text-[9px] text-amber-300">HP {card.card.hp}</span>
+            )}
           </div>
         )}
       </div>
+
+      {/* Proxy Card Indicator */}
+      {card.card.rarity === "Proxy" && (
+        <div className="absolute left-1/2 top-0.5 -translate-x-1/2 rounded bg-amber-500 px-1.5 py-0.5 text-[7px] font-bold text-black shadow-md">
+          PROXY
+        </div>
+      )}
 
       {/* Energy Badges (left side overlay) */}
       {showEnergy && energySummary.length > 0 && (

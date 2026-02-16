@@ -192,6 +192,33 @@ export function getDeckCardIds(deck: StoredDeck): string[] {
 }
 
 /**
+ * Get ALL deck card entries (including unfound ones), expanded by quantity.
+ * Each entry contains the original metadata needed to create proxy cards.
+ *
+ * Unlike getDeckCardIds() which filters out unfound cards, this returns
+ * every card entry regardless of `found` status.
+ */
+export function getAllDeckCardEntries(deck: StoredDeck): Array<{
+  cardId: string | null;
+  name: string;
+  quantity: number;
+  setCode: string;
+  number: string;
+  category: "pokemon" | "trainer" | "energy" | "unknown";
+  found: boolean;
+}> {
+  return deck.cards.map((card) => ({
+    cardId: card.found && card.cardId ? card.cardId : null,
+    name: card.name,
+    quantity: card.quantity,
+    setCode: card.setCode,
+    number: card.number,
+    category: card.category,
+    found: card.found,
+  }));
+}
+
+/**
  * Validate deck integrity — checks that all cards have resolved IDs
  * Returns list of unresolved card names (should be empty for a healthy deck)
  */

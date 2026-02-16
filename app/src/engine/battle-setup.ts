@@ -26,9 +26,10 @@ import {
   logEvent,
 } from "./game-state";
 import { shuffleZone, drawMultiple, addCards, hasBasicPokemon } from "./zones";
-import { StoredDeck, getDeckCardIds, checkDeckIntegrity } from "@/services/deck-storage";
+import { StoredDeck, getDeckCardIds, getAllDeckCardEntries, checkDeckIntegrity } from "@/services/deck-storage";
 import { executePreparation, INITIAL_HAND_SIZE, PRIZE_CARD_COUNT } from "./battle-prepare";
 import { initializeEffects } from "./effects";
+import { createProxyCard, ProxyCardEntry } from "./proxy-card";
 
 export interface SetupResult {
   success: boolean;
@@ -53,6 +54,12 @@ export interface InitializeGameOptions {
   fullPreparation?: boolean;
   /** Optional random function for coin flip (for testing) */
   randomFn?: () => number;
+  /**
+   * Enable proxy card generation for missing database entries.
+   * When true, cards not found in the database will be replaced with
+   * minimal proxy cards instead of being skipped.
+   */
+  enableProxyCards?: boolean;
 }
 
 /**
@@ -60,14 +67,71 @@ export interface InitializeGameOptions {
  *
  * @param deck The stored deck to load
  * @param cardLookup Function to resolve card ID → Card data
+ * @param enableProxyCards When true, generate proxy cards for missing entries
  */
 export function loadDeckCards(
   deck: StoredDeck,
-  cardLookup: (id: string) => Card | undefined
+  cardLookup: (id: string) => Card | undefined,
+  enableProxyCards = false
 ): DeckLoadResult {
-  const cardIds = getDeckCardIds(deck);
   const gameCards: GameCard[] = [];
   const missingCards: string[] = [];
+
+  if (enableProxyCards) {
+    // Proxy mode: iterate ALL card entries (including unfound ones)
+    const allEntries = getAllDeckCardEntries(deck);
+    let totalExpected = 0;
+
+    for (const entry of allEntries) {
+      for (let i = 0; i < entry.quantity; i++) {
+        totalExpected++;
+        if (entry.found && entry.cardId) {
+          const card = cardLookup(entry.cardId);
+          if (card) {
+            gameCards.push(createGameCard(card));
+          } else {
+            // Card ID exists but not in database — generate proxy
+            const proxyEntry: ProxyCardEntry = {
+              name: entry.name,
+              setCode: entry.setCode,
+              number: entry.number,
+              category: entry.category,
+            };
+            const proxyCard = createProxyCard(proxyEntry);
+            gameCards.push(createGameCard(proxyCard));
+            missingCards.push(`${entry.name} (proxy: db miss)`);
+            console.warn(`[BattleSetup] Created proxy card for DB miss: ${entry.name} (${entry.cardId})`);
+          }
+        } else {
+          // Card was never resolved during import — generate proxy
+          const proxyEntry: ProxyCardEntry = {
+            name: entry.name,
+            setCode: entry.setCode,
+            number: entry.number,
+            category: entry.category,
+          };
+          const proxyCard = createProxyCard(proxyEntry);
+          gameCards.push(createGameCard(proxyCard));
+          missingCards.push(`${entry.name} (proxy: not found)`);
+          console.warn(`[BattleSetup] Created proxy card for unfound: ${entry.name} (${entry.setCode} ${entry.number})`);
+        }
+      }
+    }
+
+    console.log(
+      `[BattleSetup] Loading deck "${deck.name}": ${totalExpected} card instances (proxy mode ON, ${missingCards.length} proxies created)`
+    );
+
+    return {
+      gameCards,
+      missingCards,
+      totalLoaded: gameCards.length,
+      totalExpected,
+    };
+  }
+
+  // Standard mode: only load found cards
+  const cardIds = getDeckCardIds(deck);
 
   console.log(
     `[BattleSetup] Loading deck "${deck.name}": ${cardIds.length} card instances from ${deck.cards.length} unique cards`
@@ -120,12 +184,12 @@ export function initializeGame(
   player2Name = "玩家 2",
   options: InitializeGameOptions = {}
 ): SetupResult {
-  const { fullPreparation = false, randomFn } = options;
+  const { fullPreparation = false, randomFn, enableProxyCards = false } = options;
   const errors: string[] = [];
   const warnings: string[] = [];
 
   // Initialize the card effects system (idempotent - safe to call multiple times)
-  initializeEffects();
+  // Note: initializeEffects will be called again with loaded cards below for text parsing
 
   // ─── Pre-flight checks ───
 
@@ -158,8 +222,8 @@ export function initializeGame(
 
   // ─── Load cards ───
 
-  const load1 = loadDeckCards(deck1, cardLookup);
-  const load2 = loadDeckCards(deck2, cardLookup);
+  const load1 = loadDeckCards(deck1, cardLookup, enableProxyCards);
+  const load2 = loadDeckCards(deck2, cardLookup, enableProxyCards);
 
   if (load1.missingCards.length > 0) {
     warnings.push(
@@ -171,6 +235,13 @@ export function initializeGame(
       `${player2Name} 有 ${load2.missingCards.length} 张卡牌在数据库中未找到`
     );
   }
+
+  // Initialize effect system with all loaded cards for text-based auto-registration (Layer 3)
+  const allLoadedCards = [
+    ...load1.gameCards.map(gc => gc.card),
+    ...load2.gameCards.map(gc => gc.card),
+  ];
+  initializeEffects(allLoadedCards);
 
   // Must have at least some cards
   if (load1.totalLoaded === 0) {

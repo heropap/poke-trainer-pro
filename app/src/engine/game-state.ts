@@ -28,6 +28,8 @@ export interface GameCard {
   statusConditions: StatusCondition[];
   /** Whether this card was played this turn (prevents same-turn evolution) */
   playedThisTurn: boolean;
+  /** Whether this card was evolved this turn (prevents double evolution) */
+  evolvedThisTurn: boolean;
   /** Whether this card's ability was used this turn (for once-per-turn abilities) */
   abilityUsedThisTurn: boolean;
 }
@@ -146,7 +148,8 @@ export type GameEventType =
   | "coin_flip"
   | "status_damage"
   | "search_deck"
-  | "heal";
+  | "heal"
+  | "manual_override";
 
 // ───────────────────────────────────────────────
 // Factory Functions
@@ -168,6 +171,7 @@ export function createGameCard(card: Card): GameCard {
     attachedTools: [],
     statusConditions: [],
     playedThisTurn: false,
+    evolvedThisTurn: false,
     abilityUsedThisTurn: false,
   };
 }

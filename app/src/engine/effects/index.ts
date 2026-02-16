@@ -44,10 +44,15 @@ export { flipCoin, flipCoins, setRandomFn } from "./coin";
 // Re-export status effects
 export { processBetweenTurns } from "./status-effects";
 
+// Re-export text parser
+export { parseCardEffects, autoRegisterTextEffects } from "./text-parser";
+
 // Card implementations
 import { trainerEffects, trainerNameEffects } from "./cards/trainers";
 import { attackEffects } from "./cards/attacks";
 import { registerAll, registerAllByName } from "./effect-registry";
+import { autoRegisterTextEffects } from "./text-parser";
+import { Card } from "@/types/card";
 
 /** All built-in card effects (ID-based) */
 const allEffects = [...trainerEffects, ...attackEffects];
@@ -55,10 +60,18 @@ const allEffects = [...trainerEffects, ...attackEffects];
 /**
  * Initialize the effect system by registering all built-in card effects.
  * Call this once at app startup.
+ *
+ * @param cards Optional array of Card data — when provided, auto-registers
+ *              text-parsed effects for cards without existing registered effects.
  */
-export function initializeEffects(): void {
+export function initializeEffects(cards?: Card[]): void {
   registerAll(allEffects);
   registerAllByName(trainerNameEffects);
+
+  // Layer 3: Auto-register text-parsed effects for unregistered cards
+  if (cards && cards.length > 0) {
+    autoRegisterTextEffects(cards);
+  }
 }
 
 /**

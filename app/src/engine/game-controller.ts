@@ -40,6 +40,7 @@ import {
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
+import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 
 // ───────────────────────────────────────────────
 // Action Types (from UI)
@@ -54,7 +55,8 @@ export interface GameAction {
     | "retreat"
     | "promote"
     | "concede"
-    | "use_ability";
+    | "use_ability"
+    | "manual_override";
   cardId?: string;
   targetZone?: "active" | "bench" | "attach";
   targetId?: string;
@@ -62,6 +64,9 @@ export interface GameAction {
   abilityName?: string;
   energyToDiscard?: string[];
   benchInstanceId?: string;
+  /** Manual override fields (Layer 2) */
+  overrideType?: ManualOverrideType;
+  params?: Record<string, any>;
 }
 
 export interface ActionResult {
@@ -109,7 +114,8 @@ export function processAction(
   // Turn validation: is it this player's turn?
   // Exception: "promote" can happen when it's not your turn (after your active is KO'd)
   // Exception: "concede" can happen anytime
-  if (action.type !== "promote" && action.type !== "concede") {
+  // Exception: "manual_override" bypasses turn order (god mode)
+  if (action.type !== "promote" && action.type !== "concede" && action.type !== "manual_override") {
     if (state.currentPlayer !== playerIndex) {
       return {
         success: false,
@@ -146,6 +152,20 @@ export function processAction(
     case "use_ability":
       result = handleUseAbility(state, playerIndex, action);
       break;
+    case "manual_override": {
+      if (!action.overrideType) {
+        result = { success: false, error: "缺少手动操作类型", newState: { ...state } };
+      } else {
+        const overrideAction: ManualOverrideAction = {
+          type: "manual_override",
+          overrideType: action.overrideType,
+          params: action.params ?? {},
+        };
+        const overrideResult = executeManualOverride(state, playerIndex, overrideAction);
+        result = { ...overrideResult, newState: overrideResult.newState };
+      }
+      break;
+    }
     default:
       result = {
         success: false,

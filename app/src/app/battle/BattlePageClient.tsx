@@ -365,7 +365,7 @@ export default function BattlePageClient() {
     console.log(`  Player 1: ${deck1.name}`);
     console.log(`  Player 2 (${p2Name}): ${deck2.name}`);
 
-    const result = initializeGame(deck1, deck2, cardLookup, "玩家", p2Name, { fullPreparation: true });
+    const result = initializeGame(deck1, deck2, cardLookup, "玩家", p2Name, { fullPreparation: true, enableProxyCards: true });
     setSetupResult(result);
 
     if (result.success && result.gameState) {

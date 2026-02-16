@@ -24,6 +24,7 @@ import {
   canEvolve,
 } from "@/engine/turn-actions";
 import { hasEffect } from "@/engine/effects/effect-registry";
+import { ManualToolkit } from "./ManualToolkit";
 
 // ────────────────────────────────────────────────
 // Types
@@ -177,6 +178,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
   // Selection state (PTCG Live style)
   const [selectedCardId, setSelectedCardId] = React.useState<string | null>(null);
   const [targeting, setTargeting] = React.useState<TargetingState | null>(null);
+
+  // Manual Toolkit state (Layer 2)
+  const [toolkitOpen, setToolkitOpen] = React.useState(false);
 
   // Toast notifications
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
@@ -533,6 +537,17 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           {/* Action Buttons */}
           <div className="absolute right-8 flex gap-2">
             <button
+              className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
+                toolkitOpen
+                  ? "bg-yellow-500 text-black hover:bg-yellow-400"
+                  : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+              }`}
+              onClick={() => setToolkitOpen(!toolkitOpen)}
+              title="Manual Override Toolkit"
+            >
+              🔧 工具
+            </button>
+            <button
               className="rounded bg-red-600 px-3 py-1 text-xs font-bold hover:bg-red-500"
               onClick={() => dispatchAction({ type: "end_turn" })}
             >
@@ -626,6 +641,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
             </div>
           ))}
         </div>
+
+        {/* Manual Override Toolkit (Layer 2) */}
+        <ManualToolkit
+          gameState={gameState}
+          playerIndex={myIndex as 0 | 1}
+          onAction={dispatchAction}
+          isOpen={toolkitOpen}
+          onToggle={() => setToolkitOpen(!toolkitOpen)}
+        />
       </div>
     </DndContext>
   );

@@ -24,6 +24,8 @@ import { removeCard, addToBottom, findCard } from "./zones";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { processBetweenTurns } from "./effects/status-effects";
+import { validateEvolution } from "./middleware/evolution.middleware";
+import { ActionEvent } from "./middleware/types";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -129,58 +131,30 @@ export function attachEnergy(
 
 /**
  * Check if an evolution is legal.
+ *
+ * Delegates to the declarative evolution middleware pipeline.
+ * The pipeline runs rules in priority order (game-level → card-level → turn-level).
+ * First denial short-circuits.
+ *
+ * @see evolution.middleware.ts for the full rule set and priority documentation.
  */
 export function canEvolve(
   state: GameState,
   evolutionInstanceId: string,
   targetInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
-    return fail("只能在主阶段进化宝可梦");
-  }
+  const event: ActionEvent<"EVOLVE_ACTION"> = {
+    type: "EVOLVE_ACTION",
+    playerIndex: state.currentPlayer,
+    payload: {
+      evolutionCardId: evolutionInstanceId,
+      targetPokemonId: targetInstanceId,
+    },
+  };
 
-  const player = getCurrentPlayer(state);
-
-  const evolutionCard = findCard(player.hand, evolutionInstanceId);
-  if (!evolutionCard) {
-    return fail("手牌中找不到该进化卡");
-  }
-
-  if (evolutionCard.card.supertype !== "Pokémon") {
-    return fail("所选卡牌不是宝可梦卡");
-  }
-
-  if (
-    !evolutionCard.card.subtypes.includes("Stage 1") &&
-    !evolutionCard.card.subtypes.includes("Stage 2")
-  ) {
-    return fail("所选卡牌不是进化卡");
-  }
-
-  const target = findTarget(player, targetInstanceId);
-  if (!target) {
-    return fail("目标宝可梦不在场上");
-  }
-
-  // Check evolution chain
-  if (!evolutionCard.card.evolvesFrom) {
-    return fail("进化卡缺少进化来源信息");
-  }
-
-  if (target.card.name !== evolutionCard.card.evolvesFrom) {
-    return fail(
-      `${evolutionCard.card.name} 不能从 ${target.card.name} 进化（需要 ${evolutionCard.card.evolvesFrom}）`
-    );
-  }
-
-  // Cannot evolve a Pokemon that was played this turn
-  if (target.playedThisTurn) {
-    return fail("不能进化本回合刚入场的宝可梦");
-  }
-
-  // Cannot evolve on the first turn of the game
-  if (state.isFirstTurn) {
-    return fail("游戏第一回合不能进化宝可梦");
+  const result = validateEvolution(state, event);
+  if (!result.allowed) {
+    return fail(result.reason!);
   }
 
   return ok();
@@ -210,8 +184,10 @@ export function evolvePokemon(
   target.cardId = evolutionCard.cardId;
   // Evolution removes all status conditions
   target.statusConditions = [];
-  // Mark as played this turn (can't evolve again)
+  // Mark as played this turn (can't evolve again this turn)
   target.playedThisTurn = true;
+  // Mark as evolved this turn (distinct from "just entered play")
+  target.evolvedThisTurn = true;
 
   logEvent(
     state,
@@ -609,13 +585,15 @@ export function endTurn(state: GameState): ActionResult {
   player.energyAttachedThisTurn = false;
   player.supporterUsedThisTurn = false;
 
-  // Reset playedThisTurn and abilityUsedThisTurn for all of this player's Pokemon
+  // Reset per-turn flags for all of this player's Pokemon
   if (player.active) {
     player.active.playedThisTurn = false;
+    player.active.evolvedThisTurn = false;
     player.active.abilityUsedThisTurn = false;
   }
   for (const card of player.bench.cards) {
     card.playedThisTurn = false;
+    card.evolvedThisTurn = false;
     card.abilityUsedThisTurn = false;
   }
 

@@ -53,6 +53,7 @@ function createHiddenCard(instanceId: string): GameCard {
     attachedTools: [],
     statusConditions: [],
     playedThisTurn: false,
+    evolvedThisTurn: false,
     abilityUsedThisTurn: false,
   };
 }
