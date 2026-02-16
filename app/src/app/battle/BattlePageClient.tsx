@@ -265,13 +265,13 @@ export default function BattlePageClient() {
    * Handle all game actions from BattleBoard for local play.
    * In AI mode, only player 0 (human) can issue actions this way.
    */
-  const handleLocalAction = useCallback((action: GameAction) => {
-    if (!gameState || !isLocalGame.current) return;
+  const handleLocalAction = useCallback((action: GameAction): { success: boolean; error?: string } => {
+    if (!gameState || !isLocalGame.current) return { success: false, error: "游戏未初始化" };
 
     // In AI mode, block actions during AI's turn
     if (battleMode === "ai" && gameState.currentPlayer !== 0) {
       console.warn("[AI Mode] It's the AI's turn, action blocked");
-      return;
+      return { success: false, error: "AI 回合中" };
     }
 
     const playerIndex = gameState.currentPlayer;
@@ -279,8 +279,10 @@ export default function BattlePageClient() {
 
     if (result.success) {
       setGameState(result.newState);
+      return { success: true };
     } else {
       console.warn(`[LocalGame] Action failed: ${result.error}`);
+      return { success: false, error: result.error };
     }
   }, [gameState, battleMode]);
 
@@ -406,7 +408,7 @@ export default function BattlePageClient() {
           }
           onAction={(action: any) => {
             if (isLocalGame.current) {
-              handleLocalAction(action as GameAction);
+              return handleLocalAction(action as GameAction);
             } else {
               if (socket && action.type) {
                 socket.emit("game:action", {

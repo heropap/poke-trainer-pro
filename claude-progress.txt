@@ -327,3 +327,32 @@ Notes: 修复了训练师卡无法点击使用的根因，并实现了 PTCG Live
    - 效果未实现 → 橙色警告，操作失败 → 红色错误，3 秒消失
 
 测试: 351 个测试全部通过。TypeScript 编译 0 错误。
+
+=== Session 11b | 2026-02-16 ===
+Feature: 修复"很多卡没法使用"的问题
+Status: completed
+Notes: 发现并修复了 game-controller.ts handlePlayCard() 中的路由顺序错误。
+
+根因:
+- handlePlayCard() 先按 targetZone 路由（"attach" → gaAttachEnergy），再按卡牌类型路由
+- 导致 Pokemon Tool 被当作 Energy 处理（gaAttachEnergy 检查 supertype !== "Energy" 直接返回 false）
+- 同样，任何带 targetZone="attach" 的非 Energy 卡都会被误路由
+
+修复:
+1. game-controller.ts: 重构 handlePlayCard() 路由逻辑
+   - 改为先按 card.supertype 分流（Pokemon → Energy → Trainer），再按 targetZone 处理
+   - Pokemon: Basic 自动检测 active/bench，Stage 1/2 支持 evolve（即使误作为 play_card 发送也能处理）
+   - Energy: 需要 targetId 才能附加
+   - Trainer: Tool→需 targetId→taPlayItem(tool)，Supporter→taPlaySupporter，Item→taPlayItem
+   - 每种卡牌类型有明确的错误信息
+
+2. BattleBoard.tsx: 新增 dispatchAction() 封装
+   - 所有 onAction 调用改为 dispatchAction()
+   - 自动捕获 ActionFeedback { success, error }，失败时显示 toast 通知
+   - 用户终于能看到操作失败的原因了
+
+3. BattlePageClient.tsx: handleLocalAction 返回 { success, error }
+   - 之前只 console.warn，用户完全看不到错误
+   - 现在返回结果供 BattleBoard 展示
+
+测试: 351 个测试全部通过。TypeScript 编译 0 错误。

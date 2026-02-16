@@ -29,10 +29,15 @@ import { hasEffect } from "@/engine/effects/effect-registry";
 // Types
 // ────────────────────────────────────────────────
 
+interface ActionFeedback {
+  success: boolean;
+  error?: string;
+}
+
 interface BattleBoardProps {
   gameState: GameState;
   currentPlayerId: string; // "p1" or "p2"
-  onAction?: (action: any) => void;
+  onAction?: (action: any) => ActionFeedback | void;
 }
 
 interface ToastMessage {
@@ -197,6 +202,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
     }, 3000);
   }
 
+  // ─── Dispatch action with error feedback ──────
+  function dispatchAction(action: any) {
+    if (!onAction) return;
+    const result = onAction(action);
+    if (result && !result.success && result.error) {
+      showToast(result.error, "error");
+    }
+  }
+
   // ─── Cancel selection / targeting ─────────────
   function cancelSelection() {
     setSelectedCardId(null);
@@ -239,16 +253,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
       const targetZone = over.id;
 
       if (targetZone === "active-spot") {
-        onAction?.({ type: "play_card", cardId: activeId, targetZone: "active" });
+        dispatchAction({ type: "play_card", cardId: activeId, targetZone: "active" });
       } else if (String(targetZone).startsWith("bench-spot-")) {
-        onAction?.({ type: "play_card", cardId: activeId, targetZone: "bench" });
+        dispatchAction({ type: "play_card", cardId: activeId, targetZone: "bench" });
       } else if (
         targetZone === "active-pokemon" ||
         String(targetZone).startsWith("bench-pokemon-")
       ) {
         const targetInstanceId = (over.data.current as any)?.instanceId;
         if (targetInstanceId) {
-          onAction?.({
+          dispatchAction({
             type: "play_card",
             cardId: activeId,
             targetZone: "attach",
@@ -293,7 +307,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
       case "play_item": {
         // Direct play (no target needed)
         const effectExists = hasEffect(card.cardId);
-        onAction?.({ type: "play_card", cardId: card.instanceId });
+        dispatchAction({ type: "play_card", cardId: card.instanceId });
         if (!effectExists) {
           showToast(`${card.card.name} — 效果未实现（卡已丢弃）`, "warning");
         }
@@ -304,9 +318,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
       case "play_basic": {
         // Auto-place: active if empty, else bench
         if (!me.active) {
-          onAction?.({ type: "play_card", cardId: card.instanceId, targetZone: "active" });
+          dispatchAction({ type: "play_card", cardId: card.instanceId, targetZone: "active" });
         } else {
-          onAction?.({ type: "play_card", cardId: card.instanceId, targetZone: "bench" });
+          dispatchAction({ type: "play_card", cardId: card.instanceId, targetZone: "bench" });
         }
         cancelSelection();
         break;
@@ -322,7 +336,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         }
         // If only one target, attach directly
         if (validTargets.length === 1) {
-          onAction?.({
+          dispatchAction({
             type: "play_card",
             cardId: card.instanceId,
             targetZone: "attach",
@@ -343,7 +357,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           return;
         }
         if (validTargets.length === 1) {
-          onAction?.({ type: "evolve", cardId: card.instanceId, targetId: validTargets[0] });
+          dispatchAction({ type: "evolve", cardId: card.instanceId, targetId: validTargets[0] });
           cancelSelection();
           return;
         }
@@ -360,7 +374,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         }
         if (validTargets.length === 1) {
           const effectExists = hasEffect(card.cardId);
-          onAction?.({
+          dispatchAction({
             type: "play_card",
             cardId: card.instanceId,
             targetZone: "attach",
@@ -388,7 +402,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
 
     switch (action) {
       case "attach_energy":
-        onAction?.({
+        dispatchAction({
           type: "play_card",
           cardId: card.instanceId,
           targetZone: "attach",
@@ -396,7 +410,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         });
         break;
       case "evolve":
-        onAction?.({
+        dispatchAction({
           type: "evolve",
           cardId: card.instanceId,
           targetId: targetInstanceId,
@@ -404,7 +418,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
         break;
       case "equip_tool": {
         const effectExists = hasEffect(card.cardId);
-        onAction?.({
+        dispatchAction({
           type: "play_card",
           cardId: card.instanceId,
           targetZone: "attach",
@@ -520,7 +534,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           <div className="absolute right-8 flex gap-2">
             <button
               className="rounded bg-red-600 px-3 py-1 text-xs font-bold hover:bg-red-500"
-              onClick={() => onAction?.({ type: "end_turn" })}
+              onClick={() => dispatchAction({ type: "end_turn" })}
             >
               结束回合
             </button>
@@ -535,7 +549,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
               card={me.active}
               canAttack={isMyTurn && !targeting}
               isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
-              onAttack={(attackName) => onAction?.({ type: "attack", attackName })}
+              onAttack={(attackName) => dispatchAction({ type: "attack", attackName })}
               isTargetable={activeIsTargetable}
               onTargetClick={() => {
                 if (me.active) handleTargetClick(me.active.instanceId);

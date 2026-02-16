@@ -180,59 +180,77 @@ function handlePlayCard(
     return { success: false, error: "手牌中找不到该卡牌", newState: { ...state } };
   }
 
-  // Route based on card type and target zone
-  if (action.targetZone === "active") {
-    // Play Basic Pokemon to Active
-    const res = playActive(state, playerIndex, action.cardId);
-    return { ...res, newState: { ...state } };
-  }
+  // ─── Route by CARD TYPE first, then by targetZone ───
+  // This ensures Pokemon Tools, Energy, etc. go to the correct handler
+  // regardless of how the UI dispatched them.
 
-  if (action.targetZone === "bench") {
-    // Play Basic Pokemon to Bench
-    const res = playBench(state, playerIndex, action.cardId);
-    return { ...res, newState: { ...state } };
-  }
-
-  if (action.targetZone === "attach" && action.targetId) {
-    // Attach energy to a Pokemon
-    const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
-    return { ...res, newState: { ...state } };
-  }
-
-  // Auto-detect based on card type
-  if (card.card.supertype === "Pokémon" && card.card.subtypes.includes("Basic")) {
-    // If no active, play to active; otherwise bench
-    if (!player.active) {
-      const res = playActive(state, playerIndex, action.cardId);
-      return { ...res, newState: { ...state } };
-    } else {
-      const res = playBench(state, playerIndex, action.cardId);
-      return { ...res, newState: { ...state } };
+  // 1. Pokemon cards
+  if (card.card.supertype === "Pokémon") {
+    if (card.card.subtypes.includes("Basic")) {
+      if (action.targetZone === "active") {
+        const res = playActive(state, playerIndex, action.cardId);
+        return { ...res, newState: { ...state } };
+      }
+      if (action.targetZone === "bench") {
+        const res = playBench(state, playerIndex, action.cardId);
+        return { ...res, newState: { ...state } };
+      }
+      // Auto-detect: active if empty, otherwise bench
+      if (!player.active) {
+        const res = playActive(state, playerIndex, action.cardId);
+        return { ...res, newState: { ...state } };
+      } else {
+        const res = playBench(state, playerIndex, action.cardId);
+        return { ...res, newState: { ...state } };
+      }
+    }
+    // Stage 1/2 evolution cards should use the "evolve" action type,
+    // but handle gracefully if dispatched as "play_card"
+    if (card.card.subtypes.includes("Stage 1") || card.card.subtypes.includes("Stage 2")) {
+      if (action.targetId) {
+        const res = taEvolvePokemon(state, action.cardId, action.targetId);
+        return { success: res.success, error: res.error, newState: { ...state } };
+      }
+      return { success: false, error: "进化卡需要指定目标宝可梦", newState: { ...state } };
     }
   }
 
-  if (card.card.supertype === "Energy" && action.targetId) {
-    const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
-    return { ...res, newState: { ...state } };
+  // 2. Energy cards
+  if (card.card.supertype === "Energy") {
+    if (action.targetId) {
+      const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
+      return { ...res, newState: { ...state } };
+    }
+    // targetZone "attach" with targetId
+    if (action.targetZone === "attach" && action.targetId) {
+      const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
+      return { ...res, newState: { ...state } };
+    }
+    return { success: false, error: "能量卡需要指定附加目标", newState: { ...state } };
   }
 
+  // 3. Trainer cards
   if (card.card.supertype === "Trainer") {
-    if (card.card.subtypes.includes("Supporter")) {
-      const res = taPlaySupporter(state, action.cardId);
-      return { success: res.success, error: res.error, newState: { ...state } };
-    }
+    // 3a. Pokemon Tool — needs a target to attach to
     if (card.card.subtypes.includes("Pokémon Tool")) {
-      // Tool cards need a target Pokemon to attach to
       if (!action.targetId) {
         return { success: false, error: "工具卡需要指定装备目标", newState: { ...state } };
       }
       const res = taPlayItem(state, action.cardId, action.targetId);
       return { success: res.success, error: res.error, newState: { ...state } };
     }
+    // 3b. Supporter
+    if (card.card.subtypes.includes("Supporter")) {
+      const res = taPlaySupporter(state, action.cardId);
+      return { success: res.success, error: res.error, newState: { ...state } };
+    }
+    // 3c. Item (non-Tool)
     if (card.card.subtypes.includes("Item")) {
       const res = taPlayItem(state, action.cardId);
       return { success: res.success, error: res.error, newState: { ...state } };
     }
+    // 3d. Stadium or other trainer types (future)
+    return { success: false, error: `不支持的训练师卡类型: ${card.card.subtypes.join(", ")}`, newState: { ...state } };
   }
 
   return { success: false, error: "无法确定如何打出该卡牌", newState: { ...state } };
