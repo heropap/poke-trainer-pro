@@ -18,6 +18,7 @@ import {
 } from "./zones";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
+import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
 
 export interface PlayCardResult {
@@ -284,6 +285,13 @@ export function canAttack(
 
   // Cannot attack on first turn of the game (if player 1 went first)
   if (state.turn === 1 && state.isFirstTurn) return false;
+
+  // ─── Status condition checks ───
+  // Paralyzed Pokemon cannot attack
+  if (player.active.statusConditions.includes("paralyzed")) return false;
+
+  // Asleep Pokemon cannot attack
+  if (player.active.statusConditions.includes("asleep")) return false;
 
   return true;
 }
@@ -633,6 +641,40 @@ export function performAttack(
   const defenderIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;
   const defender = state.players[defenderIndex];
   const activeAttack = attacker.active!.card.attacks!.find(a => a.name === attackName)!;
+
+  // ─── Confused: Flip coin before attacking ───
+  // If confused, flip a coin:
+  //   Heads → attack proceeds normally
+  //   Tails → 30 damage to self (3 damage counters), attack fails
+  if (attacker.active!.statusConditions.includes("confused")) {
+    const heads = flipCoin();
+    logEvent(state, playerIndex, "coin_flip",
+      heads
+        ? `${attacker.active!.card.name} 处于混乱状态，翻硬币…正面! 攻击正常进行`
+        : `${attacker.active!.card.name} 处于混乱状态，翻硬币…反面! 攻击失败，对自己造成 30 点伤害`,
+      { result: heads ? "heads" : "tails", status: "confused" }
+    );
+
+    if (!heads) {
+      // Self-damage: 3 damage counters = 30 damage
+      attacker.active!.damageCounters += 3;
+
+      // Check self-KO from confusion damage
+      const selfHp = parseInt(attacker.active!.card.hp || "0", 10);
+      if (selfHp > 0 && attacker.active!.damageCounters * 10 >= selfHp) {
+        const selfPrize = getPrizeCount(attacker.active!);
+        if (checkKnockout(state, playerIndex, "active")) {
+          takePrizes(state, defenderIndex, selfPrize);
+          if (checkWinCondition(state)) {
+            return { success: true, gameEnded: true };
+          }
+        }
+      }
+
+      // Attack fails but turn action is consumed (success = true, attack just didn't land)
+      return { success: true };
+    }
+  }
 
   // 1. Calculate Base Damage from card data
   const rawBaseDamage = parseInt(activeAttack.damage || "0", 10);

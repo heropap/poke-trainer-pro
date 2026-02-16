@@ -536,3 +536,38 @@ Notes:
      new: websocket-game-room.test.ts
 
 测试: 新增 29 个测试，总计 451 个测试全部通过（17 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 15 | 2026-02-16 ===
+Feature: 状态异常攻击/撤退检查（核心规则修复）
+Status: completed
+Notes:
+  问题: 引擎未实现 PTCG 基本规则 — 麻痹/睡眠的宝可梦可以自由攻击和撤退，混乱无自伤判定。
+
+  实现内容:
+  1. game-actions.ts — canAttack() 增加状态异常检查
+     - 麻痹 (paralyzed) → return false（不能攻击）
+     - 睡眠 (asleep) → return false（不能攻击）
+     - 注意: 混乱/中毒/灼伤不阻止攻击（canAttack 返回 true）
+
+  2. game-actions.ts — performAttack() 增加混乱硬币翻转
+     - 混乱 (confused) → 攻击前翻硬币
+     - 正面: 攻击正常进行
+     - 反面: 30 点自伤（3 个伤害计数器）+ 攻击失败
+     - 自伤可以 KO 自己（触发奖励卡和胜负判定）
+     - ex/V 宝可梦混乱自 KO 给对手 2 张奖励卡
+
+  3. turn-actions.ts — canRetreat() 增加麻痹检查
+     - 麻痹 → fail("麻痹状态的宝可梦不能撤退")
+     - 注意: 睡眠/混乱/中毒/灼伤不阻止撤退
+
+  关键规则（符合 PTCG 官方）:
+  - 麻痹: 不能攻击 + 不能撤退（回合结束时自动解除）
+  - 睡眠: 不能攻击，但可以撤退（付费后清除睡眠）
+  - 混乱: 可以尝试攻击，翻硬币决定结果
+  - 中毒/灼伤: 不影响攻击和撤退（伤害在回合间处理）
+
+  文件变更: 3 个文件
+     modified: game-actions.ts, turn-actions.ts
+     new: status-attack-checks.test.ts
+
+测试: 新增 29 个测试，总计 480 个测试全部通过（18 个测试套件）。TypeScript 编译 0 错误。

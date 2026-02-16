@@ -249,6 +249,11 @@ export function canRetreat(
     return fail("备战区没有宝可梦可以替换");
   }
 
+  // ─── Status condition check: Paralyzed Pokemon cannot retreat ───
+  if (player.active.statusConditions.includes("paralyzed")) {
+    return fail("麻痹状态的宝可梦不能撤退");
+  }
+
   // Check retreat cost (with tool modifiers)
   let retreatCost = player.active.card.convertedRetreatCost ?? 0;
 
