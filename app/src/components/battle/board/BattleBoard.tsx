@@ -119,7 +119,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           </div>
 
           {/* Opponent Active */}
-          <ActiveSpot card={opponent.active} isOpponent />
+          <ActiveSpot card={opponent.active} isOpponent isFirstTurn={false} />
         </div>
 
         {/* ─────────────────────────────────────────────────────────────
@@ -156,9 +156,10 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           
           {/* Player Active */}
           <div className="mb-4">
-            <ActiveSpot 
-              card={me.active} 
+            <ActiveSpot
+              card={me.active}
               canAttack={gameState.currentPlayer === myIndex && gameState.phase === "main"}
+              isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
               onAttack={(attackName) => onAction?.({ type: "attack", attackName })}
             />
           </div>
@@ -176,7 +177,24 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
 
           {/* Player Hand & Controls */}
           <div className="relative w-full">
-            <Hand cards={me.hand.cards} onCardClick={(card) => console.log("Clicked card", card.card.name)} />
+            <Hand
+              cards={me.hand.cards}
+              isMyTurn={gameState.currentPlayer === myIndex && gameState.phase === "main"}
+              onCardClick={(card) => {
+                // Click-to-play for trainer cards (Items and Supporters)
+                if (card.card.supertype === "Trainer") {
+                  if (card.card.subtypes.includes("Supporter") ||
+                      (card.card.subtypes.includes("Item") && !card.card.subtypes.includes("Pokémon Tool"))) {
+                    onAction?.({
+                      type: "play_card",
+                      cardId: card.instanceId,
+                    });
+                    return;
+                  }
+                }
+                console.log("Clicked card", card.card.name);
+              }}
+            />
             
             {/* Player Info (Bottom Right) */}
             <div className="absolute bottom-4 right-4 flex flex-col items-end gap-1 rounded-lg bg-zinc-900/80 p-3 text-right shadow-xl backdrop-blur-md">

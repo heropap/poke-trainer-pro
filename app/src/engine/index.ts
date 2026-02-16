@@ -22,6 +22,7 @@ export {
   concede,
   performAttack,
   canAttack,
+  checkEnergyCost,
 } from "./game-actions";
 
 // Re-export non-conflicting items from turn-actions

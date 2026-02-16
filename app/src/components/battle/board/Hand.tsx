@@ -8,9 +8,10 @@ interface DraggableCardProps {
   card: GameCard;
   index: number;
   onCardClick?: (card: GameCard) => void;
+  isMyTurn?: boolean;
 }
 
-function DraggableCard({ card, index, onCardClick }: DraggableCardProps) {
+function DraggableCard({ card, index, onCardClick, isMyTurn }: DraggableCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.instanceId,
     data: { card }
@@ -18,28 +19,44 @@ function DraggableCard({ card, index, onCardClick }: DraggableCardProps) {
 
   if (isDragging) {
     return (
-      <div 
-        ref={setNodeRef} 
+      <div
+        ref={setNodeRef}
         className="-ml-12 first:ml-0 opacity-0"
         style={{ zIndex: index, width: 120, height: 168 }} // Placeholder size
       />
     );
   }
 
+  // Trainer cards (Items/Supporters) that are NOT Pokemon Tools can be played by clicking
+  const isClickPlayable = isMyTurn &&
+    card.card.supertype === "Trainer" &&
+    (card.card.subtypes.includes("Supporter") || card.card.subtypes.includes("Item")) &&
+    !card.card.subtypes.includes("Pokémon Tool");
+
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="-ml-12 first:ml-0 transition-all duration-200 hover:z-20 hover:-translate-y-6 hover:scale-110 cursor-grab active:cursor-grabbing"
+      className={`-ml-12 first:ml-0 transition-all duration-200 hover:z-20 hover:-translate-y-6 hover:scale-110 cursor-grab active:cursor-grabbing ${
+        isClickPlayable ? "ring-2 ring-yellow-400/50 rounded-lg" : ""
+      }`}
       style={{ zIndex: index }}
     >
-      <VisualCard
-        card={card}
-        scale={0.8}
-        isHoverable={false} // Hand wrapper handles hover
-        onClick={() => onCardClick?.(card)}
-      />
+      <div className="relative">
+        <VisualCard
+          card={card}
+          scale={0.8}
+          isHoverable={false} // Hand wrapper handles hover
+          onClick={() => onCardClick?.(card)}
+        />
+        {/* Click-to-play indicator for trainer cards */}
+        {isClickPlayable && (
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-yellow-500 px-2 py-0.5 text-[8px] font-bold text-black shadow-md pointer-events-none">
+            点击使用
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -48,9 +65,10 @@ interface HandProps {
   cards: GameCard[];
   isOpponent?: boolean;
   onCardClick?: (card: GameCard) => void;
+  isMyTurn?: boolean;
 }
 
-export function Hand({ cards, isOpponent = false, onCardClick }: HandProps) {
+export function Hand({ cards, isOpponent = false, onCardClick, isMyTurn = false }: HandProps) {
   if (isOpponent) {
     // Render opponent hand (cards face down)
     return (
@@ -81,6 +99,7 @@ export function Hand({ cards, isOpponent = false, onCardClick }: HandProps) {
             card={card}
             index={i}
             onCardClick={onCardClick}
+            isMyTurn={isMyTurn}
           />
         ))}
       </div>

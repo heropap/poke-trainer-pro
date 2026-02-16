@@ -235,3 +235,53 @@ Notes: 实现了完整的卡牌效果框架，使对战中的卡牌效果（攻�
 - 状态异常互斥: asleep/confused/paralyzed 三者互斥，新状态覆盖旧状态
 
 测试: 新增 39 个测试（card-effects.test.ts），总计 351 个测试全部通过（14 个测试套件）。
+
+=== Session 10 | 2026-02-16 ===
+Feature: 卡牌使用修复 - 训练师卡/能量系统/UI 增强
+Status: completed
+Notes: 修复了多个阻止训练师卡和攻击系统正常工作的关键问题。
+
+修复内容:
+1. battle-setup.ts: 在 initializeGame() 中调用 initializeEffects()
+   - 之前效果注册表在运行时为空，所有注册的 trainer/attack 效果都不会执行
+   - 现在每次创建游戏时自动初始化效果系统（Map.set 幂等，多次调用安全）
+
+2. BattleBoard.tsx + Hand.tsx: 训练师卡点击使用
+   - 之前 Item/Supporter 只能拖拽，但没有合适的放置目标，实际上无法使用
+   - 新增 onCardClick 处理: 点击 Item/Supporter 直接触发 play_card action
+   - Hand 组件新增 isMyTurn prop，非 Tool 的训练师卡在自己回合显示 "点击使用" 提示
+   - Supporter/Item 有黄色高亮环标记可用状态
+
+3. game-actions.ts: 能量类型校验 checkEnergyCost()
+   - 之前 canAttack() 只检查附加能量总数 vs convertedEnergyCost，不检查类型
+   - 新增 checkEnergyCost(attachedEnergy, cost) 函数，实现 PTCG 正式规则:
+     * 特定类型费用（Fire, Water 等）必须用对应类型能量支付
+     * Colorless 费用可用任意类型能量支付
+     * 贪心算法: 先支付特定类型，剩余支付 Colorless
+   - 新增 getEnergyType() 辅助函数: 从 GameCard 解析能量类型（Basic→types[0]，Special→Colorless）
+   - canAttack() 改用 checkEnergyCost 替代简单计数检查
+
+4. VisualCard.tsx: 能量/状态/工具显示
+   - 新增 showEnergy prop，在宝可梦卡上叠加显示附加能量
+   - 能量按类型分组显示（如 Rx2, W, C），每种类型用对应颜色圆角标签
+   - 新增状态异常显示（毒/烧/眠/痹/混），用对应颜色标签
+   - 新增工具卡指示器（右上角青色标签）
+
+5. ActiveSpot.tsx: 攻击按钮能量费用显示
+   - 攻击按钮现在显示: [能量费用圆点] [招式名] [伤害值]
+   - 每个能量费用用对应颜色圆点表示（Fire=红, Water=蓝, Colorless=灰 等）
+   - 能量不足的攻击灰显禁用（bg-zinc-600 + cursor-not-allowed）
+   - 使用 checkEnergyCost() 实时判断每个攻击是否可用
+
+6. BenchSpot.tsx: 备战区也显示能量
+   - showEnergy={true} 传递给 VisualCard
+
+7. turn-actions.ts: 修复 TypeScript 严格模式 phase 类型比较
+   - processBetweenTurns 后 phase 可能被改为 game_over，用 as string 绕过类型窄化
+
+关键决策:
+- checkEnergyCost 独立导出: UI 组件可以直接调用判断攻击可用性，不需要创建完整 GameState
+- 训练师卡使用: 点击而非拖拽，因为 Item/Supporter 不需要目标（Pokemon Tool 仍需拖拽到目标）
+- 能量显示紧凑化: 同类型能量合并显示（如 Rx2 而非两个单独的 R 标签）
+
+测试: 351 个测试全部通过，无新增测试（本次为 bugfix + UI 增强）。TypeScript 编译 0 错误。

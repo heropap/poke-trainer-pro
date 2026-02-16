@@ -32,7 +32,7 @@ export function BenchSpot({ card, index, onClick }: BenchSpotProps) {
     >
       {card ? (
         <div ref={setPokemonRef} className={`relative h-full w-full ${isOverPokemon ? "ring-4 ring-yellow-400 rounded-lg" : ""}`}>
-          <VisualCard card={card} scale={0.65} showHp={true} />
+          <VisualCard card={card} scale={0.65} showHp={true} showEnergy={true} />
         </div>
       ) : (
         <span className="text-xs text-zinc-300 dark:text-zinc-600">

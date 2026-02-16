@@ -1,7 +1,63 @@
 
 import React from "react";
 import { GameCard } from "@/engine/game-state";
-import Image from "next/image";
+
+/** Map energy type name to a color */
+const ENERGY_COLORS: Record<string, string> = {
+  Grass: "bg-green-500",
+  Fire: "bg-red-500",
+  Water: "bg-blue-500",
+  Lightning: "bg-yellow-400",
+  Psychic: "bg-purple-500",
+  Fighting: "bg-orange-700",
+  Darkness: "bg-gray-800",
+  Metal: "bg-gray-400",
+  Dragon: "bg-amber-600",
+  Fairy: "bg-pink-400",
+  Colorless: "bg-zinc-400",
+};
+
+/** Map energy type to a short label */
+const ENERGY_LABELS: Record<string, string> = {
+  Grass: "G",
+  Fire: "R",
+  Water: "W",
+  Lightning: "L",
+  Psychic: "P",
+  Fighting: "F",
+  Darkness: "D",
+  Metal: "M",
+  Dragon: "N",
+  Fairy: "Y",
+  Colorless: "C",
+};
+
+/** Map energy type to a text color for contrast */
+const ENERGY_TEXT_COLORS: Record<string, string> = {
+  Grass: "text-white",
+  Fire: "text-white",
+  Water: "text-white",
+  Lightning: "text-black",
+  Psychic: "text-white",
+  Fighting: "text-white",
+  Darkness: "text-white",
+  Metal: "text-black",
+  Dragon: "text-white",
+  Fairy: "text-white",
+  Colorless: "text-black",
+};
+
+function getEnergyTypeFromCard(energyCard: GameCard): string {
+  if (energyCard.card.subtypes?.includes("Basic") && energyCard.card.types && energyCard.card.types.length > 0) {
+    return energyCard.card.types[0];
+  }
+  const name = energyCard.card.name || "";
+  const types = ["Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Fairy"];
+  for (const t of types) {
+    if (name.includes(t)) return t;
+  }
+  return "Colorless";
+}
 
 interface VisualCardProps {
   card: GameCard;
@@ -10,6 +66,7 @@ interface VisualCardProps {
   onClick?: () => void;
   className?: string;
   showHp?: boolean;
+  showEnergy?: boolean;
 }
 
 export function VisualCard({
@@ -19,6 +76,7 @@ export function VisualCard({
   onClick,
   className = "",
   showHp = false,
+  showEnergy = false,
 }: VisualCardProps) {
   // Standard card ratio is 2.5 : 3.5 (e.g. 250px : 350px)
   // We'll use a base width of 150px for calculation
@@ -28,6 +86,19 @@ export function VisualCard({
   const hp = card.card.hp ? parseInt(card.card.hp, 10) : 0;
   const currentHp = hp > 0 ? hp - card.damageCounters * 10 : 0;
   const hpPercentage = hp > 0 ? (currentHp / hp) * 100 : 0;
+
+  // Group attached energy by type for display
+  const energySummary: { type: string; count: number }[] = [];
+  if (showEnergy && card.attachedEnergy.length > 0) {
+    const counts: Record<string, number> = {};
+    for (const e of card.attachedEnergy) {
+      const type = getEnergyTypeFromCard(e);
+      counts[type] = (counts[type] || 0) + 1;
+    }
+    for (const [type, count] of Object.entries(counts)) {
+      energySummary.push({ type, count });
+    }
+  }
 
   return (
     <div
@@ -54,6 +125,55 @@ export function VisualCard({
           </div>
         )}
       </div>
+
+      {/* Energy Badges (left side overlay) */}
+      {showEnergy && energySummary.length > 0 && (
+        <div className="absolute left-0.5 top-0.5 flex flex-col gap-0.5">
+          {energySummary.map(({ type, count }) => (
+            <div
+              key={type}
+              className={`flex items-center gap-0.5 rounded-full px-1 py-0.5 shadow-md ${ENERGY_COLORS[type] || "bg-zinc-500"}`}
+              title={`${type} Energy x${count}`}
+            >
+              <span className={`text-[8px] font-bold leading-none ${ENERGY_TEXT_COLORS[type] || "text-white"}`}>
+                {ENERGY_LABELS[type] || "?"}{count > 1 ? `x${count}` : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Status Conditions (right side) */}
+      {card.statusConditions.length > 0 && (
+        <div className="absolute right-0.5 top-7 flex flex-col gap-0.5">
+          {card.statusConditions.map((status) => (
+            <div
+              key={status}
+              className={`rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${
+                status === "poisoned" ? "bg-purple-600 text-white" :
+                status === "burned" ? "bg-orange-600 text-white" :
+                status === "asleep" ? "bg-blue-600 text-white" :
+                status === "paralyzed" ? "bg-yellow-500 text-black" :
+                status === "confused" ? "bg-pink-500 text-white" :
+                "bg-zinc-600 text-white"
+              }`}
+            >
+              {status === "poisoned" ? "毒" :
+               status === "burned" ? "烧" :
+               status === "asleep" ? "眠" :
+               status === "paralyzed" ? "痹" :
+               status === "confused" ? "混" : status}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Attached Tools indicator */}
+      {card.attachedTools.length > 0 && (
+        <div className="absolute right-0.5 top-0.5 rounded bg-cyan-600 px-1 py-0.5 text-[7px] font-bold text-white shadow-md">
+          {card.attachedTools[0].card.name.slice(0, 6)}
+        </div>
+      )}
 
       {/* HP Bar (Overlay) */}
       {showHp && hp > 0 && (

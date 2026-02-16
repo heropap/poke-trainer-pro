@@ -28,6 +28,7 @@ import {
 import { shuffleZone, drawMultiple, addCards, hasBasicPokemon } from "./zones";
 import { StoredDeck, getDeckCardIds, checkDeckIntegrity } from "@/services/deck-storage";
 import { executePreparation, INITIAL_HAND_SIZE, PRIZE_CARD_COUNT } from "./battle-prepare";
+import { initializeEffects } from "./effects";
 
 export interface SetupResult {
   success: boolean;
@@ -122,6 +123,9 @@ export function initializeGame(
   const { fullPreparation = false, randomFn } = options;
   const errors: string[] = [];
   const warnings: string[] = [];
+
+  // Initialize the card effects system (idempotent - safe to call multiple times)
+  initializeEffects();
 
   // ─── Pre-flight checks ───
 

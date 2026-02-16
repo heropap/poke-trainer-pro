@@ -573,7 +573,7 @@ export function endTurn(state: GameState): ActionResult {
   processBetweenTurns(state, currentPlayerIndex);
 
   // Check if status damage caused a game over
-  if (state.phase === "game_over") {
+  if ((state.phase as string) === "game_over") {
     return ok();
   }
 

@@ -186,15 +186,79 @@ export function attachEnergy(
 }
 
 /**
- * Helper: Calculate energy count (simplified for now)
+ * Helper: Get the energy type that a GameCard (energy) provides.
+ * Basic energies provide their named type. Special energies provide "Colorless".
  */
-function getAttachedEnergyCount(card: GameCard): number {
-  // TODO: Handle double energy etc.
-  return card.attachedEnergy.length;
+function getEnergyType(energyCard: GameCard): string {
+  // Basic energy cards have a type in their name or types field
+  // e.g., "Fire Energy" → "Fire", "Water Energy" → "Water"
+  if (energyCard.card.subtypes?.includes("Basic") && energyCard.card.types && energyCard.card.types.length > 0) {
+    return energyCard.card.types[0];
+  }
+  // Fallback: try to parse from name
+  const name = energyCard.card.name || "";
+  const types = ["Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Fairy"];
+  for (const t of types) {
+    if (name.includes(t)) return t;
+  }
+  // Special energy or unrecognized → Colorless
+  return "Colorless";
 }
 
 /**
- * Validates if an attack can be performed
+ * Check if the attached energy on a Pokemon satisfies an attack's cost.
+ *
+ * PTCG energy cost rules:
+ * - Specific type costs (e.g., "Fire") must be paid by that type of energy
+ * - "Colorless" costs can be paid by any energy type
+ * - Each attached energy can only be used to pay for one cost
+ *
+ * Uses a greedy algorithm: pay specific costs first, then use remaining for Colorless.
+ */
+export function checkEnergyCost(
+  attachedEnergy: GameCard[],
+  cost: string[]
+): boolean {
+  if (!cost || cost.length === 0) return true;
+  if (attachedEnergy.length < cost.length) return false;
+
+  // Count specific type costs and colorless costs
+  const specificCosts: Record<string, number> = {};
+  let colorlessCost = 0;
+
+  for (const c of cost) {
+    if (c === "Colorless") {
+      colorlessCost++;
+    } else {
+      specificCosts[c] = (specificCosts[c] || 0) + 1;
+    }
+  }
+
+  // Count available energy by type
+  const availableEnergy: Record<string, number> = {};
+  for (const e of attachedEnergy) {
+    const type = getEnergyType(e);
+    availableEnergy[type] = (availableEnergy[type] || 0) + 1;
+  }
+
+  // First, pay specific type costs
+  let totalUsed = 0;
+  for (const [type, needed] of Object.entries(specificCosts)) {
+    const available = availableEnergy[type] || 0;
+    if (available < needed) return false; // Not enough of this type
+    availableEnergy[type] = available - needed;
+    totalUsed += needed;
+  }
+
+  // Then, check if remaining energy can pay colorless costs
+  let remainingEnergy = attachedEnergy.length - totalUsed;
+  return remainingEnergy >= colorlessCost;
+}
+
+/**
+ * Validates if an attack can be performed.
+ * Checks: active Pokemon exists, main phase, attack exists,
+ * energy type requirements met, first turn restriction.
  */
 export function canAttack(
   state: GameState,
@@ -213,11 +277,10 @@ export function canAttack(
   const attack = player.active.card.attacks?.find(a => a.name === attackName);
   if (!attack) return false;
 
-  // Check energy cost
-  const energyCount = getAttachedEnergyCount(player.active);
-  const cost = attack.convertedEnergyCost || 0;
-
-  if (energyCount < cost) return false;
+  // Check energy cost with type matching
+  if (!checkEnergyCost(player.active.attachedEnergy, attack.cost)) {
+    return false;
+  }
 
   // Cannot attack on first turn of the game (if player 1 went first)
   if (state.turn === 1 && state.isFirstTurn) return false;
