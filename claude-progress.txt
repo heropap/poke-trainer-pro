@@ -480,3 +480,59 @@ Notes:
      - 需要选择目标的效果自动选择第一个有效目标
 
 测试: 新增 34 个测试，总计 422 个测试全部通过（16 个测试套件）。TypeScript 编译 0 错误。
+
+=== Session 14 | 2026-02-16 ===
+Feature: WebSocket 对战通信 (Priority 8)
+Status: completed
+Notes:
+  基础设施已有: Socket.IO 服务器(server.ts)、GameRoom 类、SocketContext 客户端上下文。
+  本 session 完成了在线对战的完整闭环。
+
+  实现内容:
+  1. game-room.ts — 状态遮蔽 (getMaskedState)
+     - 隐藏对手手牌/牌组/奖励卡: 替换为 __hidden__ 占位卡（保留 zone 大小）
+     - 隐藏自己的牌组/奖励卡（不能偷看牌序和奖励内容）
+     - 公开区域（active, bench, discard）保持可见
+     - JSON.parse(JSON.stringify) 深拷贝确保不污染权威状态
+     - 新增 getPlayerIndex(), hasPlayer(), isGameOver() 辅助方法
+     - 新增 handleDisconnect() — 掉线自动认输
+     - 新增 createdAt/lastActivityAt 时间戳
+
+  2. server.ts — 完整服务端通信
+     - broadcastMaskedState(): 每个玩家收到各自视角的遮蔽状态
+     - broadcastGameOver(): 各自遮蔽 + winner 信息
+     - matchmaking:cancel 正确清除队列
+     - disconnect 处理: 清除匹配队列 + 正在进行的游戏自动认输通知对手
+     - game:action 成功后检查 promotionRequired → 发送 game:promotion_required 到特定玩家
+     - game:reconnect 事件（重连支持，基于 socketId）
+     - playerGameMap: socketId → gameId 快速查找
+     - 30分钟过期自动清理（cleanupStaleGames 每 5 分钟扫描）
+     - game:start 携带 gameId 供客户端保存
+
+  3. BattlePageClient.tsx — 在线模式客户端闭环
+     - 新增 onlineGameId 状态，所有 socket.emit 使用此 ID
+     - onAction 在线模式: socket.emit("game:action", { gameId, action })
+     - 监听 game:over → 更新 gameState（触发游戏结束覆盖层）
+     - 监听 game:action_error → 红色 toast 提示 3 秒消失
+     - 监听 game:promotion_required → 由 BattleBoard 的 bench 点击 UI 处理
+     - 监听 error → 红色 toast
+     - 胜负判定修复: iWon = winner.playerIndex === myPlayerId（支持 Player 1 视角）
+     - 在线模式绿色脉冲指示器（右上角"在线对战"标签）
+     - handleReturnToLobby 重置所有在线状态
+
+  4. websocket-game-room.test.ts — 29 个新测试
+     - 初始化: 成功初始化、空牌组失败、时间戳追踪
+     - 状态遮蔽(8): 对手手牌/牌组/奖励卡隐藏、自己牌组/奖励卡隐藏、zone 大小保留、
+       公开区域可见、反向遮蔽(Bob视角隐藏Alice手牌)、不污染权威状态、元数据保留
+     - 玩家识别(2): getPlayerIndex、hasPlayer
+     - 操作路由(5): 正确路由、未知socket拒绝、非当前玩家拒绝、状态更新、活跃时间更新
+     - 掉线处理(3): 自动认输、未知socket无操作、已结束游戏无操作
+     - 生命周期(2): 创建→认输完整流程、多回合对弈
+     - 隐藏卡结构(2): 占位卡格式、instanceId 保留
+     - 通信协议(3): ActionResult 结构、错误消息、GameState 结构
+
+  文件变更: 5 个文件
+     modified: server.ts, game-room.ts, BattlePageClient.tsx, feature_list.json
+     new: websocket-game-room.test.ts
+
+测试: 新增 29 个测试，总计 451 个测试全部通过（17 个测试套件）。TypeScript 编译 0 错误。
