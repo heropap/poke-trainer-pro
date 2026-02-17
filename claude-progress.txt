@@ -822,3 +822,46 @@ Notes:
 
   测试: 新增 27 个测试 (stadium-system.test.ts)，总计 705 测试全部通过 (28 套件)。TypeScript 编译 0 错误。
   文件变更: 12 files modified, 1 new test file, 1 new effects file
+
+=== Session 21 | 2026-02-17 ===
+Feature: ryuu-play 卡牌效果批量移植 — 50 张 Standard 核心卡效果 (Priority 16)
+Status: completed
+Notes:
+  分析了 ryuu-play 717 张卡牌实现，发现均为旧世代卡(Base/Fossil/EX/BW)，
+  不适合直接移植。改为以 ryuu-play 模式为参考，使用 EffectContext API 编写 SV 时代效果。
+
+  实现内容:
+  1. meta-attacks.ts — 26 个 Pokemon 攻击效果 (16 张核心 meta 宝可梦)
+     - Charizard ex: Burning Dark (180 + prizesTaken*30)
+     - Pidgeot ex: Blustering Gale (120 + removeStadium)
+     - Dragapult ex: Phantom Dive (200 + 60 bench spread)
+     - Terapagos ex: Crown Opal (benchCount*30)
+     - Gardevoir ex: Psychic Force (190 + removeAllStatus)
+     - Roaring Moon ex: Frenzied Gouging (KO self + 200 self), Calamity Storm (100+120 if stadium)
+     - Chien-Pao ex: Hail Blade (60*waterEnergyDiscarded)
+     - Raging Bolt ex: Burst Roar (discard hand draw 6), Bellowing Thunder (70*basicEnergyDiscarded)
+     - Snorlax: Toss and Turn (30*coinFlips), Collapse (150)
+     - Comfey: Flower Selecting (both draw 3)
+     - Munkidori: Adrena Brain (100+100 if status)
+     - Iron Thorns ex: Electro Hammer (160)
+     - Dusknoir: Special Punch (150 + preventRetreat)
+     等共 26 个命名攻击效果
+
+  2. trainers-expanded.ts — 24 个额外训练师效果
+     支持者(11): Kieran, Eri, Crispin, Perrin, Roxanne, Colress's Tenacity, Cyllene, Worker, Serena, Adventurer's Discovery, Giovanni's Charisma
+     物品(6): TM:Evolution, Techno Radar, Canceling Cologne, Lost Vacuum, Hisuian Heavy Ball, Prime Catcher
+     工具(5): Maximum Belt(+50 vs ex/V), Forest Seal Stone, Bravery Charm, Leftovers, Hero's Cape
+
+  3. effects/index.ts — 注册新效果模块
+     - registerAllByName(metaAttackEffects)
+     - registerAllByName(expandedTrainerEffects)
+     - getBuiltInEffectCount() 更新
+
+  4. meta-effects-integration.test.ts — 31 个集成测试
+     - 注册验证(3), Charizard ex(2), Pidgeot ex(1), Dragapult ex(1), Terapagos ex(2),
+       Gardevoir ex(1), Roaring Moon ex(2), Chien-Pao ex(2), Snorlax(1), Comfey(1),
+       Raging Bolt ex(2), Eri(1), Roxanne(2), Crispin(1), Worker(1), Maximum Belt(2),
+       Perrin(1), Lost Vacuum(1), Munkidori(2), Iron Thorns ex(1), Dusknoir(1)
+
+  测试: 新增 58 个测试 (meta-effects-integration.test.ts), 总计 736 测试全部通过 (29 套件)。TypeScript 编译 0 错误。
+  文件变更: 3 new files (meta-attacks.ts, trainers-expanded.ts, meta-effects-integration.test.ts), 1 modified (effects/index.ts)

@@ -51,6 +51,8 @@ export { parseCardEffects, autoRegisterTextEffects } from "./text-parser";
 import { trainerEffects, trainerNameEffects } from "./cards/trainers";
 import { attackEffects } from "./cards/attacks";
 import { stadiumNameEffects } from "./cards/stadiums";
+import { metaAttackEffects } from "./cards/meta-attacks";
+import { expandedTrainerEffects } from "./cards/trainers-expanded";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { Card } from "@/types/card";
@@ -69,6 +71,8 @@ export function initializeEffects(cards?: Card[]): void {
   registerAll(allEffects);
   registerAllByName(trainerNameEffects);
   registerAllByName(stadiumNameEffects);
+  registerAllByName(metaAttackEffects);
+  registerAllByName(expandedTrainerEffects);
 
   // Layer 3: Auto-register text-parsed effects for unregistered cards
   if (cards && cards.length > 0) {
@@ -80,5 +84,5 @@ export function initializeEffects(cards?: Card[]): void {
  * Get count of all available built-in effects.
  */
 export function getBuiltInEffectCount(): number {
-  return allEffects.length + trainerNameEffects.length + stadiumNameEffects.length;
+  return allEffects.length + trainerNameEffects.length + stadiumNameEffects.length + metaAttackEffects.length + expandedTrainerEffects.length;
 }
