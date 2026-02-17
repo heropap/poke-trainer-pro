@@ -24,6 +24,7 @@ import {
   canPlayBasicToBench,
   canAttachEnergy,
   canEvolve,
+  canPlayStadium,
 } from "@/engine/turn-actions";
 import { hasEffect } from "@/engine/effects/effect-registry";
 import { ManualToolkit } from "./ManualToolkit";
@@ -117,6 +118,9 @@ function computePlayableCardIds(
             playable.add(card.instanceId);
           }
         }
+      } else if (subtypes.includes("Stadium")) {
+        const res = canPlayStadium(state, card.instanceId);
+        if (res.success) playable.add(card.instanceId);
       }
     }
   }
@@ -417,6 +421,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         break;
       }
 
+      case "play_stadium": {
+        dispatchAction({ type: "play_card", cardId: card.instanceId });
+        cancelSelection();
+        break;
+      }
+
       default:
         cancelSelection();
     }
@@ -565,6 +575,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             <div className="text-xs uppercase tracking-widest text-zinc-500">
               Turn {gameState.turn}
             </div>
+            {/* Stadium indicator */}
+            {gameState.stadium && (
+              <div className="rounded bg-emerald-700/80 px-2 py-0.5 text-[10px] font-bold text-emerald-200" title={gameState.stadium.card.card.rules?.[0] || ""}>
+                {gameState.stadium.card.card.name}
+              </div>
+            )}
             <div className="rounded-full bg-blue-600 px-6 py-1 text-sm font-bold text-white shadow-lg shadow-blue-900/20">
               {gameState.players[gameState.currentPlayer].name} 的回合
             </div>

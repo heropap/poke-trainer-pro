@@ -299,6 +299,7 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
     winner,
     log: events,
     prompt: null, // Prompts handled separately through the adapter
+    stadium: null,
     activeOverrides: {},
     rules: {
       prizeCardsPerPlayer: 6, // ryuu-play uses standard 6 prizes

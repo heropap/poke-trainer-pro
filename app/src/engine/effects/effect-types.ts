@@ -151,6 +151,12 @@ export interface EffectContext {
   /** Get all Pokemon in play for a player */
   getAllPokemon(who?: "player" | "opponent"): GameCard[];
 
+  /** Get the current stadium card in play (null if none) */
+  getStadium(): GameCard | null;
+
+  /** Remove the current stadium card (discard it to its owner's discard pile) */
+  removeStadium(): boolean;
+
   /** Log a message to the game event log */
   log(message: string): void;
 

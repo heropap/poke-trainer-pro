@@ -133,6 +133,21 @@ export function computeAIAction(
     }
   }
 
+  // ── Priority 7.5: Play Stadium cards ──
+  if (!state.turnStatus.stadiumPlayed) {
+    const stadiumCards = player.hand.cards.filter(
+      c => c.card.supertype === "Trainer" && c.card.subtypes.includes("Stadium") &&
+        // Don't play same-name stadium
+        (!state.stadium || state.stadium.card.card.name !== c.card.name)
+    );
+    if (stadiumCards.length > 0) {
+      return {
+        action: { type: "play_card", cardId: stadiumCards[0].instanceId },
+        reason: `Play stadium: ${stadiumCards[0].card.name}`,
+      };
+    }
+  }
+
   // ── Priority 8: Consider retreat if active is in danger ──
   const retreatAction = considerRetreat(state, playerIndex);
   if (retreatAction) {

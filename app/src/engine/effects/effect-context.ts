@@ -507,6 +507,28 @@ export function createEffectContext(
       return collected;
     },
 
+    // ─── Stadium ───
+
+    getStadium(): GameCard | null {
+      return state.stadium?.card ?? null;
+    },
+
+    removeStadium(): boolean {
+      if (!state.stadium) return false;
+
+      const oldStadium = state.stadium.card;
+      const oldOwner = state.players[state.stadium.owner];
+      addToBottom(oldOwner.discard, oldStadium);
+
+      logEvent(state, playerIndex, "remove_stadium",
+        `场地卡 ${oldStadium.card.name} 被移除`,
+        { stadiumName: oldStadium.card.name }
+      );
+
+      state.stadium = null;
+      return true;
+    },
+
     findPokemon(instanceId: string): GameCard | null {
       for (const p of state.players) {
         if (p.active?.instanceId === instanceId) return p.active;

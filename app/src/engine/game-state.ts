@@ -131,6 +131,11 @@ export interface GameState {
   log: GameEvent[];
   /** Pending user interaction */
   prompt: GamePrompt | null;
+  /** Stadium card in play (shared between both players) */
+  stadium: {
+    card: GameCard;
+    owner: 0 | 1;
+  } | null;
   /** Active effect overrides (Phase 2: God Mode / Card Effects) */
   activeOverrides: {
     allowEvolutionTurn1?: boolean;
@@ -177,6 +182,8 @@ export type GameEventType =
   | "status_damage"
   | "search_deck"
   | "heal"
+  | "play_stadium"
+  | "remove_stadium"
   | "manual_override";
 
 // ───────────────────────────────────────────────
@@ -277,6 +284,7 @@ export function createGameState(
     winner: null,
     log: [],
     prompt: null,
+    stadium: null,
     activeOverrides: {},
     rules: {
       prizeCardsPerPlayer: 6,

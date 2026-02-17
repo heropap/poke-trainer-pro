@@ -770,6 +770,55 @@ Notes:
   测试: 27 套件，678 测试全部通过。TypeScript 编译 0 错误。
   文件变更: 894 files changed, 69489 insertions, 507 deletions
 
-=== 项目完成报告 ===
+=== Phase 1 完成报告 ===
 所有 14 个功能均已完成（passes: true）。
 总测试: 27 套件，678 测试全部通过。
+
+=== Session 20 | 2026-02-17 ===
+Feature: Stadium 卡系统 — 场地卡机制 (Priority 15)
+Status: completed
+Notes:
+  Phase 2 启动，新增 10 个功能到 feature_list.json (P15-P24)。
+  本 session 实现了完整的场地卡系统。
+
+  实现内容:
+  1. game-state.ts — GameState 新增 stadium 字段
+     - stadium: { card: GameCard; owner: 0 | 1 } | null
+     - 新增 play_stadium / remove_stadium 事件类型
+     - createGameState() 初始化 stadium: null
+
+  2. turn-actions.ts — playStadium() 场地卡打出
+     - canPlayStadium(): 主阶段检查、一回合一张限制、同名限制
+     - playStadium(): 替换旧场地(丢弃到旧owner弃牌堆)、放置新场地、执行效果
+     - canRetreat(): 集成 Beach Court 场地效果 (Basic 撤退费 -1)
+
+  3. game-controller.ts — 路由 Stadium 子类型
+     - handlePlayCard 新增 subtypes.includes("Stadium") 分支
+     - 调用 taPlayStadium()
+
+  4. effect-types.ts + effect-context.ts — EffectContext 新增方法
+     - getStadium(): 获取当前场地卡 (GameCard | null)
+     - removeStadium(): 移除场地并丢弃到 owner 弃牌堆
+
+  5. effects/cards/stadiums.ts — 5 张场地卡效果注册
+     - Beach Court: Basic 撤退费 -1 (via canRetreat 直接检查)
+     - Artazon: 搜索非 Rule Box 基础宝可梦
+     - Iono's Palace: 展示手牌迫使对手洗手抽同数
+     - Academy at Night: 手牌放回牌组顶
+     - Mesagoza: 弃手抽 5
+     - 均为持续效果(onPlay 空), 注册到 nameRegistry
+
+  6. UI 集成
+     - ActionMenu.tsx: 新增 "打出场地" 操作按钮
+     - BattleBoard.tsx: Stadium 显示区(中间状态栏翡翠标签)、playability 检查
+     - ActionLog.tsx: play_stadium/remove_stadium 事件图标
+
+  7. AI 集成
+     - ai-player.ts: Priority 7.5 — 自动打出手中的场地卡(避免同名)
+
+  8. TypeScript 修复
+     - text-parser.test.ts: mock EffectContext 添加 getStadium/removeStadium
+     - engine-adapter.ts + ryuu-adapter: 添加 stadium: null
+
+  测试: 新增 27 个测试 (stadium-system.test.ts)，总计 705 测试全部通过 (28 套件)。TypeScript 编译 0 错误。
+  文件变更: 12 files modified, 1 new test file, 1 new effects file

@@ -29,6 +29,7 @@ import {
   playSupporter as taPlaySupporter,
   playItem as taPlayItem,
   playBasicToBench as taPlayBasicToBench,
+  playStadium as taPlayStadium,
 } from "./turn-actions";
 import {
   playActive,
@@ -301,7 +302,12 @@ function handlePlayCard(
         const res = await taPlayItem(state, action.cardId);
         return { success: res.success, error: res.error, newState: { ...state } };
       }
-      // 3d. Stadium or other trainer types (future)
+      // 3d. Stadium
+      if (card.card.subtypes.includes("Stadium")) {
+        const res = await taPlayStadium(state, action.cardId);
+        return { success: res.success, error: res.error, newState: { ...state } };
+      }
+      // 3e. Other trainer types
       return { success: false, error: `不支持的训练师卡类型: ${card.card.subtypes.join(", ")}`, newState: { ...state } };
     }
 

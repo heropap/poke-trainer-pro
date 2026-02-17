@@ -39,6 +39,8 @@ export {
   playItem,
   canPlayBasicToBench,
   playBasicToBench,
+  canPlayStadium,
+  playStadium,
   endTurn,
   drawCard,
 } from "./turn-actions";

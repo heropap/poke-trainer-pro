@@ -238,7 +238,7 @@ export function canRetreat(
     return fail("睡眠状态的宝可梦不能撤退");
   }
 
-  // Check retreat cost (with tool modifiers)
+  // Check retreat cost (with tool + stadium modifiers)
   let retreatCost = player.active.card.convertedRetreatCost ?? 0;
 
   // Apply tool retreat cost modifiers
@@ -249,6 +249,14 @@ export function canRetreat(
       retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
     }
   }
+
+  // Apply Beach Court stadium effect: Basic Pokemon retreat cost -1
+  if (state.stadium && state.stadium.card.card.name === "Beach Court") {
+    if (player.active.card.subtypes.includes("Basic")) {
+      retreatCost -= 1;
+    }
+  }
+
   if (retreatCost < 0) retreatCost = 0;
 
   const selectedEnergy: GameCard[] = [];
@@ -559,7 +567,106 @@ export function playBasicToBench(
 }
 
 // ───────────────────────────────────────────────
-// 7. End Turn
+// 7. Play Stadium
+// ───────────────────────────────────────────────
+
+/**
+ * Check if a stadium card can be played.
+ * PTCG rules:
+ * - Only one stadium in play at a time (shared between players)
+ * - You can't play a stadium with the same name as the one already in play
+ * - Playing a new stadium discards the old one
+ * - One stadium per turn
+ */
+export function canPlayStadium(
+  state: GameState,
+  stadiumInstanceId: string
+): ActionResult {
+  if (state.phase !== "main") {
+    return fail("只能在主阶段使用场地卡");
+  }
+
+  if (state.turnStatus.stadiumPlayed) {
+    return fail("每回合只能使用一张场地卡");
+  }
+
+  const player = getCurrentPlayer(state);
+  const card = findCard(player.hand, stadiumInstanceId);
+  if (!card) {
+    return fail("手牌中找不到该卡牌");
+  }
+
+  if (
+    card.card.supertype !== "Trainer" ||
+    !card.card.subtypes.includes("Stadium")
+  ) {
+    return fail("所选卡牌不是场地卡");
+  }
+
+  // Can't play a stadium with the same name as the current one
+  if (state.stadium && state.stadium.card.card.name === card.card.name) {
+    return fail("不能打出与当前场地同名的场地卡");
+  }
+
+  return ok();
+}
+
+/**
+ * Play a stadium card from hand.
+ * If another stadium is already in play, discard it first.
+ */
+export async function playStadium(
+  state: GameState,
+  stadiumInstanceId: string
+): Promise<ActionResult> {
+  const check = canPlayStadium(state, stadiumInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const card = removeCard(player.hand, stadiumInstanceId)!;
+
+  // Discard old stadium if one exists
+  if (state.stadium) {
+    const oldStadium = state.stadium.card;
+    const oldOwner = state.players[state.stadium.owner];
+    addToBottom(oldOwner.discard, oldStadium);
+
+    logEvent(
+      state,
+      state.currentPlayer,
+      "remove_stadium",
+      `场地卡 ${oldStadium.card.name} 被移除`,
+      { stadiumName: oldStadium.card.name }
+    );
+  }
+
+  // Place new stadium
+  state.stadium = {
+    card: card,
+    owner: state.currentPlayer,
+  };
+  state.turnStatus.stadiumPlayed = true;
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "play_stadium",
+    `${player.name} 打出了场地卡 ${card.card.name}`,
+    { stadiumName: card.card.name }
+  );
+
+  // Execute stadium effect if registered
+  const cardEffect = getEffect(card.cardId, card.card.name);
+  if (cardEffect?.trainer?.onPlay) {
+    const ctx = createEffectContext(state, state.currentPlayer, card);
+    await cardEffect.trainer.onPlay(ctx);
+  }
+
+  return ok();
+}
+
+// ───────────────────────────────────────────────
+// 8. End Turn
 // ───────────────────────────────────────────────
 
 /**

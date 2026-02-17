@@ -61,6 +61,7 @@ export function adaptGameState(external: ExternalState): GameState {
       message: l.message
     })),
     prompt: null, // Prompts handled separately
+    stadium: null,
     activeOverrides: {},
     rules: { prizeCardsPerPlayer: 6 }
   };

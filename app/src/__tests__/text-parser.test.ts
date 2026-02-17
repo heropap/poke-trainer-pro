@@ -110,6 +110,9 @@ function makeMockCtx(overrides: Partial<EffectContext> = {}): EffectContext {
     pickUpPokemon: jest.fn(() => []),
     findPokemon: jest.fn(() => null),
     getAllPokemon: jest.fn(() => []),
+    getStadium: jest.fn(() => null),
+    removeStadium: jest.fn(() => false),
+    promptUser: jest.fn(() => Promise.resolve([])),
     log: jest.fn(),
     ...overrides,
   };

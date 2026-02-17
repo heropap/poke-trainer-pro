@@ -41,6 +41,12 @@ function getCardActions(card: GameCard): { label: string; action: string; warnin
         warning: effectExists ? undefined : "效果未实现"
       }];
     }
+    if (subtypes.includes("Stadium")) {
+      return [{
+        label: "打出场地",
+        action: "play_stadium",
+      }];
+    }
   }
 
   if (supertype === "Pokémon") {
