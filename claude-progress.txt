@@ -740,3 +740,36 @@ Notes: 实现了对战日志侧边栏，显示所有游戏事件：
   文件变更: 19 files, +1637 lines
   新文件: ActionLog.tsx, action-log.test.ts, CardDetailModal.tsx, CardSelectionModal.tsx,
          validation.ts, base-rules.ts, attack-system.ts + 2 个引擎测试文件
+
+=== Session 19 | 2026-02-17 ===
+Feature: ryuu-play 引擎移植 + 适配层
+Status: completed
+Notes:
+  从 GitHub 克隆并评估了 ryuu-play (keeshii/ryuu-play) 开源 PTCG 引擎（203 specs 全通过），
+  确认支持 Energy Attachment、Evolution、Damage Calculation 三大核心机制。
+
+  实现内容:
+  1. 引擎移植:
+     - 复制 ryuu-play packages/common/src → app/src/lib/ptcg-engine/（核心引擎）
+     - 复制 ryuu-play packages/sets/src → app/src/lib/ptcg-sets/（卡牌集）
+     - 配置 TypeScript 路径别名 @ptcg/common → ./src/lib/ptcg-engine/index.ts
+     - 排除 ryuu-play spec 文件（Jasmine）避免与 Jest 冲突
+
+  2. 适配层:
+     - app/src/adapters/engine-adapter.ts: 完整的类型桥接
+       - mapRyuuStateToUI(): State → GameState 主转换器
+       - ryuuCardToUICard(): 类实例 → 纯接口
+       - pokemonSlotToGameCard(): PokemonSlot → GameCard（含能量/工具/伤害/状态）
+     - app/src/lib/ryuu-adapter/: 外部类型适配（修复 TypeScript 类型不匹配）
+
+  3. 异步测试修复（86 个测试）:
+     - processAction/playSupporter/playItem 改为 async 后，9 个测试文件需要添加 async/await
+     - 5 个并行 agent 同时修复所有测试文件
+     - handleAction/handleDisconnect（game-room.ts）也需异步化测试
+
+  测试: 27 套件，678 测试全部通过。TypeScript 编译 0 错误。
+  文件变更: 894 files changed, 69489 insertions, 507 deletions
+
+=== 项目完成报告 ===
+所有 14 个功能均已完成（passes: true）。
+总测试: 27 套件，678 测试全部通过。
