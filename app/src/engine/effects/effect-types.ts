@@ -153,6 +153,23 @@ export interface EffectContext {
 
   /** Log a message to the game event log */
   log(message: string): void;
+
+  /**
+   * Prompt the user to select cards or targets.
+   * Returns a promise that resolves with the selected card IDs.
+   */
+  promptUser(options: {
+    message: string;
+    min: number;
+    max: number;
+    zone?: "deck" | "discard" | "hand" | "bench" | "opponent_bench";
+    filter?: {
+      supertype?: string;
+      subtypes?: string[];
+      name?: string;
+    };
+    targets?: string[];
+  }): Promise<string[]>;
 }
 
 // ───────────────────────────────────────────────
@@ -228,7 +245,7 @@ export interface TrainerEffect {
   /** Additional play conditions beyond the standard checks */
   canPlay?: (ctx: EffectContext) => boolean;
   /** Execute the trainer card's effect */
-  onPlay: (ctx: EffectContext) => void;
+  onPlay: (ctx: EffectContext) => void | Promise<void>;
 }
 
 // ───────────────────────────────────────────────

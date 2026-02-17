@@ -2,6 +2,7 @@
 import { RuleValidator } from "../interfaces/validation";
 import { GameState } from "../game-state";
 import { GameAction } from "../game-controller";
+import { checkEnergyCostDetailed } from "../game-actions";
 
 // ───────────────────────────────────────────────
 // Meta Rules
@@ -35,22 +36,20 @@ export const checkGodMode: RuleValidator = (state, action) => {
 // ───────────────────────────────────────────────
 
 export const checkPhase: RuleValidator = (state, action) => {
-  const allowedPhases = ["main", "attack"];
   // Actions allowed only in MAIN phase
   const mainPhaseActions = ["play_card", "use_ability", "retreat", "evolve"];
   
   if (mainPhaseActions.includes(action.type)) {
-    // Note: We check turnStatus.phase (Golden Loop) if available, fallback to legacy state.phase
-    const currentPhase = state.turnStatus?.phase || state.phase;
-    if (currentPhase !== "MAIN" && currentPhase !== "main") {
+    const normalizedPhase = String(state.phase).toLowerCase();
+    if (normalizedPhase !== "main") {
       return { valid: false, reason: "只能在主阶段进行此操作", code: "PHASE_ERROR" };
     }
   }
 
   // Attack ends main phase / enters attack phase
   if (action.type === "attack") {
-    const currentPhase = state.turnStatus?.phase || state.phase;
-    if (currentPhase !== "MAIN" && currentPhase !== "main") {
+    const normalizedPhase = String(state.phase).toLowerCase();
+    if (normalizedPhase !== "main") {
        return { valid: false, reason: "只能在主阶段攻击", code: "PHASE_ERROR" };
     }
   }
@@ -105,7 +104,7 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
       if (card.card.supertype === "Trainer" && card.card.subtypes.includes("Supporter")) {
         if (turnStatus.supporterUsed) {
           // Check overrides?
-          return { valid: false, reason: "每回合只能使用一次支持者", code: "SUPPORTER_LIMIT" };
+          return { valid: false, reason: "每回合只能使用一张支持者", code: "SUPPORTER_LIMIT" };
         }
         // First Turn Rule for Supporter (First player cannot use)
         if (state.turn === 1 && state.isFirstTurn) {
@@ -125,6 +124,44 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
   return { valid: true };
 };
 
+export const checkAttackEnergyCost: RuleValidator = (
+  state,
+  action,
+  playerIndex
+) => {
+  if (action.type !== "attack") return { valid: true };
+
+  const player = state.players[playerIndex];
+  const active = player.active;
+  if (!active) {
+    return { valid: false, reason: "没有战斗宝可梦", code: "NO_ACTIVE" };
+  }
+
+  if (!action.attackName) {
+    return { valid: false, reason: "缺少攻击名称", code: "NO_ATTACK_NAME" };
+  }
+
+  const attack = active.card.attacks?.find((a) => a.name === action.attackName);
+  if (!attack) {
+    return { valid: false, reason: "找不到攻击", code: "ATTACK_NOT_FOUND" };
+  }
+
+  const energyCheck = checkEnergyCostDetailed(
+    active.attachedEnergy,
+    attack.cost
+  );
+
+  if (!energyCheck.sufficient) {
+    return {
+      valid: false,
+      reason: `能量不足: 缺少 ${energyCheck.missing.join(", ")}`,
+      code: "ENERGY_COST",
+    };
+  }
+
+  return { valid: true };
+};
+
 // ───────────────────────────────────────────────
 // Combined Pipeline
 // ───────────────────────────────────────────────
@@ -135,5 +172,6 @@ export const basePipeline = combineValidators([
   checkGameOver,
   checkTurnOwnership,
   checkPhase,
-  checkHardRules
+  checkHardRules,
+  checkAttackEnergyCost
 ]);

@@ -455,7 +455,7 @@ describe("Attack Effects - No Effect Fallback", () => {
 // ═══════════════════════════════════════════════
 
 describe("Trainer Effects - Supporter", () => {
-  it("Professor's Research: 弃手牌抽7张", () => {
+  it("Professor's Research: 弃手牌抽7张", async () => {
     const state = setupGame();
     // Register effect
     registerEffect({
@@ -482,7 +482,7 @@ describe("Trainer Effects - Supporter", () => {
     const handCard = makeGameCard({ name: "Random Card", hp: "40" });
     state.players[0].hand.cards.push(handCard);
 
-    const result = playSupporter(state, supporter.instanceId);
+    const result = await playSupporter(state, supporter.instanceId);
     expect(result.success).toBe(true);
     // Should have drawn 7 new cards (hand was discarded before drawing)
     expect(state.players[0].hand.cards.length).toBe(7);
@@ -491,7 +491,7 @@ describe("Trainer Effects - Supporter", () => {
 });
 
 describe("Trainer Effects - Item", () => {
-  it("Nest Ball: 从牌组搜索基础宝可梦到备战区", () => {
+  it("Nest Ball: 从牌组搜索基础宝可梦到备战区", async () => {
     const state = setupGame();
     registerEffect({
       cardId: "test-nest-ball",
@@ -525,7 +525,7 @@ describe("Trainer Effects - Item", () => {
     state.players[0].hand.cards.push(item);
 
     const benchBefore = state.players[0].bench.cards.length;
-    const result = playItem(state, item.instanceId);
+    const result = await playItem(state, item.instanceId);
 
     expect(result.success).toBe(true);
     expect(state.players[0].bench.cards.length).toBe(benchBefore + 1);
@@ -703,7 +703,7 @@ describe("Status Effects - Between Turns", () => {
 // ═══════════════════════════════════════════════
 
 describe("Use Ability Action", () => {
-  it("激活宝可梦特性", () => {
+  it("激活宝可梦特性", async () => {
     const state = setupGame();
     let abilityExecuted = false;
 
@@ -724,7 +724,7 @@ describe("Use Ability Action", () => {
       }],
     });
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "use_ability",
       cardId: state.players[0].active!.instanceId,
       abilityName: "Solar Transfer",
@@ -735,7 +735,7 @@ describe("Use Ability Action", () => {
     expect(state.players[0].active!.abilityUsedThisTurn).toBe(true);
   });
 
-  it("每回合只能用一次特性", () => {
+  it("每回合只能用一次特性", async () => {
     const state = setupGame();
     state.players[0].active!.card.abilities = [
       { name: "Test Ability", text: "", type: "Ability" },
@@ -750,7 +750,7 @@ describe("Use Ability Action", () => {
     });
 
     // First use should succeed
-    const r1 = processAction(state, 0, {
+    const r1 = await processAction(state, 0, {
       type: "use_ability",
       cardId: state.players[0].active!.instanceId,
       abilityName: "Test Ability",
@@ -758,7 +758,7 @@ describe("Use Ability Action", () => {
     expect(r1.success).toBe(true);
 
     // Second use should fail
-    const r2 = processAction(state, 0, {
+    const r2 = await processAction(state, 0, {
       type: "use_ability",
       cardId: state.players[0].active!.instanceId,
       abilityName: "Test Ability",
@@ -767,9 +767,9 @@ describe("Use Ability Action", () => {
     expect(r2.error).toContain("已经使用过");
   });
 
-  it("不存在的特性返回错误", () => {
+  it("不存在的特性返回错误", async () => {
     const state = setupGame();
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "use_ability",
       cardId: state.players[0].active!.instanceId,
       abilityName: "Nonexistent",
@@ -777,7 +777,7 @@ describe("Use Ability Action", () => {
     expect(result.success).toBe(false);
   });
 
-  it("备战区宝可梦也能使用特性", () => {
+  it("备战区宝可梦也能使用特性", async () => {
     const state = setupGame();
     const benchMon = makeGameCard({ name: "Gardevoir", hp: "120" });
     benchMon.card.abilities = [
@@ -795,7 +795,7 @@ describe("Use Ability Action", () => {
       }],
     });
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "use_ability",
       cardId: benchMon.instanceId,
       abilityName: "Psychic Embrace",

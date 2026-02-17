@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Effect Context Factory
  *
@@ -10,6 +12,13 @@ import { removeCard, addToBottom, addToTop, shuffleZone, findCard, drawMultiple 
 import { flipCoin as coinFlip, flipCoins as coinFlips } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
 import { EffectContext } from "./effect-types";
+
+/**
+ * Global store for pending prompt resolvers.
+ * This allows async effects to pause execution until the UI responds.
+ * Key: promptId, Value: resolve function
+ */
+export const pendingPrompts = new Map<string, (ids: string[]) => void>();
 
 /**
  * Create an EffectContext for a card effect execution.
@@ -519,6 +528,28 @@ export function createEffectContext(
 
     log(message: string): void {
       logEvent(state, playerIndex, "use_ability" as any, message);
+    },
+
+    // ─── User Prompt ───
+
+    promptUser(options): Promise<string[]> {
+      const promptId = `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: playerIndex,
+        zone: options.zone || "deck",
+        min: options.min,
+        max: options.max,
+        message: options.message,
+        filter: options.filter,
+        targets: options.targets
+      };
+      
+      return new Promise<string[]>((resolve) => {
+        pendingPrompts.set(promptId, resolve);
+      });
     },
   };
 

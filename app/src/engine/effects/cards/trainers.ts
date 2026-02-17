@@ -26,11 +26,20 @@ function createBossOrders(cardId: string): CardEffectDef {
         // Must have an opponent bench Pokemon to switch
         return ctx.opponent.bench.cards.length > 0 && ctx.opponent.active !== null;
       },
-      onPlay: (ctx) => {
-        // Switch opponent's first bench Pokemon to active (simplified)
-        // In full implementation, the player would choose which bench Pokemon
+      onPlay: async (ctx) => {
+        // Prompt user to select an opponent's bench Pokemon
         if (ctx.opponent.bench.cards.length > 0) {
-          ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+          const selection = await ctx.promptUser({
+            message: "选择一只对手的备战宝可梦切换到战斗区",
+            min: 1,
+            max: 1,
+            zone: "opponent_bench",
+            targets: ctx.opponent.bench.cards.map(c => c.instanceId)
+          });
+
+          if (selection && selection.length > 0) {
+            ctx.switchOpponentActive(selection[0]);
+          }
         }
       },
     },

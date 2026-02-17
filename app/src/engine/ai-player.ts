@@ -18,7 +18,7 @@
 
 import { GameState, GameCard, Player } from "./game-state";
 import { GameAction, ActionResult } from "./game-controller";
-import { canAttack } from "./game-actions";
+import { canAttack, checkEnergyCostDetailed } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
 
 // ───────────────────────────────────────────────
@@ -465,9 +465,11 @@ function considerRetreat(
 
   // Check retreat cost
   const retreatCost = active.card.convertedRetreatCost || 0;
-  const attachedEnergy = getEnergyCount(active);
-
-  if (attachedEnergy < retreatCost) return null; // Can't afford
+  if (retreatCost > 0) {
+    const cost = Array.from({ length: retreatCost }, () => "Colorless");
+    const energyCheck = checkEnergyCostDetailed(active.attachedEnergy, cost);
+    if (!energyCheck.sufficient) return null;
+  }
 
   // Find healthiest bench Pokemon
   const benchSorted = [...player.bench.cards].sort(

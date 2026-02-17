@@ -400,7 +400,7 @@ describe("Retreat", () => {
 // ─── Play Supporter ───
 
 describe("Play Supporter", () => {
-  it("成功使用支持者卡", () => {
+  it("成功使用支持者卡", async () => {
     const state = setupMainPhase();
     const player = getCurrentPlayer(state);
 
@@ -411,14 +411,14 @@ describe("Play Supporter", () => {
     });
     player.hand.cards.push(supporter);
 
-    const result = playSupporter(state, supporter.instanceId);
+    const result = await playSupporter(state, supporter.instanceId);
     expect(result.success).toBe(true);
     expect(player.supporterUsedThisTurn).toBe(true);
     expect(player.hand.cards).toHaveLength(0);
     expect(player.discard.cards).toHaveLength(1);
   });
 
-  it("每回合只能使用一张支持者", () => {
+  it("每回合只能使用一张支持者", async () => {
     const state = setupMainPhase();
     const player = getCurrentPlayer(state);
 
@@ -434,7 +434,7 @@ describe("Play Supporter", () => {
     });
     player.hand.cards.push(supporter1, supporter2);
 
-    playSupporter(state, supporter1.instanceId);
+    await playSupporter(state, supporter1.instanceId);
     const result = canPlaySupporter(state, supporter2.instanceId);
     expect(result.success).toBe(false);
     expect(result.error).toContain("一张");
@@ -460,7 +460,7 @@ describe("Play Supporter", () => {
 // ─── Play Item ───
 
 describe("Play Item", () => {
-  it("成功使用物品卡", () => {
+  it("成功使用物品卡", async () => {
     const state = setupMainPhase();
     const player = getCurrentPlayer(state);
 
@@ -471,13 +471,13 @@ describe("Play Item", () => {
     });
     player.hand.cards.push(item);
 
-    const result = playItem(state, item.instanceId);
+    const result = await playItem(state, item.instanceId);
     expect(result.success).toBe(true);
     expect(player.hand.cards).toHaveLength(0);
     expect(player.discard.cards).toHaveLength(1);
   });
 
-  it("可以一回合使用多张物品卡", () => {
+  it("可以一回合使用多张物品卡", async () => {
     const state = setupMainPhase();
     const player = getCurrentPlayer(state);
 
@@ -493,8 +493,8 @@ describe("Play Item", () => {
     });
     player.hand.cards.push(item1, item2);
 
-    playItem(state, item1.instanceId);
-    const result = playItem(state, item2.instanceId);
+    await playItem(state, item1.instanceId);
+    const result = await playItem(state, item2.instanceId);
     expect(result.success).toBe(true);
     expect(player.discard.cards).toHaveLength(2);
   });

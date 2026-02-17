@@ -14,7 +14,7 @@ interface ActionFeedback {
 interface ManualToolkitProps {
   gameState: GameState;
   playerIndex: 0 | 1;
-  onAction: (action: any) => ActionFeedback | void;
+  onAction: (action: any) => ActionFeedback | void | Promise<ActionFeedback | void>;
   isOpen: boolean;
   onToggle: () => void;
 }

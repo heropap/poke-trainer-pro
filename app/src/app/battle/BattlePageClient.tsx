@@ -12,10 +12,14 @@ import { zoneSize } from "@/engine/zones";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
 import { computeAIAction, AIDecision } from "@/engine/ai-player";
 import Link from "next/link";
+import { adaptGameState } from "@/lib/ryuu-adapter/adapter";
+import { MockEngine } from "@/lib/ryuu-adapter/mock-engine";
+import { ExternalState, ExternalPlayer, ExternalCard, CardList } from "@/lib/ryuu-adapter/external-types";
+import { createMockInitialState } from "@/lib/ryuu-adapter/mock-data";
 
 // ─── Battle Mode Types ───
 
-type BattleMode = "ai" | "local" | "online";
+type BattleMode = "ai" | "local" | "online" | "mock_engine"; // Added mock_engine mode
 
 // ─── AI Turn Execution Delay (ms) ───
 const AI_ACTION_DELAY = 800;
@@ -38,7 +42,10 @@ export default function BattlePageClient() {
   const [isMatchmaking, setIsMatchmaking] = useState(false);
   const [matchFound, setMatchFound] = useState(false);
   const [battleMode, setBattleMode] = useState<BattleMode>("ai");
-  const [lobbyTab, setLobbyTab] = useState<"ai" | "online">("ai");
+  const [lobbyTab, setLobbyTab] = useState<"ai" | "online" | "mock">("ai");
+
+  // Mock Engine Ref
+  const mockEngineRef = useRef<MockEngine | null>(null);
 
   // AI state
   const [aiThinking, setAiThinking] = useState(false);
@@ -196,7 +203,85 @@ export default function BattlePageClient() {
    * This runs recursively: after each action, if the AI still
    * has the turn, it computes and executes the next action.
    */
-  const executeAITurn = useCallback((currentState: GameState, actionCount: number = 0) => {
+  const handleStartMockEngine = useCallback(() => {
+    // 1. Create initial state from enhanced Mock Data
+    const initialState = createMockInitialState();
+
+    // 2. Initialize Engine
+    const engine = new MockEngine(initialState);
+    mockEngineRef.current = engine;
+    
+    // 3. Adapt & Set State
+    const adapted = adaptGameState(engine.getState());
+    setGameState(adapted);
+    setBattleMode("mock_engine");
+    setMyPlayerId(0);
+  }, []);
+
+  const handleMockAction = useCallback((action: GameAction): { success: boolean; error?: string } => {
+    const engine = mockEngineRef.current;
+    if (!engine || !gameState) return { success: false, error: "Engine not ready" };
+
+    const currentPlayer = gameState.currentPlayer;
+    const playerId = currentPlayer === 0 ? "p1" : "p2"; // Mock IDs
+
+    let result: { success: boolean; message?: string } = { success: false, message: "Unknown action" };
+
+    if (action.type === "play_card") {
+      if (!action.cardId) {
+        return { success: false, error: "Missing cardId" };
+      }
+
+      // Find card in engine state
+      const player = engine.getState().players[currentPlayer];
+      // In a real app, action.cardId is the instanceId from frontend (e.g., ext-c-charmeleon-1-...)
+      // We need to match it to engine's card ID.
+      // Our adapter generates instanceId as `ext-${extCard.id}-...`.
+      // So we can try to find the card in hand that matches.
+      
+      const engineCard = player.hand.cards.find(c => action.cardId!.startsWith(`ext-${c.id}`));
+      
+      if (!engineCard) {
+          return { success: false, error: "Card not found in engine hand" };
+      }
+
+      if (engineCard.superType === "Energy") {
+          // Assume target is active for now, or use targetId if mapped
+          // Simplified: attach to active
+          result = engine.playEnergy(playerId, engineCard.id, "active-" + playerId);
+      } else if (engineCard.superType === "Trainer") {
+          result = engine.playTrainer(playerId, engineCard.id, "active-" + playerId);
+      } else if (engineCard.superType === "Pokemon" && engineCard.subType?.includes("Stage")) {
+          // Evolve
+          result = engine.evolvePokemon(playerId, engineCard.id, "active-" + playerId);
+      }
+      
+    } else if (action.type === "attack") {
+       // Mock Engine expects attack name. GameAction usually has 'attackName' or 'moveIndex'
+       // Let's assume for mock purposes we use the first attack if name not provided, or hardcode "Scratch"
+       const attackName = (action as any).name || "Scratch";
+       result = engine.attack(playerId, attackName);
+    } else if (action.type === "end_turn") {
+       engine.endTurn();
+       result = { success: true };
+    }
+
+    if (result.success) {
+       setGameState(adaptGameState(engine.getState()));
+       return { success: true };
+    } else {
+       return { success: false, error: result.message };
+    }
+  }, [gameState]);
+
+  // ─── AI Turn Execution ───
+
+  /**
+   * Execute a single AI action with a delay.
+   * This runs recursively: after each action, if the AI still
+   * has the turn, it computes and executes the next action.
+   */
+  const executeAITurn = useCallback(async (currentState: GameState, actionCount: number = 0) => {
     if (currentState.phase === "game_over") {
       setAiThinking(false);
       return;
@@ -215,7 +300,7 @@ export default function BattlePageClient() {
     // Safety: prevent infinite action loops
     if (actionCount >= AI_MAX_ACTIONS_PER_TURN) {
       console.warn(`[AI] Hit max actions per turn (${AI_MAX_ACTIONS_PER_TURN}), forcing end turn`);
-      const endResult = processAction(currentState, aiIndex, { type: "end_turn" });
+      const endResult = await processAction(currentState, aiIndex, { type: "end_turn" });
       if (endResult.success) {
         setGameState(endResult.newState);
       }
@@ -233,7 +318,7 @@ export default function BattlePageClient() {
     }
 
     // Execute the action after a delay so the player can see it
-    aiTimerRef.current = setTimeout(() => {
+    aiTimerRef.current = setTimeout(async () => {
       // Use the ref to get the absolute latest state
       const latestState = gameStateRef.current;
       if (!latestState || latestState.phase === "game_over") {
@@ -257,7 +342,7 @@ export default function BattlePageClient() {
       console.log(`[AI] (${actionCount + 1}/${AI_MAX_ACTIONS_PER_TURN}) ${freshDecision.reason}`);
       setAiLastAction(freshDecision.reason);
 
-      const result = processAction(latestState, aiIndex, freshDecision.action);
+      const result = await processAction(latestState, aiIndex, freshDecision.action);
 
       if (result.success) {
         setGameState(result.newState);
@@ -290,7 +375,7 @@ export default function BattlePageClient() {
       } else {
         console.warn(`[AI] Action failed: ${result.error}, ending turn`);
         // If AI action fails, try to end turn
-        const endResult = processAction(latestState, aiIndex, { type: "end_turn" });
+        const endResult = await processAction(latestState, aiIndex, { type: "end_turn" });
         if (endResult.success) {
           setGameState(endResult.newState);
         }
@@ -321,11 +406,11 @@ export default function BattlePageClient() {
 
   // ─── Action Handlers ───
 
-  const handleEndTurn = useCallback(() => {
+  const handleEndTurn = useCallback(async () => {
     if (!gameState) return;
 
     if (isLocalGame.current) {
-      const result = processAction(gameState, gameState.currentPlayer, { type: "end_turn" });
+      const result = await processAction(gameState, gameState.currentPlayer, { type: "end_turn" });
       setGameState(result.newState);
     } else if (socket && onlineGameId) {
       socket.emit("game:action", {
@@ -339,7 +424,7 @@ export default function BattlePageClient() {
    * Handle all game actions from BattleBoard for local play.
    * In AI mode, only player 0 (human) can issue actions this way.
    */
-  const handleLocalAction = useCallback((action: GameAction): { success: boolean; error?: string } => {
+  const handleLocalAction = useCallback(async (action: GameAction): Promise<{ success: boolean; error?: string }> => {
     if (!gameState || !isLocalGame.current) return { success: false, error: "游戏未初始化" };
 
     // In AI mode, block actions during AI's turn
@@ -349,7 +434,7 @@ export default function BattlePageClient() {
     }
 
     const playerIndex = gameState.currentPlayer;
-    const result = processAction(gameState, playerIndex, action);
+    const result = await processAction(gameState, playerIndex, action);
 
     if (result.success) {
       setGameState(result.newState);
@@ -472,6 +557,7 @@ export default function BattlePageClient() {
   if (gameState) {
     const isAIMode = battleMode === "ai";
     const isAITurn = isAIMode && gameState.currentPlayer === 1;
+    const isMockMode = battleMode === "mock_engine";
 
     return (
       <div className="fixed inset-0 z-50 bg-zinc-950">
@@ -482,11 +568,15 @@ export default function BattlePageClient() {
               ? "p1" // AI mode: always from player's perspective
               : battleMode === "local"
                 ? (gameState.currentPlayer === 0 ? "p1" : "p2") // Local hot-seat
-                : (myPlayerId === 1 ? "p2" : "p1") // Online: fixed perspective
+                : isMockMode 
+                  ? "p1" // Mock mode: Player 1
+                  : (myPlayerId === 1 ? "p2" : "p1") // Online: fixed perspective
           }
           onAction={(action: any) => {
             if (isLocalGame.current) {
               return handleLocalAction(action as GameAction);
+            } else if (isMockMode) {
+              return handleMockAction(action as GameAction);
             } else {
               // Online mode: send action to server
               if (socket && onlineGameId && action.type) {
@@ -629,8 +719,37 @@ export default function BattlePageClient() {
           >
             在线匹配 (Beta)
           </button>
+          <button
+            onClick={() => { setLobbyTab("mock"); handleStartMockEngine(); }}
+            className={`border-b-2 px-1 py-2 text-sm font-medium transition-colors ${
+              lobbyTab === "mock"
+                ? "border-purple-500 text-purple-600 dark:text-purple-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+            }`}
+          >
+            引擎测试 (Mock)
+          </button>
         </div>
       </div>
+
+      {/* Mock Tab Content */}
+      {lobbyTab === "mock" && (
+        <div className="flex flex-col items-center justify-center space-y-4 rounded-lg border border-purple-200 bg-purple-50 p-8 dark:border-purple-900 dark:bg-purple-950/30">
+          <div className="text-center">
+            <h3 className="text-lg font-medium text-purple-900 dark:text-purple-100">
+              外部引擎测试模式
+            </h3>
+            <p className="mt-2 text-sm text-purple-700 dark:text-purple-300">
+              这是一个使用模拟外部引擎 (MockEngine) 的沙盒模式。
+              <br />
+              它绕过了原有的 GameController，直接测试核心规则 (贴能限制、伤害计算)。
+            </p>
+          </div>
+          <div className="text-sm text-zinc-500">
+             (游戏已在后台初始化，点击上方标签切换回 AI 或在线模式)
+          </div>
+        </div>
+      )}
 
       {/* AI Tab Content */}
       {lobbyTab === "ai" && (

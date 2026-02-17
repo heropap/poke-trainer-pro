@@ -300,40 +300,40 @@ describe("Action routing (handleAction)", () => {
     );
   });
 
-  test("routes action to correct player index", () => {
+  test("routes action to correct player index", async () => {
     // Current player should be able to end turn
     const currentSocketId = room.state.currentPlayer === 0 ? "sock-p1" : "sock-p2";
-    const result = room.handleAction(currentSocketId, { type: "end_turn" });
+    const result = await room.handleAction(currentSocketId, { type: "end_turn" });
     expect(result.success).toBe(true);
   });
 
-  test("rejects action from unknown socket", () => {
-    const result = room.handleAction("unknown-socket", { type: "end_turn" });
+  test("rejects action from unknown socket", async () => {
+    const result = await room.handleAction("unknown-socket", { type: "end_turn" });
     expect(result.success).toBe(false);
     expect(result.error).toBe("Not a player in this game");
   });
 
-  test("rejects action from wrong player (not their turn)", () => {
+  test("rejects action from wrong player (not their turn)", async () => {
     const nonCurrentSocketId = room.state.currentPlayer === 0 ? "sock-p2" : "sock-p1";
-    const result = room.handleAction(nonCurrentSocketId, { type: "end_turn" });
+    const result = await room.handleAction(nonCurrentSocketId, { type: "end_turn" });
     expect(result.success).toBe(false);
   });
 
-  test("updates authoritative state after successful action", () => {
+  test("updates authoritative state after successful action", async () => {
     const currentPlayerBefore = room.state.currentPlayer;
     const currentSocketId = currentPlayerBefore === 0 ? "sock-p1" : "sock-p2";
-    room.handleAction(currentSocketId, { type: "end_turn" });
+    await room.handleAction(currentSocketId, { type: "end_turn" });
 
     // Current player should have switched after end_turn
     expect(room.state.currentPlayer).not.toBe(currentPlayerBefore);
   });
 
-  test("updates lastActivityAt on action", () => {
+  test("updates lastActivityAt on action", async () => {
     const before = room.lastActivityAt;
     const currentSocketId = room.state.currentPlayer === 0 ? "sock-p1" : "sock-p2";
 
     // Small delay to ensure timestamp differs
-    room.handleAction(currentSocketId, { type: "end_turn" });
+    await room.handleAction(currentSocketId, { type: "end_turn" });
     expect(room.lastActivityAt).toBeGreaterThanOrEqual(before);
   });
 });
@@ -351,10 +351,10 @@ describe("Disconnection handling", () => {
     );
   });
 
-  test("auto-concedes for disconnected player", () => {
+  test("auto-concedes for disconnected player", async () => {
     expect(room.isGameOver()).toBe(false);
 
-    const result = room.handleDisconnect("sock-p1");
+    const result = await room.handleDisconnect("sock-p1");
     expect(result).not.toBeNull();
     expect(result!.success).toBe(true);
     expect(room.isGameOver()).toBe(true);
@@ -363,18 +363,18 @@ describe("Disconnection handling", () => {
     expect(room.state.winner!.condition).toBe("concede");
   });
 
-  test("returns null for unknown socket disconnect", () => {
-    const result = room.handleDisconnect("unknown");
+  test("returns null for unknown socket disconnect", async () => {
+    const result = await room.handleDisconnect("unknown");
     expect(result).toBeNull();
   });
 
-  test("returns null if game already over", () => {
+  test("returns null if game already over", async () => {
     // End the game first
-    room.handleDisconnect("sock-p1");
+    await room.handleDisconnect("sock-p1");
     expect(room.isGameOver()).toBe(true);
 
     // Second disconnect should be no-op
-    const result = room.handleDisconnect("sock-p2");
+    const result = await room.handleDisconnect("sock-p2");
     expect(result).toBeNull();
   });
 });
@@ -382,7 +382,7 @@ describe("Disconnection handling", () => {
 // ─── 6. Game Lifecycle ───
 
 describe("Game lifecycle", () => {
-  test("full game flow: create → play → concede", () => {
+  test("full game flow: create → play → concede", async () => {
     const room = new GameRoom("life-test", "sock-1", "A", "sock-2", "B", cardLookup);
     room.initialize(
       { id: "d1", name: "D1", cards: deck1Ids },
@@ -394,14 +394,14 @@ describe("Game lifecycle", () => {
 
     // Concede
     const currentSocket = room.state.currentPlayer === 0 ? "sock-1" : "sock-2";
-    const result = room.handleAction(currentSocket, { type: "concede" });
+    const result = await room.handleAction(currentSocket, { type: "concede" });
     expect(result.success).toBe(true);
     expect(room.isGameOver()).toBe(true);
     expect(room.state.winner).not.toBeNull();
     expect(room.state.winner!.condition).toBe("concede");
   });
 
-  test("multiple turns can be played", () => {
+  test("multiple turns can be played", async () => {
     const room = new GameRoom("turns-test", "sock-1", "A", "sock-2", "B", cardLookup);
     room.initialize(
       { id: "d1", name: "D1", cards: deck1Ids },
@@ -412,7 +412,7 @@ describe("Game lifecycle", () => {
 
     // Play 4 turns (end turn back and forth)
     for (let i = 0; i < 4; i++) {
-      const result = room.handleAction(getSocket(), { type: "end_turn" });
+      const result = await room.handleAction(getSocket(), { type: "end_turn" });
       expect(result.success).toBe(true);
     }
 
@@ -467,7 +467,7 @@ describe("Hidden card structure", () => {
 // ─── 8. Communication Protocol ───
 
 describe("Communication protocol types", () => {
-  test("handleAction returns correct ActionResult shape", () => {
+  test("handleAction returns correct ActionResult shape", async () => {
     const room = new GameRoom("proto-test", "sock-1", "A", "sock-2", "B", cardLookup);
     room.initialize(
       { id: "d1", name: "D1", cards: deck1Ids },
@@ -475,7 +475,7 @@ describe("Communication protocol types", () => {
     );
 
     const currentSocket = room.state.currentPlayer === 0 ? "sock-1" : "sock-2";
-    const result = room.handleAction(currentSocket, { type: "end_turn" });
+    const result = await room.handleAction(currentSocket, { type: "end_turn" });
 
     // ActionResult shape
     expect(result).toHaveProperty("success");
@@ -484,7 +484,7 @@ describe("Communication protocol types", () => {
     expect(result.newState).toBeDefined();
   });
 
-  test("error result includes error message", () => {
+  test("error result includes error message", async () => {
     const room = new GameRoom("proto-err", "sock-1", "A", "sock-2", "B", cardLookup);
     room.initialize(
       { id: "d1", name: "D1", cards: deck1Ids },
@@ -493,7 +493,7 @@ describe("Communication protocol types", () => {
 
     // Wrong player tries to act
     const wrongSocket = room.state.currentPlayer === 0 ? "sock-2" : "sock-1";
-    const result = room.handleAction(wrongSocket, { type: "end_turn" });
+    const result = await room.handleAction(wrongSocket, { type: "end_turn" });
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();

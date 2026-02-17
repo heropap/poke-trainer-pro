@@ -356,7 +356,7 @@ describe("EffectContext - New Methods", () => {
 // ═══════════════════════════════════════════════
 
 describe("Trainer Effects (Name-based) - Iono", () => {
-  it("Iono: 双方洗手牌入牌组，按奖励卡数抽牌", () => {
+  it("Iono: 双方洗手牌入牌组，按奖励卡数抽牌", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -378,7 +378,7 @@ describe("Trainer Effects (Name-based) - Iono", () => {
     });
     state.players[0].hand.cards.push(iono);
 
-    const result = playSupporter(state, iono.instanceId);
+    const result = await playSupporter(state, iono.instanceId);
     expect(result.success).toBe(true);
 
     // Alice should have exactly 3 cards (= her prize count)
@@ -389,7 +389,7 @@ describe("Trainer Effects (Name-based) - Iono", () => {
 });
 
 describe("Trainer Effects (Name-based) - Judge", () => {
-  it("Judge: 双方洗手牌入牌组，各抽 4 张", () => {
+  it("Judge: 双方洗手牌入牌组，各抽 4 张", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -405,7 +405,7 @@ describe("Trainer Effects (Name-based) - Judge", () => {
     });
     state.players[0].hand.cards.push(judge);
 
-    const result = playSupporter(state, judge.instanceId);
+    const result = await playSupporter(state, judge.instanceId);
     expect(result.success).toBe(true);
     expect(state.players[0].hand.cards.length).toBe(4);
     expect(state.players[1].hand.cards.length).toBe(4);
@@ -413,7 +413,7 @@ describe("Trainer Effects (Name-based) - Judge", () => {
 });
 
 describe("Trainer Effects (Name-based) - Nemona", () => {
-  it("Nemona: 抽 3 张", () => {
+  it("Nemona: 抽 3 张", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -425,7 +425,7 @@ describe("Trainer Effects (Name-based) - Nemona", () => {
     state.players[0].hand.cards.push(nemona);
     const handBefore = state.players[0].hand.cards.length;
 
-    const result = playSupporter(state, nemona.instanceId);
+    const result = await playSupporter(state, nemona.instanceId);
     expect(result.success).toBe(true);
     // Drew 3 cards (hand was 1 before playing, minus supporter, plus 3)
     expect(state.players[0].hand.cards.length).toBe(handBefore - 1 + 3);
@@ -433,7 +433,7 @@ describe("Trainer Effects (Name-based) - Nemona", () => {
 });
 
 describe("Trainer Effects (Name-based) - Ultra Ball", () => {
-  it("Ultra Ball: 丢弃 2 张搜索宝可梦", () => {
+  it("Ultra Ball: 丢弃 2 张搜索宝可梦", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -450,7 +450,7 @@ describe("Trainer Effects (Name-based) - Ultra Ball", () => {
     state.players[0].hand.cards.push(ultraBall);
 
     const handBefore = state.players[0].hand.cards.length;
-    const result = playItem(state, ultraBall.instanceId);
+    const result = await playItem(state, ultraBall.instanceId);
 
     expect(result.success).toBe(true);
     // Hand: started with 3 fodder + ultra ball = 4
@@ -462,7 +462,7 @@ describe("Trainer Effects (Name-based) - Ultra Ball", () => {
 });
 
 describe("Trainer Effects (Name-based) - Switch", () => {
-  it("Switch: 切换自己的战斗宝可梦", () => {
+  it("Switch: 切换自己的战斗宝可梦", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -476,14 +476,14 @@ describe("Trainer Effects (Name-based) - Switch", () => {
     });
     state.players[0].hand.cards.push(switchCard);
 
-    const result = playItem(state, switchCard.instanceId);
+    const result = await playItem(state, switchCard.instanceId);
     expect(result.success).toBe(true);
     expect(state.players[0].active!.card.name).toBe("Snorlax");
   });
 });
 
 describe("Trainer Effects (Name-based) - Potion", () => {
-  it("Potion: 治疗 30 HP", () => {
+  it("Potion: 治疗 30 HP", async () => {
     initializeEffects();
     const state = setupGame();
     state.players[0].active!.damageCounters = 5; // 50 damage
@@ -495,13 +495,13 @@ describe("Trainer Effects (Name-based) - Potion", () => {
     });
     state.players[0].hand.cards.push(potion);
 
-    playItem(state, potion.instanceId);
+    await playItem(state, potion.instanceId);
     expect(state.players[0].active!.damageCounters).toBe(2); // 50 - 30 = 20, 2 counters
   });
 });
 
 describe("Trainer Effects (Name-based) - Night Stretcher", () => {
-  it("Night Stretcher: 从弃牌堆取回 1 只宝可梦", () => {
+  it("Night Stretcher: 从弃牌堆取回 1 只宝可梦", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -515,13 +515,13 @@ describe("Trainer Effects (Name-based) - Night Stretcher", () => {
     });
     state.players[0].hand.cards.push(nightStretcher);
 
-    playItem(state, nightStretcher.instanceId);
+    await playItem(state, nightStretcher.instanceId);
     expect(state.players[0].hand.cards.some(c => c.card.name === "Gardevoir")).toBe(true);
   });
 });
 
 describe("Trainer Effects (Name-based) - Energy Search", () => {
-  it("Energy Search: 搜索 1 张基础能量", () => {
+  it("Energy Search: 搜索 1 张基础能量", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -532,14 +532,14 @@ describe("Trainer Effects (Name-based) - Energy Search", () => {
     });
     state.players[0].hand.cards.push(energySearch);
 
-    playItem(state, energySearch.instanceId);
+    await playItem(state, energySearch.instanceId);
     // Should have found the Fire Energy we put in deck in setupGame
     expect(state.players[0].hand.cards.some(c => c.card.name === "Fire Energy")).toBe(true);
   });
 });
 
 describe("Trainer Effects (Name-based) - Pokemon Catcher", () => {
-  it("Pokemon Catcher 正面: 换对手战斗区", () => {
+  it("Pokemon Catcher 正面: 换对手战斗区", async () => {
     initializeEffects();
     setRandomFn(() => 0.9); // Always heads
     const state = setupGame();
@@ -554,11 +554,11 @@ describe("Trainer Effects (Name-based) - Pokemon Catcher", () => {
     });
     state.players[0].hand.cards.push(catcher);
 
-    playItem(state, catcher.instanceId);
+    await playItem(state, catcher.instanceId);
     expect(state.players[1].active!.card.name).toBe("Geodude");
   });
 
-  it("Pokemon Catcher 反面: 无效果", () => {
+  it("Pokemon Catcher 反面: 无效果", async () => {
     initializeEffects();
     setRandomFn(() => 0.1); // Always tails
     const state = setupGame();
@@ -573,13 +573,13 @@ describe("Trainer Effects (Name-based) - Pokemon Catcher", () => {
     });
     state.players[0].hand.cards.push(catcher);
 
-    playItem(state, catcher.instanceId);
+    await playItem(state, catcher.instanceId);
     expect(state.players[1].active!.card.name).toBe("Pikachu ex"); // unchanged
   });
 });
 
 describe("Trainer Effects (Name-based) - Super Rod", () => {
-  it("Super Rod: 从弃牌堆洗回宝可梦/能量到牌组", () => {
+  it("Super Rod: 从弃牌堆洗回宝可梦/能量到牌组", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -596,7 +596,7 @@ describe("Trainer Effects (Name-based) - Super Rod", () => {
     });
     state.players[0].hand.cards.push(superRod);
 
-    playItem(state, superRod.instanceId);
+    await playItem(state, superRod.instanceId);
     // Both cards should be back in deck
     expect(state.players[0].deck.cards.length).toBe(deckBefore + 2);
     // Discard has 1 card left: the Super Rod itself (discarded after use by engine)
@@ -606,7 +606,7 @@ describe("Trainer Effects (Name-based) - Super Rod", () => {
 });
 
 describe("Trainer Effects (Name-based) - Pal Pad", () => {
-  it("Pal Pad: 从弃牌堆洗 2 张支持者回牌组", () => {
+  it("Pal Pad: 从弃牌堆洗 2 张支持者回牌组", async () => {
     initializeEffects();
     const state = setupGame();
 
@@ -623,7 +623,7 @@ describe("Trainer Effects (Name-based) - Pal Pad", () => {
     });
     state.players[0].hand.cards.push(palPad);
 
-    playItem(state, palPad.instanceId);
+    await playItem(state, palPad.instanceId);
     expect(state.players[0].deck.cards.length).toBe(deckBefore + 2);
   });
 });

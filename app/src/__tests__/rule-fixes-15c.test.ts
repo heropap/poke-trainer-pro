@@ -213,7 +213,7 @@ describe("System Rule Fixes — Session 15c", () => {
       expect(result.error).toContain("每回合只能使用一张");
     });
 
-    it("playSupporter() also blocked on first turn", () => {
+    it("playSupporter() also blocked on first turn", async () => {
       const state = setupBattleState();
       state.turn = 1;
       state.isFirstTurn = true;
@@ -221,7 +221,7 @@ describe("System Rule Fixes — Session 15c", () => {
       const supporter = createGameCard(createSupporterCard());
       state.players[0].hand.cards.push(supporter);
 
-      const result = playSupporter(state, supporter.instanceId);
+      const result = await playSupporter(state, supporter.instanceId);
       expect(result.success).toBe(false);
       expect(result.error).toContain("先攻方第一回合");
     });

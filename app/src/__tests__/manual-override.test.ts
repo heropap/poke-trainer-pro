@@ -411,7 +411,7 @@ describe("manual_override: shuffle_hand_draw", () => {
 // ═══════════════════════════════════════════
 
 describe("processAction — manual_override routing", () => {
-  test("routes manual_override through game controller", () => {
+  test("routes manual_override through game controller", async () => {
     const state = setupTestGame();
     const target = state.players[0].active!;
 
@@ -421,12 +421,12 @@ describe("processAction — manual_override routing", () => {
       params: { targetInstanceId: target.instanceId, amount: 20 },
     };
 
-    const result = processAction(state, 0, action);
+    const result = await processAction(state, 0, action);
     expect(result.success).toBe(true);
     expect(target.damageCounters).toBe(2);
   });
 
-  test("manual_override bypasses turn check", () => {
+  test("manual_override bypasses turn check", async () => {
     const state = setupTestGame();
     state.currentPlayer = 0;
     // Player 1 tries manual override on their own turn — should work!
@@ -438,19 +438,19 @@ describe("processAction — manual_override routing", () => {
       params: { targetInstanceId: target.instanceId, amount: 10 },
     };
 
-    const result = processAction(state, 1, action);
+    const result = await processAction(state, 1, action);
     expect(result.success).toBe(true);
     expect(target.damageCounters).toBe(1);
   });
 
-  test("manual_override missing overrideType fails", () => {
+  test("manual_override missing overrideType fails", async () => {
     const state = setupTestGame();
 
     const action: GameAction = {
       type: "manual_override",
     };
 
-    const result = processAction(state, 0, action);
+    const result = await processAction(state, 0, action);
     expect(result.success).toBe(false);
     expect(result.error).toContain("手动操作类型");
   });

@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 import {
   GameState,
@@ -214,7 +216,10 @@ export class GameRoom {
    * Handle a player action using the unified GameController.
    * Returns the ActionResult so the server can broadcast the updated state.
    */
-  public handleAction(socketId: string, action: any): ActionResult {
+  public async handleAction(
+    socketId: string,
+    action: { type: string; [key: string]: any }
+  ): Promise<ActionResult> {
     const playerIndex = this.getPlayerIndex(socketId);
     if (playerIndex === -1) {
       return {
@@ -225,7 +230,7 @@ export class GameRoom {
     }
 
     this.lastActivityAt = Date.now();
-    const result = processAction(this.state, playerIndex, action as GameAction);
+    const result = await processAction(this.state, playerIndex, action as GameAction);
 
     if (result.success) {
       // processAction returns a shallow clone; update our authoritative state
@@ -246,13 +251,13 @@ export class GameRoom {
    * Handle a player disconnecting mid-game.
    * The disconnected player concedes.
    */
-  public handleDisconnect(socketId: string): ActionResult | null {
+  public async handleDisconnect(socketId: string): Promise<ActionResult | null> {
     const playerIndex = this.getPlayerIndex(socketId);
     if (playerIndex === -1) return null;
     if (this.isGameOver()) return null;
 
     // Auto-concede for the disconnected player
-    const result = processAction(this.state, playerIndex, { type: "concede" });
+    const result = await processAction(this.state, playerIndex, { type: "concede" });
     if (result.success) {
       this.state = result.newState;
     }

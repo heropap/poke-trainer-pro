@@ -360,7 +360,7 @@ describe("Bug 3: endTurn processes BOTH players' status effects", () => {
 describe("Bug 4: handleAttack promotion flow", () => {
   afterEach(() => setRandomFn());
 
-  it("multi-bench promotion: state.phase stays main until promote completes", () => {
+  it("multi-bench promotion: state.phase stays main until promote completes", async () => {
     const state = setupBattleState();
 
     // Make Bob's active very weak so attack KOs it
@@ -374,7 +374,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     // Bob has 2 bench Pokemon — requires manual promotion
     expect(state.players[1].bench.cards.length).toBe(2);
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "attack",
       attackName: "Test Attack",
     });
@@ -386,7 +386,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     expect(result.newState.phase).toBe("main");
   });
 
-  it("multi-bench promotion: endTurn runs after promote action", () => {
+  it("multi-bench promotion: endTurn runs after promote action", async () => {
     const state = setupBattleState();
     state.players[1].active!.card = createTestCard({
       id: "bob-weak",
@@ -396,7 +396,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     });
 
     // Attack KOs Bob's active
-    const attackResult = processAction(state, 0, {
+    const attackResult = await processAction(state, 0, {
       type: "attack",
       attackName: "Test Attack",
     });
@@ -405,7 +405,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
 
     // Now Bob promotes
     const benchId = state.players[1].bench.cards[0].instanceId;
-    const promoteResult = processAction(state, 1, {
+    const promoteResult = await processAction(state, 1, {
       type: "promote",
       benchInstanceId: benchId,
     });
@@ -416,7 +416,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     expect(state.currentPlayer).toBe(1);
   });
 
-  it("single-bench auto-promote: normal endTurn flow", () => {
+  it("single-bench auto-promote: normal endTurn flow", async () => {
     const state = setupBattleState();
     state.players[1].active!.card = createTestCard({
       id: "bob-weak",
@@ -429,7 +429,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     state.players[1].bench.cards.splice(1, 1);
     expect(state.players[1].bench.cards.length).toBe(1);
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "attack",
       attackName: "Test Attack",
     });

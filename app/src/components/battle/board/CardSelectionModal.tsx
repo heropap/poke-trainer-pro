@@ -28,10 +28,16 @@ export function CardSelectionModal({
     prompt.zone === "deck" ? player.deck :
     prompt.zone === "discard" ? player.discard :
     prompt.zone === "hand" ? player.hand :
+    prompt.zone === "opponent_bench" ? gameState.players[prompt.playerIndex === 0 ? 1 : 0].bench :
     player.bench;
 
   // Filter cards based on prompt criteria
   const availableCards = sourceZone.cards.filter(card => {
+    // Explicit targets filter (if provided, only these cards are selectable)
+    if (prompt.targets && prompt.targets.length > 0) {
+      if (!prompt.targets.includes(card.instanceId)) return false;
+    }
+
     if (prompt.filter) {
       if (prompt.filter.supertype && card.card.supertype !== prompt.filter.supertype) return false;
       if (prompt.filter.subtypes && !prompt.filter.subtypes.every(s => card.card.subtypes.includes(s))) return false;

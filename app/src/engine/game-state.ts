@@ -138,6 +138,10 @@ export interface GameState {
     supporterUsedCountLimit?: number;
     godMode?: boolean; // Ultimate override
   };
+  /** Rule configuration */
+  rules: {
+    prizeCardsPerPlayer: number;
+  };
 }
 
 // ───────────────────────────────────────────────
@@ -183,7 +187,7 @@ export interface GamePrompt {
   id: string;
   type: "select_cards";
   playerIndex: 0 | 1;
-  zone: "deck" | "discard" | "hand" | "bench";
+  zone: "deck" | "discard" | "hand" | "bench" | "opponent_bench";
   min: number;
   max: number;
   filter?: {
@@ -191,6 +195,8 @@ export interface GamePrompt {
     subtypes?: string[];
     name?: string;
   };
+  /** Explicit list of allowed card IDs (overrides zone/filter if present) */
+  targets?: string[];
   message: string;
 }
 
@@ -272,6 +278,9 @@ export function createGameState(
     log: [],
     prompt: null,
     activeOverrides: {},
+    rules: {
+      prizeCardsPerPlayer: 6,
+    },
   };
 }
 

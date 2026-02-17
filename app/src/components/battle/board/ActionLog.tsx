@@ -25,7 +25,7 @@ interface ActionLogProps {
   onToggle: () => void;
   aiSpeed?: AiSpeed;
   onAiSpeedChange?: (speed: AiSpeed) => void;
-  battleMode?: "ai" | "local" | "online";
+  battleMode?: "ai" | "local" | "online" | "mock_engine";
 }
 
 // ─── Event Formatting ───

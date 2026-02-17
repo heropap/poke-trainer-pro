@@ -26,6 +26,7 @@ import { createEffectContext } from "./effects/effect-context";
 import { processBetweenTurns } from "./effects/status-effects";
 import { validateEvolution } from "./middleware/evolution.middleware";
 import { ActionEvent } from "./middleware/types";
+import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -250,19 +251,25 @@ export function canRetreat(
   }
   if (retreatCost < 0) retreatCost = 0;
 
-  if (energyToDiscard.length < retreatCost) {
-    return fail(
-      `撤退需要丢弃 ${retreatCost} 个能量，只选择了 ${energyToDiscard.length} 个`
-    );
-  }
-
-  // Verify all energy instanceIds exist on the active Pokemon
+  const selectedEnergy: GameCard[] = [];
   for (const eid of energyToDiscard) {
     const found = player.active.attachedEnergy.find(
       (e) => e.instanceId === eid
     );
     if (!found) {
       return fail(`能量 ${eid} 不在战斗宝可梦身上`);
+    }
+    selectedEnergy.push(found);
+  }
+
+  if (retreatCost > 0) {
+    const cost = Array.from({ length: retreatCost }, () => "Colorless");
+    const energyCheck = checkEnergyCostWithProvided(
+      getProvidedEnergy(selectedEnergy),
+      cost
+    );
+    if (!energyCheck.sufficient) {
+      return fail(`撤退需要 ${retreatCost} 点能量，所选能量不足`);
     }
   }
 
@@ -364,10 +371,10 @@ export function canPlaySupporter(
  * Play a supporter card from hand.
  * If a registered effect exists, execute it before discarding.
  */
-export function playSupporter(
+export async function playSupporter(
   state: GameState,
   supporterInstanceId: string
-): ActionResult {
+): Promise<ActionResult> {
   const check = canPlaySupporter(state, supporterInstanceId);
   if (!check.success) return check;
 
@@ -389,7 +396,7 @@ export function playSupporter(
   const cardEffect = getEffect(card.cardId, card.card.name);
   if (cardEffect?.trainer?.onPlay) {
     const ctx = createEffectContext(state, state.currentPlayer, card);
-    cardEffect.trainer.onPlay(ctx);
+    await cardEffect.trainer.onPlay(ctx);
   }
 
   addToBottom(player.discard, card);
@@ -434,11 +441,11 @@ export function canPlayItem(
  * If it's a Pokemon Tool, attach it instead of discarding.
  * Otherwise execute effect and discard.
  */
-export function playItem(
+export async function playItem(
   state: GameState,
   itemInstanceId: string,
   targetInstanceId?: string
-): ActionResult {
+): Promise<ActionResult> {
   const check = canPlayItem(state, itemInstanceId);
   if (!check.success) return check;
 
@@ -480,7 +487,7 @@ export function playItem(
   const cardEffect = getEffect(card.cardId, card.card.name);
   if (cardEffect?.trainer?.onPlay) {
     const ctx = createEffectContext(state, state.currentPlayer, card);
-    cardEffect.trainer.onPlay(ctx);
+    await cardEffect.trainer.onPlay(ctx);
   }
 
   addToBottom(player.discard, card);

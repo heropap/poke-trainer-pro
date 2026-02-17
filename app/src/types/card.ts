@@ -85,7 +85,8 @@ export type EnergyType =
   | "Metal"
   | "Dragon"
   | "Fairy"
-  | "Colorless";
+  | "Colorless"
+  | "Any";
 
 export type Supertype = "Pokémon" | "Trainer" | "Energy";
 

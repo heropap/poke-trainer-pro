@@ -23,6 +23,10 @@ node_modules/
 out/
 *.tsbuildinfo
 
+# === 外部克隆仓库 ===
+ryuu-play/
+tcgone-engine-contrib/
+
 # === 系统文件 ===
 .DS_Store
 Thumbs.db

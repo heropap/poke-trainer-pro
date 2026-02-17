@@ -60,6 +60,8 @@ export interface InitializeGameOptions {
    * minimal proxy cards instead of being skipped.
    */
   enableProxyCards?: boolean;
+  /** Prize cards per player (default 6, supported 6/3/1) */
+  prizeCardsPerPlayer?: number;
 }
 
 /**
@@ -184,7 +186,12 @@ export function initializeGame(
   player2Name = "玩家 2",
   options: InitializeGameOptions = {}
 ): SetupResult {
-  const { fullPreparation = false, randomFn, enableProxyCards = false } = options;
+  const {
+    fullPreparation = false,
+    randomFn,
+    enableProxyCards = false,
+    prizeCardsPerPlayer,
+  } = options;
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -256,6 +263,9 @@ export function initializeGame(
   // ─── Create game state ───
 
   const state = createGameState(player1Name, player2Name);
+  if (typeof prizeCardsPerPlayer === "number") {
+    state.rules.prizeCardsPerPlayer = prizeCardsPerPlayer;
+  }
   state.phase = "setup";
 
   logEvent(state, 0, "game_start", `对战开始: ${player1Name} vs ${player2Name}`, {
@@ -315,7 +325,8 @@ export function initializeGame(
     // Set prize cards
     for (let p = 0; p < 2; p++) {
       const player = state.players[p as 0 | 1];
-      const prizes = drawMultiple(player.deck, PRIZE_CARD_COUNT);
+      const prizeTarget = state.rules?.prizeCardsPerPlayer ?? PRIZE_CARD_COUNT;
+      const prizes = drawMultiple(player.deck, prizeTarget);
       addCards(player.prizes, prizes);
 
       logEvent(state, p as 0 | 1, "game_start", `${player.name} 设置了 ${prizes.length} 张奖励卡`);

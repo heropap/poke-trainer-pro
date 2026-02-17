@@ -166,20 +166,30 @@ export function VisualCard({
         </div>
       )}
 
-      {/* Energy Badges (left side overlay) */}
-      {showEnergy && energySummary.length > 0 && (
-        <div className="absolute left-0.5 top-0.5 flex flex-col gap-0.5">
-          {energySummary.map(({ type, count }) => (
-            <div
-              key={type}
-              className={`flex items-center gap-0.5 rounded-full px-1 py-0.5 shadow-md ${ENERGY_COLORS[type] || "bg-zinc-500"}`}
-              title={`${type} Energy x${count}`}
-            >
-              <span className={`text-[8px] font-bold leading-none ${ENERGY_TEXT_COLORS[type] || "text-white"}`}>
-                {ENERGY_LABELS[type] || "?"}{count > 1 ? `x${count}` : ""}
-              </span>
-            </div>
-          ))}
+      {/* Energy Indicators (Bottom Stack Style) */}
+      {showEnergy && card.attachedEnergy.length > 0 && (
+        <div className="absolute -bottom-3 left-0 z-20 flex w-full justify-center -space-x-1 px-1">
+          {card.attachedEnergy.map((energy, index) => {
+            const type = getEnergyTypeFromCard(energy);
+            const isNew = index === card.attachedEnergy.length - 1;
+            return (
+              <div
+                key={energy.instanceId}
+                className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 border-white shadow-lg transition-all duration-500 ${
+                  ENERGY_COLORS[type] || "bg-zinc-500"
+                } ${isNew ? "animate-[bounce_0.5s_ease-out]" : ""}`}
+                style={{
+                  zIndex: index,
+                  transform: `translateY(${index % 2 === 0 ? "0px" : "-2px"})`,
+                }}
+                title={energy.card.name}
+              >
+                <span className={`text-[10px] font-bold ${ENERGY_TEXT_COLORS[type] || "text-white"}`}>
+                  {ENERGY_LABELS[type] || "?"}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -217,7 +227,7 @@ export function VisualCard({
 
       {/* HP Bar (Overlay) */}
       {showHp && hp > 0 && (
-        <div className="absolute -bottom-2 left-1/2 w-10/12 -translate-x-1/2 transform rounded-full bg-zinc-900 px-1 py-0.5 shadow-sm">
+        <div className="absolute bottom-1 left-1/2 w-10/12 -translate-x-1/2 transform rounded-full bg-zinc-900/80 px-1 py-0.5 shadow-sm backdrop-blur-sm">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
             <div
               className={`h-full rounded-full transition-all duration-300 ${

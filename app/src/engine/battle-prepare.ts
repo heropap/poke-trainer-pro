@@ -387,7 +387,8 @@ export function setPrizeCards(
   playerIndex: 0 | 1
 ): number {
   const player = state.players[playerIndex];
-  const prizes = drawMultiple(player.deck, PRIZE_CARD_COUNT);
+  const prizeTarget = state.rules?.prizeCardsPerPlayer ?? PRIZE_CARD_COUNT;
+  const prizes = drawMultiple(player.deck, prizeTarget);
   addCards(player.prizes, prizes);
 
   logEvent(
@@ -502,7 +503,8 @@ export function executePreparation(
   for (let p = 0; p < 2; p++) {
     const pIdx = p as 0 | 1;
     const prizeCount = setPrizeCards(state, pIdx);
-    if (prizeCount < PRIZE_CARD_COUNT) {
+    const prizeTarget = state.rules?.prizeCardsPerPlayer ?? PRIZE_CARD_COUNT;
+    if (prizeCount < prizeTarget) {
       warnings.push(
         `${state.players[pIdx].name} 只设置了 ${prizeCount} 张奖励卡（牌组卡牌不足）`
       );

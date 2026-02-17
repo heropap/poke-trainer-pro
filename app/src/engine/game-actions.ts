@@ -186,24 +186,101 @@ export function attachEnergy(
   return { success: false, error: "Target not found" };
 }
 
-/**
- * Helper: Get the energy type that a GameCard (energy) provides.
- * Basic energies provide their named type. Special energies provide "Colorless".
- */
-function getEnergyType(energyCard: GameCard): string {
-  // Basic energy cards have a type in their name or types field
-  // e.g., "Fire Energy" → "Fire", "Water Energy" → "Water"
-  if (energyCard.card.subtypes?.includes("Basic") && energyCard.card.types && energyCard.card.types.length > 0) {
-    return energyCard.card.types[0];
-  }
-  // Fallback: try to parse from name
-  const name = energyCard.card.name || "";
-  const types = ["Grass", "Fire", "Water", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Fairy"];
-  for (const t of types) {
+const BASIC_ENERGY_TYPES = [
+  "Grass",
+  "Fire",
+  "Water",
+  "Lightning",
+  "Psychic",
+  "Fighting",
+  "Darkness",
+  "Metal",
+  "Dragon",
+  "Fairy",
+];
+
+function parseEnergyTypeFromName(name: string): string | null {
+  for (const t of BASIC_ENERGY_TYPES) {
     if (name.includes(t)) return t;
   }
-  // Special energy or unrecognized → Colorless
-  return "Colorless";
+  return null;
+}
+
+function getEnergyProvidedByCard(energyCard: GameCard): string[] {
+  const name = energyCard.card.name || "";
+  const lower = name.toLowerCase();
+
+  if (lower.includes("double turbo energy")) return ["Colorless", "Colorless"];
+  if (lower.includes("double colorless energy")) return ["Colorless", "Colorless"];
+  if (lower.includes("luminous energy")) return ["Any"];
+  if (lower.includes("rainbow energy")) return ["Any"];
+  if (lower.includes("aurora energy")) return ["Any"];
+
+  if (
+    energyCard.card.subtypes?.includes("Basic") &&
+    energyCard.card.types &&
+    energyCard.card.types.length > 0
+  ) {
+    return [energyCard.card.types[0]];
+  }
+
+  const parsed = parseEnergyTypeFromName(name);
+  if (parsed) return [parsed];
+
+  return ["Colorless"];
+}
+
+export function getProvidedEnergy(attachedEnergy: GameCard[]): string[] {
+  const pool: string[] = [];
+  for (const card of attachedEnergy) {
+    if (card.card.supertype !== "Energy") continue;
+    pool.push(...getEnergyProvidedByCard(card));
+  }
+  return pool;
+}
+
+export interface EnergyCheckResult {
+  sufficient: boolean;
+  missing: string[];
+}
+
+export function checkEnergyCostWithProvided(
+  provided: string[],
+  cost: string[]
+): EnergyCheckResult {
+  if (!cost || cost.length === 0) {
+    return { sufficient: true, missing: [] };
+  }
+
+  const currentPool = [...provided];
+  const missing: string[] = [];
+
+  const specificCosts = cost.filter((c) => c !== "Colorless");
+  for (const req of specificCosts) {
+    let index = currentPool.findIndex((p) => p === req);
+    if (index === -1) {
+      index = currentPool.findIndex((p) => p === "Any");
+    }
+    if (index !== -1) {
+      currentPool.splice(index, 1);
+    } else {
+      missing.push(req);
+    }
+  }
+
+  const colorlessCosts = cost.filter((c) => c === "Colorless");
+  for (let i = 0; i < colorlessCosts.length; i++) {
+    if (currentPool.length > 0) {
+      currentPool.shift();
+    } else {
+      missing.push("Colorless");
+    }
+  }
+
+  return {
+    sufficient: missing.length === 0,
+    missing,
+  };
 }
 
 /**
@@ -216,44 +293,18 @@ function getEnergyType(energyCard: GameCard): string {
  *
  * Uses a greedy algorithm: pay specific costs first, then use remaining for Colorless.
  */
+export function checkEnergyCostDetailed(
+  attachedEnergy: GameCard[],
+  cost: string[]
+): EnergyCheckResult {
+  return checkEnergyCostWithProvided(getProvidedEnergy(attachedEnergy), cost);
+}
+
 export function checkEnergyCost(
   attachedEnergy: GameCard[],
   cost: string[]
 ): boolean {
-  if (!cost || cost.length === 0) return true;
-  if (attachedEnergy.length < cost.length) return false;
-
-  // Count specific type costs and colorless costs
-  const specificCosts: Record<string, number> = {};
-  let colorlessCost = 0;
-
-  for (const c of cost) {
-    if (c === "Colorless") {
-      colorlessCost++;
-    } else {
-      specificCosts[c] = (specificCosts[c] || 0) + 1;
-    }
-  }
-
-  // Count available energy by type
-  const availableEnergy: Record<string, number> = {};
-  for (const e of attachedEnergy) {
-    const type = getEnergyType(e);
-    availableEnergy[type] = (availableEnergy[type] || 0) + 1;
-  }
-
-  // First, pay specific type costs
-  let totalUsed = 0;
-  for (const [type, needed] of Object.entries(specificCosts)) {
-    const available = availableEnergy[type] || 0;
-    if (available < needed) return false; // Not enough of this type
-    availableEnergy[type] = available - needed;
-    totalUsed += needed;
-  }
-
-  // Then, check if remaining energy can pay colorless costs
-  let remainingEnergy = attachedEnergy.length - totalUsed;
-  return remainingEnergy >= colorlessCost;
+  return checkEnergyCostDetailed(attachedEnergy, cost).sufficient;
 }
 
 /**

@@ -230,7 +230,7 @@ app.prepare().then(() => {
 
     // ─── Game Actions ───
 
-    socket.on("game:action", (data) => {
+    socket.on("game:action", async (data) => {
       const { gameId, action } = data;
       const game = games.get(gameId);
 
@@ -244,7 +244,7 @@ app.prepare().then(() => {
         return;
       }
 
-      const result = game.handleAction(socket.id, action);
+      const result = await game.handleAction(socket.id, action);
 
       if (result.success) {
         // Broadcast masked state to each player
@@ -277,7 +277,7 @@ app.prepare().then(() => {
 
     // ─── Disconnection ───
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`[Server] Client disconnected: ${socket.id}`);
 
       // Remove from matchmaking queue
@@ -293,7 +293,7 @@ app.prepare().then(() => {
         if (game && !game.isGameOver()) {
           console.log(`[Server] Player ${socket.id} disconnected from game ${gameId}, auto-concede`);
 
-          const result = game.handleDisconnect(socket.id);
+          const result = await game.handleDisconnect(socket.id);
           if (result && result.success) {
             // Notify the remaining player
             broadcastMaskedState(io, game);

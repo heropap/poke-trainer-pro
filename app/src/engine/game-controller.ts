@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Local Game Controller
  *
@@ -39,7 +41,7 @@ import {
   checkWinCondition,
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
-import { createEffectContext } from "./effects/effect-context";
+import { createEffectContext, pendingPrompts } from "./effects/effect-context";
 import { resolveAttack } from "./systems/attack-system"; // New pipeline
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 import { basePipeline } from "./rules/base-rules";
@@ -121,80 +123,89 @@ export function processAction(
   state: GameState,
   playerIndex: 0 | 1,
   action: GameAction
-): ActionResult {
-  // ─── Phase 1: Validation Chain ───
-  const validation = validateAction(state, action, playerIndex);
-  if (!validation.valid) {
-    console.warn(`[Action Blocked] ${action.type}: ${validation.reason} (${validation.code})`);
-    return {
-      success: false,
-      error: validation.reason,
-      newState: { ...state }
-    };
-  }
-
-  let result: ActionResult;
-
-  switch (action.type) {
-    case "play_card":
-      result = handlePlayCard(state, playerIndex, action);
-      break;
-    case "attack":
-      result = handleAttack(state, playerIndex, action);
-      break;
-    case "end_turn":
-      result = handleEndTurn(state, playerIndex);
-      break;
-    case "evolve":
-      result = handleEvolve(state, playerIndex, action);
-      break;
-    case "retreat":
-      result = handleRetreat(state, playerIndex, action);
-      break;
-    case "promote":
-      result = handlePromote(state, playerIndex, action);
-      break;
-    case "concede":
-      result = handleConcede(state, playerIndex);
-      break;
-    case "use_ability":
-      result = handleUseAbility(state, playerIndex, action);
-      break;
-    case "manual_override": {
-      if (!action.overrideType) {
-        result = { success: false, error: "缺少手动操作类型", newState: { ...state } };
-      } else {
-        const overrideAction: ManualOverrideAction = {
-          type: "manual_override",
-          overrideType: action.overrideType,
-          params: action.params ?? {},
-        };
-        const overrideResult = executeManualOverride(state, playerIndex, overrideAction);
-        result = { ...overrideResult, newState: overrideResult.newState };
-      }
-      break;
-    }
-    case "select_cards_response": {
-      if (!state.prompt) {
-        result = { success: false, error: "没有待处理的选择请求", newState: { ...state } };
-      } else {
-        // Here we would typically resume a suspended effect.
-        // For now, we just clear the prompt to unblock the UI.
-        // In a real implementation, we would route this to the effect callback.
-        state.prompt = null;
-        result = { success: true, newState: { ...state } };
-      }
-      break;
-    }
-    default:
-      result = {
+): Promise<ActionResult> {
+  return (async () => {
+    // ─── Phase 1: Validation Chain ───
+    const validation = validateAction(state, action, playerIndex);
+    if (!validation.valid) {
+      console.warn(`[Action Blocked] ${action.type}: ${validation.reason} (${validation.code})`);
+      return {
         success: false,
-        error: `未知操作: ${(action as any).type}`,
+        error: validation.reason,
         newState: { ...state }
       };
-  }
+    }
 
-  return result;
+    let result: ActionResult;
+
+    switch (action.type) {
+      case "play_card":
+        result = await handlePlayCard(state, playerIndex, action);
+        break;
+      case "attack":
+        result = handleAttack(state, playerIndex, action);
+        break;
+      case "end_turn":
+        result = handleEndTurn(state, playerIndex);
+        break;
+      case "evolve":
+        result = handleEvolve(state, playerIndex, action);
+        break;
+      case "retreat":
+        result = handleRetreat(state, playerIndex, action);
+        break;
+      case "promote":
+        result = handlePromote(state, playerIndex, action);
+        break;
+      case "concede":
+        result = handleConcede(state, playerIndex);
+        break;
+      case "use_ability":
+        result = handleUseAbility(state, playerIndex, action);
+        break;
+      case "manual_override": {
+        if (!action.overrideType) {
+          result = { success: false, error: "缺少手动操作类型", newState: { ...state } };
+        } else {
+          const overrideAction: ManualOverrideAction = {
+            type: "manual_override",
+            overrideType: action.overrideType,
+            params: action.params ?? {},
+          };
+          const overrideResult = executeManualOverride(state, playerIndex, overrideAction);
+          result = { ...overrideResult, newState: overrideResult.newState };
+        }
+        break;
+      }
+      case "select_cards_response": {
+        if (!state.prompt) {
+          result = { success: false, error: "没有待处理的选择请求", newState: { ...state } };
+        } else if (state.prompt.playerIndex !== playerIndex) {
+          result = { success: false, error: "不是你的选择回合", newState: { ...state } };
+        } else {
+          const resolve = pendingPrompts.get(state.prompt.id);
+          if (resolve) {
+            resolve(action.selectedIds || []);
+            pendingPrompts.delete(state.prompt.id);
+            state.prompt = null;
+            result = { success: true, newState: { ...state } };
+          } else {
+            state.prompt = null;
+            result = { success: true, newState: { ...state } };
+          }
+        }
+        break;
+      }
+      default:
+        result = {
+          success: false,
+          error: `未知操作: ${(action as any).type}`,
+          newState: { ...state }
+        };
+    }
+
+    return result;
+  })();
 }
 
 // ───────────────────────────────────────────────
@@ -205,95 +216,97 @@ function handlePlayCard(
   state: GameState,
   playerIndex: 0 | 1,
   action: GameAction
-): ActionResult {
-  if (!action.cardId) {
-    return { success: false, error: "缺少卡牌 ID", newState: { ...state } };
-  }
+): Promise<ActionResult> {
+  return (async () => {
+    if (!action.cardId) {
+      return { success: false, error: "缺少卡牌 ID", newState: { ...state } };
+    }
 
-  if (state.phase !== "main") {
-    return { success: false, error: "只能在主阶段打出卡牌", newState: { ...state } };
-  }
+    if (state.phase !== "main") {
+      return { success: false, error: "只能在主阶段打出卡牌", newState: { ...state } };
+    }
 
-  const player = state.players[playerIndex];
-  const card = player.hand.cards.find(c => c.instanceId === action.cardId);
-  if (!card) {
-    return { success: false, error: "手牌中找不到该卡牌", newState: { ...state } };
-  }
+    const player = state.players[playerIndex];
+    const card = player.hand.cards.find(c => c.instanceId === action.cardId);
+    if (!card) {
+      return { success: false, error: "手牌中找不到该卡牌", newState: { ...state } };
+    }
 
-  // ─── Route by CARD TYPE first, then by targetZone ───
-  // This ensures Pokemon Tools, Energy, etc. go to the correct handler
-  // regardless of how the UI dispatched them.
+    // ─── Route by CARD TYPE first, then by targetZone ───
+    // This ensures Pokemon Tools, Energy, etc. go to the correct handler
+    // regardless of how the UI dispatched them.
 
-  // 1. Pokemon cards
-  if (card.card.supertype === "Pokémon") {
-    if (card.card.subtypes.includes("Basic")) {
-      if (action.targetZone === "active") {
-        const res = playActive(state, playerIndex, action.cardId);
-        return { ...res, newState: { ...state } };
+    // 1. Pokemon cards
+    if (card.card.supertype === "Pokémon") {
+      if (card.card.subtypes.includes("Basic")) {
+        if (action.targetZone === "active") {
+          const res = playActive(state, playerIndex, action.cardId);
+          return { ...res, newState: { ...state } };
+        }
+        if (action.targetZone === "bench") {
+          const res = playBench(state, playerIndex, action.cardId);
+          return { ...res, newState: { ...state } };
+        }
+        // Auto-detect: active if empty, otherwise bench
+        if (!player.active) {
+          const res = playActive(state, playerIndex, action.cardId);
+          return { ...res, newState: { ...state } };
+        } else {
+          const res = playBench(state, playerIndex, action.cardId);
+          return { ...res, newState: { ...state } };
+        }
       }
-      if (action.targetZone === "bench") {
-        const res = playBench(state, playerIndex, action.cardId);
-        return { ...res, newState: { ...state } };
-      }
-      // Auto-detect: active if empty, otherwise bench
-      if (!player.active) {
-        const res = playActive(state, playerIndex, action.cardId);
-        return { ...res, newState: { ...state } };
-      } else {
-        const res = playBench(state, playerIndex, action.cardId);
-        return { ...res, newState: { ...state } };
+      // Stage 1/2 evolution cards should use the "evolve" action type,
+      // but handle gracefully if dispatched as "play_card"
+      if (card.card.subtypes.includes("Stage 1") || card.card.subtypes.includes("Stage 2")) {
+        if (action.targetId) {
+          const res = taEvolvePokemon(state, action.cardId, action.targetId);
+          return { success: res.success, error: res.error, newState: { ...state } };
+        }
+        return { success: false, error: "进化卡需要指定目标宝可梦", newState: { ...state } };
       }
     }
-    // Stage 1/2 evolution cards should use the "evolve" action type,
-    // but handle gracefully if dispatched as "play_card"
-    if (card.card.subtypes.includes("Stage 1") || card.card.subtypes.includes("Stage 2")) {
+
+    // 2. Energy cards
+    if (card.card.supertype === "Energy") {
       if (action.targetId) {
-        const res = taEvolvePokemon(state, action.cardId, action.targetId);
+        const res = taAttachEnergy(state, action.cardId, action.targetId);
+        return { ...res, newState: { ...state } };
+      }
+      // targetZone "attach" with targetId
+      if (action.targetZone === "attach" && action.targetId) {
+        const res = taAttachEnergy(state, action.cardId, action.targetId);
+        return { ...res, newState: { ...state } };
+      }
+      return { success: false, error: "能量卡需要指定附加目标", newState: { ...state } };
+    }
+
+    // 3. Trainer cards
+    if (card.card.supertype === "Trainer") {
+      // 3a. Pokemon Tool — needs a target to attach to
+      if (card.card.subtypes.includes("Pokémon Tool")) {
+        if (!action.targetId) {
+          return { success: false, error: "工具卡需要指定装备目标", newState: { ...state } };
+        }
+        const res = await taPlayItem(state, action.cardId, action.targetId);
         return { success: res.success, error: res.error, newState: { ...state } };
       }
-      return { success: false, error: "进化卡需要指定目标宝可梦", newState: { ...state } };
-    }
-  }
-
-  // 2. Energy cards
-  if (card.card.supertype === "Energy") {
-    if (action.targetId) {
-      const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
-      return { ...res, newState: { ...state } };
-    }
-    // targetZone "attach" with targetId
-    if (action.targetZone === "attach" && action.targetId) {
-      const res = gaAttachEnergy(state, playerIndex, action.cardId, action.targetId);
-      return { ...res, newState: { ...state } };
-    }
-    return { success: false, error: "能量卡需要指定附加目标", newState: { ...state } };
-  }
-
-  // 3. Trainer cards
-  if (card.card.supertype === "Trainer") {
-    // 3a. Pokemon Tool — needs a target to attach to
-    if (card.card.subtypes.includes("Pokémon Tool")) {
-      if (!action.targetId) {
-        return { success: false, error: "工具卡需要指定装备目标", newState: { ...state } };
+      // 3b. Supporter
+      if (card.card.subtypes.includes("Supporter")) {
+        const res = await taPlaySupporter(state, action.cardId);
+        return { success: res.success, error: res.error, newState: { ...state } };
       }
-      const res = taPlayItem(state, action.cardId, action.targetId);
-      return { success: res.success, error: res.error, newState: { ...state } };
+      // 3c. Item (non-Tool)
+      if (card.card.subtypes.includes("Item")) {
+        const res = await taPlayItem(state, action.cardId);
+        return { success: res.success, error: res.error, newState: { ...state } };
+      }
+      // 3d. Stadium or other trainer types (future)
+      return { success: false, error: `不支持的训练师卡类型: ${card.card.subtypes.join(", ")}`, newState: { ...state } };
     }
-    // 3b. Supporter
-    if (card.card.subtypes.includes("Supporter")) {
-      const res = taPlaySupporter(state, action.cardId);
-      return { success: res.success, error: res.error, newState: { ...state } };
-    }
-    // 3c. Item (non-Tool)
-    if (card.card.subtypes.includes("Item")) {
-      const res = taPlayItem(state, action.cardId);
-      return { success: res.success, error: res.error, newState: { ...state } };
-    }
-    // 3d. Stadium or other trainer types (future)
-    return { success: false, error: `不支持的训练师卡类型: ${card.card.subtypes.join(", ")}`, newState: { ...state } };
-  }
 
-  return { success: false, error: "无法确定如何打出该卡牌", newState: { ...state } };
+    return { success: false, error: "无法确定如何打出该卡牌", newState: { ...state } };
+  })();
 }
 
 function handleAttack(
@@ -309,7 +322,7 @@ function handleAttack(
     return { success: false, error: "只能在主阶段攻击", newState: { ...state } };
   }
 
-  const res = resolveAttack(state, playerIndex, action.attackName);
+  const res = performAttack(state, playerIndex, action.attackName);
 
   if (!res.success) {
     return { success: false, error: res.error, newState: { ...state } };

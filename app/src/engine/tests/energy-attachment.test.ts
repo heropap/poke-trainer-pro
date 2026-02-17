@@ -1,14 +1,25 @@
 
 import { createGameState, createGameCard, createZone, GameState, GameCard } from "../game-state";
 import { attachEnergy } from "../turn-actions";
+import { checkEnergyCostDetailed } from "../game-actions";
+import { Card } from "@/types/card";
 
-// Mock logEvent since it's not exported or mockable easily without dependency injection
-// But here we import the module directly. We can mock the module if needed.
-// For unit test, we just want to check state mutation.
+function makeCard(overrides: Partial<Card>): Card {
+  return {
+    id: overrides.id ?? "test-card",
+    name: overrides.name ?? "Test Card",
+    supertype: overrides.supertype ?? "Trainer",
+    subtypes: overrides.subtypes ?? [],
+    number: overrides.number ?? "0",
+    legalities: overrides.legalities ?? {},
+    images: overrides.images ?? { small: "", large: "" },
+    ...overrides,
+  };
+}
 
 describe("Energy Attachment Logic", () => {
   let state: GameState;
-  let playerIndex: 0 | 1 = 0;
+  const playerIndex: 0 | 1 = 0;
   let energyCard: GameCard;
   let pokemonCard: GameCard;
 
@@ -20,21 +31,23 @@ describe("Energy Attachment Logic", () => {
     const p1 = state.players[0];
     
     // Create Energy
-    energyCard = createGameCard({
+    energyCard = createGameCard(makeCard({
       id: "energy-1",
       name: "Fire Energy",
       supertype: "Energy",
       subtypes: ["Basic"],
-    });
+      types: ["Fire"],
+    }));
     
     // Create Pokemon
-    pokemonCard = createGameCard({
+    pokemonCard = createGameCard(makeCard({
       id: "charmander-1",
       name: "Charmander",
       supertype: "Pokémon",
       subtypes: ["Basic"],
-      hp: "60"
-    });
+      hp: "60",
+      number: "1",
+    }));
 
     // Setup Hand and Active
     p1.hand = createZone([energyCard]);
@@ -72,12 +85,12 @@ describe("Energy Attachment Logic", () => {
 
   test("should prevent attaching non-energy card", () => {
     const p1 = state.players[0];
-    const trainerCard = createGameCard({
+    const trainerCard = createGameCard(makeCard({
       id: "potion",
       name: "Potion",
       supertype: "Trainer",
       subtypes: ["Item"]
-    });
+    }));
     p1.hand = createZone([trainerCard]);
     
     const result = attachEnergy(state, trainerCard.instanceId, pokemonCard.instanceId);
@@ -96,5 +109,92 @@ describe("Energy Attachment Logic", () => {
     
     expect(newAttachedArray).not.toBe(initialAttachedArray);
     expect(newAttachedArray).toHaveLength(1);
+  });
+});
+
+describe("Energy Cost Calculation", () => {
+  test("basic energy matches specific costs", () => {
+    const fire1 = createGameCard(makeCard({
+      id: "fire-1",
+      name: "Fire Energy",
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      types: ["Fire"],
+    }));
+    const fire2 = createGameCard(makeCard({
+      id: "fire-2",
+      name: "Fire Energy",
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      types: ["Fire"],
+    }));
+
+    const result = checkEnergyCostDetailed([fire1, fire2], ["Fire", "Fire"]);
+    expect(result.sufficient).toBe(true);
+    expect(result.missing).toHaveLength(0);
+  });
+
+  test("colorless cost can be paid by any remaining energy", () => {
+    const fire = createGameCard(makeCard({
+      id: "fire-1",
+      name: "Fire Energy",
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      types: ["Fire"],
+    }));
+    const water = createGameCard(makeCard({
+      id: "water-1",
+      name: "Water Energy",
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      types: ["Water"],
+    }));
+
+    const result = checkEnergyCostDetailed(
+      [fire, water],
+      ["Fire", "Colorless"]
+    );
+    expect(result.sufficient).toBe(true);
+  });
+
+  test("luminous energy can satisfy any specific color", () => {
+    const luminous = createGameCard(makeCard({
+      id: "luminous-1",
+      name: "Luminous Energy",
+      supertype: "Energy",
+      subtypes: ["Special"],
+    }));
+
+    const result = checkEnergyCostDetailed([luminous], ["Fire"]);
+    expect(result.sufficient).toBe(true);
+  });
+
+  test("double turbo energy can pay two colorless", () => {
+    const doubleTurbo = createGameCard(makeCard({
+      id: "double-turbo-1",
+      name: "Double Turbo Energy",
+      supertype: "Energy",
+      subtypes: ["Special"],
+    }));
+
+    const result = checkEnergyCostDetailed(
+      [doubleTurbo],
+      ["Colorless", "Colorless"]
+    );
+    expect(result.sufficient).toBe(true);
+  });
+
+  test("missing costs are reported", () => {
+    const fire = createGameCard(makeCard({
+      id: "fire-1",
+      name: "Fire Energy",
+      supertype: "Energy",
+      subtypes: ["Basic"],
+      types: ["Fire"],
+    }));
+
+    const result = checkEnergyCostDetailed([fire], ["Fire", "Colorless"]);
+    expect(result.sufficient).toBe(false);
+    expect(result.missing).toEqual(["Colorless"]);
   });
 });

@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ptcg/common": ["./src/lib/ptcg-engine/index.ts"],
+      "@ptcg/common/*": ["./src/lib/ptcg-engine/*"]
     }
   },
   "include": [
@@ -30,5 +32,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "src/lib/ptcg-engine/**/*.spec.ts", "src/lib/ptcg-sets/**/tests/**"]
 }

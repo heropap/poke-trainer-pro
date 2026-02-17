@@ -14,6 +14,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  closestCenter,
+  useDroppable,
 } from "@dnd-kit/core";
 import { VisualCard } from "./VisualCard";
 import {
@@ -41,8 +43,8 @@ interface ActionFeedback {
 interface BattleBoardProps {
   gameState: GameState;
   currentPlayerId: string; // "p1" or "p2"
-  onAction?: (action: any) => ActionFeedback | void;
-  battleMode?: "ai" | "local" | "online";
+  onAction?: (action: any) => ActionFeedback | void | Promise<ActionFeedback | void>;
+  battleMode?: "ai" | "local" | "online" | "mock_engine";
   aiSpeed?: "slow" | "normal" | "fast" | "instant";
   onAiSpeedChange?: (speed: string) => void;
 }
@@ -219,9 +221,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   }
 
   // ─── Dispatch action with error feedback ──────
-  function dispatchAction(action: any) {
+  async function dispatchAction(action: any) {
     if (!onAction) return;
-    const result = onAction(action);
+    const result = await onAction(action);
     if (result && !result.success && result.error) {
       showToast(result.error, "error");
     }
@@ -279,9 +281,13 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         dispatchAction({ type: "play_card", cardId: activeId, targetZone: "bench" });
       } else if (
         targetZone === "active-pokemon" ||
-        String(targetZone).startsWith("bench-pokemon-")
+        String(targetZone).startsWith("bench-pokemon-") ||
+        (targetZone === "player-field" && me.active)
       ) {
-        const targetInstanceId = (over.data.current as any)?.instanceId;
+        const targetInstanceId =
+          (over.data.current as any)?.instanceId ||
+          (targetZone === "player-field" ? me.active?.instanceId : undefined);
+
         if (targetInstanceId) {
           dispatchAction({
             type: "play_card",
@@ -455,6 +461,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     cancelSelection();
   }
 
+  // ─── Player Field Droppable (Hitbox expansion) ──
+  const playerField = useDroppable({
+    id: "player-field",
+    data: { type: "field" },
+  });
+
   // ─── Determine targeting info for spots ──────
   const activeIsTargetable = targeting
     ? me.active
@@ -476,7 +488,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     : null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
       <div
         className="flex h-screen w-full flex-col overflow-hidden bg-zinc-900 text-zinc-100"
         onClick={(e) => {
@@ -599,7 +611,10 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         </div>
 
         {/* ─── PLAYER ZONE (Bottom) ─── */}
-        <div className="flex flex-1 flex-col items-center justify-end bg-zinc-800/30 p-4 pb-0">
+        <div 
+          ref={playerField.setNodeRef}
+          className={`flex flex-1 flex-col items-center justify-end bg-zinc-800/30 p-4 pb-0 ${playerField.isOver ? "bg-zinc-800/50 ring-2 ring-blue-500/30" : ""}`}
+        >
           {/* Player Active */}
           <div className="mb-4">
             <ActiveSpot

@@ -114,39 +114,39 @@ function setupPlayableGame(): GameState {
 // ─── Turn Validation ───
 
 describe("Turn Validation", () => {
-  it("不能在对方回合行动", () => {
+  it("不能在对方回合行动", async () => {
     const state = setupPlayableGame();
     state.currentPlayer = 0;
 
     // Player 1 (Bob) tries to act
-    const result = processAction(state, 1, { type: "end_turn" });
+    const result = await processAction(state, 1, { type: "end_turn" });
     expect(result.success).toBe(false);
     expect(result.error).toContain("不是你的回合");
   });
 
-  it("可以在自己的回合行动", () => {
+  it("可以在自己的回合行动", async () => {
     const state = setupPlayableGame();
     state.currentPlayer = 0;
 
-    const result = processAction(state, 0, { type: "end_turn" });
+    const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
   });
 
-  it("认输不受回合限制", () => {
+  it("认输不受回合限制", async () => {
     const state = setupPlayableGame();
     state.currentPlayer = 0;
 
     // Player 1 can concede even when it's not their turn
-    const result = processAction(state, 1, { type: "concede" });
+    const result = await processAction(state, 1, { type: "concede" });
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
   });
 
-  it("游戏已结束时不能行动", () => {
+  it("游戏已结束时不能行动", async () => {
     const state = setupPlayableGame();
     state.phase = "game_over";
 
-    const result = processAction(state, 0, { type: "end_turn" });
+    const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(false);
     expect(result.error).toContain("已结束");
   });
@@ -155,12 +155,12 @@ describe("Turn Validation", () => {
 // ─── End Turn Flow ───
 
 describe("End Turn Flow", () => {
-  it("结束回合后切换到对手并自动抽牌", () => {
+  it("结束回合后切换到对手并自动抽牌", async () => {
     const state = setupPlayableGame();
     const bobHandBefore = state.players[1].hand.cards.length;
     const bobDeckBefore = state.players[1].deck.cards.length;
 
-    const result = processAction(state, 0, { type: "end_turn" });
+    const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
 
     // Should now be Bob's turn (player 1) in main phase after auto-draw
@@ -171,12 +171,12 @@ describe("End Turn Flow", () => {
     expect(result.newState.players[1].deck.cards.length).toBe(bobDeckBefore - 1);
   });
 
-  it("对手牌组为空时结束回合触发 deck_out", () => {
+  it("对手牌组为空时结束回合触发 deck_out", async () => {
     const state = setupPlayableGame();
     // Empty Bob's deck
     state.players[1].deck.cards = [];
 
-    const result = processAction(state, 0, { type: "end_turn" });
+    const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
     expect(result.newState.phase).toBe("game_over");
@@ -188,11 +188,11 @@ describe("End Turn Flow", () => {
 // ─── Play Card ───
 
 describe("Play Card Actions", () => {
-  it("打出基础宝可梦到备战区", () => {
+  it("打出基础宝可梦到备战区", async () => {
     const state = setupPlayableGame();
     const charmander = state.players[0].hand.cards.find(c => c.card.name === "Charmander")!;
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "play_card",
       cardId: charmander.instanceId,
       targetZone: "bench",
@@ -201,13 +201,13 @@ describe("Play Card Actions", () => {
     expect(result.newState.players[0].bench.cards).toHaveLength(3);
   });
 
-  it("打出基础宝可梦到空的战斗区", () => {
+  it("打出基础宝可梦到空的战斗区", async () => {
     const state = setupPlayableGame();
     state.players[0].active = null;
 
     const charmander = state.players[0].hand.cards.find(c => c.card.name === "Charmander")!;
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "play_card",
       cardId: charmander.instanceId,
       targetZone: "active",
@@ -217,13 +217,13 @@ describe("Play Card Actions", () => {
     expect(result.newState.players[0].active!.card.name).toBe("Charmander");
   });
 
-  it("附加能量到战斗宝可梦", () => {
+  it("附加能量到战斗宝可梦", async () => {
     const state = setupPlayableGame();
     const energy = state.players[0].hand.cards.find(c => c.card.supertype === "Energy")!;
     const active = state.players[0].active!;
     const energyBefore = active.attachedEnergy.length;
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "play_card",
       cardId: energy.instanceId,
       targetZone: "attach",
@@ -233,12 +233,12 @@ describe("Play Card Actions", () => {
     expect(result.newState.players[0].active!.attachedEnergy.length).toBe(energyBefore + 1);
   });
 
-  it("非主阶段不能打出卡牌", () => {
+  it("非主阶段不能打出卡牌", async () => {
     const state = setupPlayableGame();
     state.phase = "draw";
     const charmander = state.players[0].hand.cards.find(c => c.card.name === "Charmander")!;
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "play_card",
       cardId: charmander.instanceId,
       targetZone: "bench",
@@ -251,11 +251,11 @@ describe("Play Card Actions", () => {
 // ─── Attack Flow ───
 
 describe("Attack Flow", () => {
-  it("攻击成功后自动结束回合并抽牌", () => {
+  it("攻击成功后自动结束回合并抽牌", async () => {
     const state = setupPlayableGame();
     const bobHandBefore = state.players[1].hand.cards.length;
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "attack",
       attackName: "Scratch",
     });
@@ -268,12 +268,12 @@ describe("Attack Flow", () => {
     expect(result.newState.players[1].hand.cards.length).toBe(bobHandBefore + 1);
   });
 
-  it("攻击击倒对手后正确处理", () => {
+  it("攻击击倒对手后正确处理", async () => {
     const state = setupPlayableGame();
     // Give Pikachu enough damage to be KO'd by Scratch (20 damage)
     state.players[1].active!.damageCounters = 4; // 40 existing + 20 = 60 = KO
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "attack",
       attackName: "Scratch",
     });
@@ -282,11 +282,11 @@ describe("Attack Flow", () => {
     expect(result.newState.players[0].prizes.cards.length).toBe(5);
   });
 
-  it("非主阶段不能攻击", () => {
+  it("非主阶段不能攻击", async () => {
     const state = setupPlayableGame();
     state.phase = "draw";
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "attack",
       attackName: "Scratch",
     });
@@ -297,12 +297,12 @@ describe("Attack Flow", () => {
 // ─── Promote ───
 
 describe("Promote Action", () => {
-  it("成功提升备战区宝可梦", () => {
+  it("成功提升备战区宝可梦", async () => {
     const state = setupPlayableGame();
     state.players[0].active = null;
     const eevee = state.players[0].bench.cards[0];
 
-    const result = processAction(state, 0, {
+    const result = await processAction(state, 0, {
       type: "promote",
       benchInstanceId: eevee.instanceId,
     });
@@ -310,7 +310,7 @@ describe("Promote Action", () => {
     expect(result.newState.players[0].active!.card.name).toBe("Eevee");
   });
 
-  it("提升不受回合限制（对方回合也可以提升）", () => {
+  it("提升不受回合限制（对方回合也可以提升）", async () => {
     const state = setupPlayableGame();
     state.currentPlayer = 0; // Alice's turn
     state.players[1].active = null; // Bob needs to promote
@@ -318,7 +318,7 @@ describe("Promote Action", () => {
     const squirtle = state.players[1].bench.cards[0];
 
     // Bob can promote even though it's Alice's turn
-    const result = processAction(state, 1, {
+    const result = await processAction(state, 1, {
       type: "promote",
       benchInstanceId: squirtle.instanceId,
     });
@@ -330,10 +330,10 @@ describe("Promote Action", () => {
 // ─── Concede ───
 
 describe("Concede Action", () => {
-  it("认输后对手获胜", () => {
+  it("认输后对手获胜", async () => {
     const state = setupPlayableGame();
 
-    const result = processAction(state, 0, { type: "concede" });
+    const result = await processAction(state, 0, { type: "concede" });
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
     expect(result.newState.winner!.playerIndex).toBe(1);
@@ -369,13 +369,13 @@ describe("startFirstTurn", () => {
 // ─── Full Game Flow ───
 
 describe("Full Game Flow Integration", () => {
-  it("完整的多回合游戏流程", () => {
+  it("完整的多回合游戏流程", async () => {
     const state = setupPlayableGame();
     state.currentPlayer = 0;
 
     // Turn 1: Alice plays a Basic to bench then ends turn
     const charmander = state.players[0].hand.cards.find(c => c.card.name === "Charmander")!;
-    let result = processAction(state, 0, {
+    let result = await processAction(state, 0, {
       type: "play_card",
       cardId: charmander.instanceId,
       targetZone: "bench",
@@ -384,13 +384,13 @@ describe("Full Game Flow Integration", () => {
     expect(result.newState.players[0].bench.cards).toHaveLength(3);
 
     // Alice ends turn
-    result = processAction(state, 0, { type: "end_turn" });
+    result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
     expect(result.newState.currentPlayer).toBe(1);
     expect(result.newState.phase).toBe("main");
 
     // Turn 2: Bob attacks Alice's Charizard
-    result = processAction(state, 1, {
+    result = await processAction(state, 1, {
       type: "attack",
       attackName: "Thunder Shock",
     });
@@ -400,7 +400,7 @@ describe("Full Game Flow Integration", () => {
     expect(result.newState.currentPlayer).toBe(0);
 
     // Turn 3: Alice attacks with Scratch
-    result = processAction(state, 0, {
+    result = await processAction(state, 0, {
       type: "attack",
       attackName: "Scratch",
     });
