@@ -32,6 +32,8 @@ interface ActiveSpotProps {
   /** Callback when clicked as a target */
   onTargetClick?: () => void;
   onCardContextMenu?: (card: GameCard) => void;
+  /** Compact mode for mobile viewports */
+  compact?: boolean;
 }
 
 export function ActiveSpot({
@@ -44,7 +46,13 @@ export function ActiveSpot({
   isTargetable = false,
   onTargetClick,
   onCardContextMenu,
+  compact = false,
 }: ActiveSpotProps) {
+  const containerClass = compact
+    ? "h-[150px] w-[108px]"
+    : "h-[220px] w-[160px]";
+  const cardScale = compact ? 0.65 : 1.0;
+  const attackBtnClass = compact ? "w-[120px]" : "w-[180px]";
   const { setNodeRef, isOver } = useDroppable({
     id: isOpponent ? "opponent-active" : "active-spot",
     disabled: isOpponent
@@ -61,7 +69,7 @@ export function ActiveSpot({
     <div className="flex flex-col items-center justify-center gap-2">
       <div
         ref={setNodeRef}
-        className={`relative flex h-[220px] w-[160px] items-center justify-center rounded-lg border-2 border-dashed transition-all ${
+        className={`relative flex ${containerClass} items-center justify-center rounded-lg border-2 border-dashed transition-all ${
           // Targetable state: green glowing border
           isTargetable
             ? "border-green-400 bg-green-500/10 shadow-lg shadow-green-500/20 cursor-pointer animate-pulse"
@@ -86,10 +94,10 @@ export function ActiveSpot({
               isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
             }`}
           >
-            <VisualCard 
-              card={card} 
-              scale={1.0} 
-              showHp={true} 
+            <VisualCard
+              card={card}
+              scale={cardScale}
+              showHp={true}
               showEnergy={true}
               onContextMenu={(e) => {
                 if (onCardContextMenu) {
@@ -109,7 +117,7 @@ export function ActiveSpot({
 
       {/* Attack Buttons */}
       {!isOpponent && card && card.card.attacks && canAttack && (
-        <div className="flex w-[180px] flex-col gap-1">
+        <div className={`flex ${attackBtnClass} flex-col gap-1`}>
           {card.card.attacks.map((attack, i) => {
             // Check if this attack has enough energy (considering types)
             const hasEnergy = checkEnergyCost(card.attachedEnergy, attack.cost);

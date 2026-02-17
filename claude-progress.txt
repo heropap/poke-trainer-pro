@@ -922,3 +922,23 @@ Notes:
 
   测试: 新增 35 个测试 (marker-system.test.ts), 总计 771 测试全部通过 (30 套件)。TypeScript 编译 0 错误。
   文件变更: 2 new files (markers.ts, marker-system.test.ts), 10 modified
+
+=== Session 23 | 2026-02-17 ===
+Feature: 移动端响应式布局 — 适配手机和平板
+Status: completed
+Notes:
+- 创建 useIsMobile hook (matchMedia, 默认 768px breakpoint, SSR safe)
+- BattleBoard: 导入 useIsMobile, 根据 isMobile 传递 compact prop 给所有子组件
+  - 对手信息栏: 移动端缩小头像、隐藏详细数据
+  - 中间状态栏: 移动端高度 h-10, 紧凑信息显示 (T{n} · name)
+  - 日志/工具按钮: 移动端仅显示图标, 隐藏工具按钮
+  - bench gap: 移动端 gap-1 确保 5 张 bench 在 375px 内
+  - 添加 TouchSensor (200ms delay) 支持移动端拖拽
+  - log 默认在移动端关闭, viewport 变小时自动关闭
+- ActiveSpot: compact 模式 150×108px (scale 0.65), 攻击按钮 w-[120px]
+- BenchSpot: compact 模式 95×68px (scale 0.42)
+- Hand: compact 模式 scale 0.55, 水平滚动 carousel + snap-x + touch-pan-x + 隐藏滚动条
+- ActionMenu: compact 模式渲染为 fixed 底部 sheet (圆角顶部, 拖拽手柄, 更大按钮)
+- ActionLog: compact 模式渲染为全屏 modal (fixed inset-0)
+- 编写 9 个响应式测试 (useIsMobile hook + 组件尺寸契约 + 375px viewport 适配)
+- 31 suites, 780 tests all passing, TypeScript clean

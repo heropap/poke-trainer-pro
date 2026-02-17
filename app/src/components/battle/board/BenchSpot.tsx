@@ -13,6 +13,8 @@ interface BenchSpotProps {
   /** Callback when clicked as a target */
   onTargetClick?: () => void;
   onCardContextMenu?: (card: GameCard) => void;
+  /** Compact mode for mobile viewports */
+  compact?: boolean;
 }
 
 export function BenchSpot({
@@ -22,7 +24,12 @@ export function BenchSpot({
   isTargetable = false,
   onTargetClick,
   onCardContextMenu,
+  compact = false,
 }: BenchSpotProps) {
+  const containerClass = compact
+    ? "h-[95px] w-[68px]"
+    : "h-[140px] w-[100px]";
+  const cardScale = compact ? 0.42 : 0.65;
   const { setNodeRef, isOver } = useDroppable({
     id: `bench-spot-${index}`,
   });
@@ -37,7 +44,7 @@ export function BenchSpot({
   return (
     <div
       ref={setNodeRef}
-      className={`relative flex h-[140px] w-[100px] items-center justify-center rounded-lg border border-dashed transition-all ${
+      className={`relative flex ${containerClass} items-center justify-center rounded-lg border border-dashed transition-all ${
         // Targetable state: green glowing border
         isTargetable && card
           ? "border-green-400 bg-green-500/10 shadow-lg shadow-green-500/20 cursor-pointer animate-pulse"
@@ -62,11 +69,11 @@ export function BenchSpot({
             isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
           }`}
         >
-          <VisualCard 
-            card={card} 
-            scale={0.65} 
-            showHp={true} 
-            showEnergy={true} 
+          <VisualCard
+            card={card}
+            scale={cardScale}
+            showHp={true}
+            showEnergy={true}
             onContextMenu={(e) => {
               if (onCardContextMenu) {
                 e.preventDefault();

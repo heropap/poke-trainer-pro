@@ -12,6 +12,7 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   closestCenter,
@@ -31,6 +32,7 @@ import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
 import { CardSelectionModal } from "./CardSelectionModal";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // ────────────────────────────────────────────────
 // Types
@@ -175,6 +177,7 @@ function getEnergyTargets(player: Player): string[] {
 let toastIdCounter = 0;
 
 export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, aiSpeed, onAiSpeedChange }: BattleBoardProps) {
+  const isMobile = useIsMobile();
   const myIndex = currentPlayerId === "p1" ? 0 : 1;
   const opponentIndex = currentPlayerId === "p1" ? 1 : 0;
 
@@ -194,8 +197,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   // Manual Toolkit state (Layer 2)
   const [toolkitOpen, setToolkitOpen] = React.useState(false);
 
-  // Action Log sidebar state
-  const [logOpen, setLogOpen] = React.useState(true);
+  // Action Log sidebar state — default closed on mobile to avoid covering screen
+  const [logOpen, setLogOpen] = React.useState(!isMobile);
+
+  // Close log when switching to mobile viewport
+  const prevMobileRef = React.useRef(isMobile);
+  React.useEffect(() => {
+    if (isMobile && !prevMobileRef.current) setLogOpen(false);
+    prevMobileRef.current = isMobile;
+  }, [isMobile]);
 
   // Card Detail Modal state
   const [viewingCard, setViewingCard] = React.useState<GameCard | null>(null);
@@ -207,7 +217,11 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: { distance: 5 },
   });
-  const sensors = useSensors(pointerSensor);
+  // TouchSensor: 200ms delay + 5px tolerance to distinguish tap from drag on mobile
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: { delay: 200, tolerance: 5 },
+  });
+  const sensors = useSensors(pointerSensor, touchSensor);
 
   // Compute playable cards
   const playableCardIds = React.useMemo(
@@ -509,51 +523,55 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         }}
       >
         {/* ─── OPPONENT ZONE (Top) ─── */}
-        <div className="flex flex-1 flex-col items-center justify-start border-b border-zinc-800 bg-zinc-900/50 p-4 pt-8">
+        <div className={`flex flex-1 flex-col items-center justify-start border-b border-zinc-800 bg-zinc-900/50 ${isMobile ? "p-2 pt-6" : "p-4 pt-8"}`}>
           {/* Opponent Info Bar */}
-          <div className="absolute left-4 top-4 flex items-center gap-4 rounded-full bg-zinc-800 px-4 py-2 shadow-lg">
-            <div className="h-8 w-8 rounded-full bg-red-500"></div>
-            <div className="text-sm font-bold">{opponent.name}</div>
-            <div className="flex gap-2 text-xs text-zinc-400">
-              <span>手牌: {zoneSize(opponent.hand)}</span>
-              <span>牌库: {zoneSize(opponent.deck)}</span>
-              <span>奖励卡: {zoneSize(opponent.prizes)}</span>
-            </div>
+          <div className={`absolute left-2 top-2 flex items-center rounded-full bg-zinc-800 shadow-lg ${isMobile ? "gap-2 px-2 py-1" : "gap-4 px-4 py-2"}`}>
+            <div className={`rounded-full bg-red-500 ${isMobile ? "h-5 w-5" : "h-8 w-8"}`}></div>
+            <div className={`font-bold ${isMobile ? "text-xs" : "text-sm"}`}>{opponent.name}</div>
+            {!isMobile && (
+              <div className="flex gap-2 text-xs text-zinc-400">
+                <span>手牌: {zoneSize(opponent.hand)}</span>
+                <span>牌库: {zoneSize(opponent.deck)}</span>
+                <span>奖励卡: {zoneSize(opponent.prizes)}</span>
+              </div>
+            )}
           </div>
 
           {/* Opponent Hand */}
-          <div className="absolute top-[-60px] opacity-75 transition-all hover:top-[-20px] hover:opacity-100">
-            <Hand cards={opponent.hand.cards} isOpponent />
+          <div className={`absolute opacity-75 transition-all hover:opacity-100 ${isMobile ? "top-[-40px] hover:top-[-10px]" : "top-[-60px] hover:top-[-20px]"}`}>
+            <Hand cards={opponent.hand.cards} isOpponent compact={isMobile} />
           </div>
 
           {/* Opponent Bench */}
-            <div className="mb-4 mt-8 flex gap-4">
+            <div className={`flex ${isMobile ? "mb-2 mt-5 gap-1" : "mb-4 mt-8 gap-4"}`}>
               {Array.from({ length: 5 }).map((_, i) => (
-                <BenchSpot 
-                  key={i} 
-                  index={i} 
-                  card={opponent.bench.cards[i] || null} 
+                <BenchSpot
+                  key={i}
+                  index={i}
+                  card={opponent.bench.cards[i] || null}
                   onCardContextMenu={handleCardContextMenu}
+                  compact={isMobile}
                 />
               ))}
             </div>
 
           {/* Opponent Active */}
-          <ActiveSpot 
-            card={opponent.active} 
-            isOpponent 
-            isFirstTurn={false} 
+          <ActiveSpot
+            card={opponent.active}
+            isOpponent
+            isFirstTurn={false}
             onCardContextMenu={handleCardContextMenu}
+            compact={isMobile}
           />
         </div>
 
         {/* ─── MIDDLE ZONE (Arena / Status) ─── */}
-        <div className="relative flex h-12 w-full items-center justify-center bg-zinc-950 shadow-inner">
+        <div className={`relative flex w-full items-center justify-center bg-zinc-950 shadow-inner ${isMobile ? "h-10" : "h-12"}`}>
           {/* Targeting mode overlay banner */}
           {targeting && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-600/20 backdrop-blur-[1px]">
-              <div className="flex items-center gap-3 rounded-full bg-blue-600 px-6 py-1.5 text-sm font-bold text-white shadow-lg">
-                <span>
+              <div className={`flex items-center gap-2 rounded-full bg-blue-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
+                <span className={isMobile ? "truncate max-w-[180px]" : ""}>
                   选择目标宝可梦 —{" "}
                   {targeting.action === "attach_energy"
                     ? `附加 ${targeting.card.card.name}`
@@ -565,34 +583,48 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                   onClick={cancelSelection}
                   className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
                 >
-                  取消 (Esc)
+                  取消
                 </button>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-8">
-            <div className="text-xs uppercase tracking-widest text-zinc-500">
-              Turn {gameState.turn}
-            </div>
-            {/* Stadium indicator */}
-            {gameState.stadium && (
-              <div className="rounded bg-emerald-700/80 px-2 py-0.5 text-[10px] font-bold text-emerald-200" title={gameState.stadium.card.card.rules?.[0] || ""}>
-                {gameState.stadium.card.card.name}
+          {isMobile ? (
+            /* Mobile: compact center info */
+            <div className="flex items-center gap-2">
+              <div className="rounded-full bg-blue-600 px-3 py-0.5 text-[10px] font-bold text-white shadow">
+                T{gameState.turn} · {gameState.players[gameState.currentPlayer].name}
               </div>
-            )}
-            <div className="rounded-full bg-blue-600 px-6 py-1 text-sm font-bold text-white shadow-lg shadow-blue-900/20">
-              {gameState.players[gameState.currentPlayer].name} 的回合
+              {gameState.stadium && (
+                <div className="rounded bg-emerald-700/80 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200 truncate max-w-[80px]">
+                  {gameState.stadium.card.card.name}
+                </div>
+              )}
             </div>
-            <div className="text-xs uppercase tracking-widest text-zinc-500">
-              {gameState.phase} Phase
+          ) : (
+            /* Desktop: full info bar */
+            <div className="flex items-center gap-8">
+              <div className="text-xs uppercase tracking-widest text-zinc-500">
+                Turn {gameState.turn}
+              </div>
+              {gameState.stadium && (
+                <div className="rounded bg-emerald-700/80 px-2 py-0.5 text-[10px] font-bold text-emerald-200" title={gameState.stadium.card.card.rules?.[0] || ""}>
+                  {gameState.stadium.card.card.name}
+                </div>
+              )}
+              <div className="rounded-full bg-blue-600 px-6 py-1 text-sm font-bold text-white shadow-lg shadow-blue-900/20">
+                {gameState.players[gameState.currentPlayer].name} 的回合
+              </div>
+              <div className="text-xs uppercase tracking-widest text-zinc-500">
+                {gameState.phase} Phase
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Log Toggle (left side) */}
-          <div className="absolute left-8">
+          <div className={`absolute ${isMobile ? "left-1" : "left-8"}`}>
             <button
-              className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
+              className={`rounded px-2 py-1 text-xs font-bold transition-colors ${
                 logOpen
                   ? "bg-blue-500 text-white hover:bg-blue-400"
                   : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
@@ -600,25 +632,27 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
               onClick={() => setLogOpen(!logOpen)}
               title="对战日志"
             >
-              📋 日志
+              {isMobile ? "📋" : "📋 日志"}
             </button>
           </div>
 
           {/* Action Buttons */}
-          <div className="absolute right-8 flex gap-2">
+          <div className={`absolute ${isMobile ? "right-1" : "right-8"} flex gap-1`}>
+            {!isMobile && (
+              <button
+                className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
+                  toolkitOpen
+                    ? "bg-yellow-500 text-black hover:bg-yellow-400"
+                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+                }`}
+                onClick={() => setToolkitOpen(!toolkitOpen)}
+                title="Manual Override Toolkit"
+              >
+                🔧 工具
+              </button>
+            )}
             <button
-              className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
-                toolkitOpen
-                  ? "bg-yellow-500 text-black hover:bg-yellow-400"
-                  : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-              }`}
-              onClick={() => setToolkitOpen(!toolkitOpen)}
-              title="Manual Override Toolkit"
-            >
-              🔧 工具
-            </button>
-            <button
-              className="rounded bg-red-600 px-3 py-1 text-xs font-bold hover:bg-red-500"
+              className={`rounded bg-red-600 font-bold hover:bg-red-500 ${isMobile ? "px-2 py-1 text-[10px]" : "px-3 py-1 text-xs"}`}
               onClick={() => dispatchAction({ type: "end_turn" })}
             >
               结束回合
@@ -627,12 +661,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         </div>
 
         {/* ─── PLAYER ZONE (Bottom) ─── */}
-        <div 
+        <div
           ref={playerField.setNodeRef}
-          className={`flex flex-1 flex-col items-center justify-end bg-zinc-800/30 p-4 pb-0 ${playerField.isOver ? "bg-zinc-800/50 ring-2 ring-blue-500/30" : ""}`}
+          className={`flex flex-1 flex-col items-center justify-end bg-zinc-800/30 pb-0 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "bg-zinc-800/50 ring-2 ring-blue-500/30" : ""}`}
         >
           {/* Player Active */}
-          <div className="mb-4">
+          <div className={isMobile ? "mb-2" : "mb-4"}>
             <ActiveSpot
               card={me.active}
               canAttack={isMyTurn && !targeting}
@@ -643,11 +677,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                 if (me.active) handleTargetClick(me.active.instanceId);
               }}
               onCardContextMenu={handleCardContextMenu}
+              compact={isMobile}
             />
           </div>
 
           {/* Player Bench */}
-          <div className="mb-6 flex gap-4">
+          <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-6 gap-4"}`}>
             {Array.from({ length: 5 }).map((_, i) => {
               const benchCard = me.bench.cards[i] || null;
               const isTargetable = benchCard
@@ -664,6 +699,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                     if (benchCard) handleTargetClick(benchCard.instanceId);
                   }}
                   onCardContextMenu={handleCardContextMenu}
+                  compact={isMobile}
                 />
               );
             })}
@@ -682,14 +718,17 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
               onMenuAction={handleMenuAction}
               onMenuCancel={cancelSelection}
               onCardContextMenu={handleCardContextMenu}
+              compact={isMobile}
             />
 
             {/* Player Info (Bottom Right) */}
-            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-1 rounded-lg bg-zinc-900/80 p-3 text-right shadow-xl backdrop-blur-md">
-              <div className="text-lg font-bold text-blue-400">{me.name}</div>
-              <div className="text-xs text-zinc-400">
-                Deck: {zoneSize(me.deck)} | Discard: {zoneSize(me.discard)} | Prizes:{" "}
-                {zoneSize(me.prizes)}
+            <div className={`absolute bottom-2 right-2 flex flex-col items-end gap-1 rounded-lg bg-zinc-900/80 text-right shadow-xl backdrop-blur-md ${isMobile ? "p-1.5" : "p-3"}`}>
+              <div className={`font-bold text-blue-400 ${isMobile ? "text-xs" : "text-lg"}`}>{me.name}</div>
+              <div className={`text-zinc-400 ${isMobile ? "text-[9px]" : "text-xs"}`}>
+                {isMobile
+                  ? `${zoneSize(me.deck)}D ${zoneSize(me.discard)}G ${zoneSize(me.prizes)}P`
+                  : `Deck: ${zoneSize(me.deck)} | Discard: ${zoneSize(me.discard)} | Prizes: ${zoneSize(me.prizes)}`
+                }
               </div>
             </div>
           </div>
@@ -726,6 +765,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           battleMode={battleMode}
           aiSpeed={aiSpeed}
           onAiSpeedChange={onAiSpeedChange as any}
+          compact={isMobile}
         />
 
         {/* Manual Override Toolkit (Layer 2) */}

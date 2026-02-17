@@ -26,6 +26,8 @@ interface ActionLogProps {
   aiSpeed?: AiSpeed;
   onAiSpeedChange?: (speed: AiSpeed) => void;
   battleMode?: "ai" | "local" | "online" | "mock_engine";
+  /** Mobile mode: render as fullscreen modal instead of sidebar */
+  compact?: boolean;
 }
 
 // ─── Event Formatting ───
@@ -132,6 +134,7 @@ export function ActionLog({
   aiSpeed,
   onAiSpeedChange,
   battleMode,
+  compact = false,
 }: ActionLogProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -165,7 +168,10 @@ export function ActionLog({
   if (!isOpen) return null;
 
   return (
-    <div className="absolute left-0 top-0 z-30 flex h-full w-80 flex-col border-r border-blue-500/30 bg-zinc-900/95 shadow-2xl backdrop-blur-md">
+    <div className={compact
+      ? "fixed inset-0 z-50 flex flex-col bg-zinc-900/98 backdrop-blur-md"
+      : "absolute left-0 top-0 z-30 flex h-full w-80 flex-col border-r border-blue-500/30 bg-zinc-900/95 shadow-2xl backdrop-blur-md"
+    }>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-blue-500/30 bg-blue-500/10 px-3 py-2">
         <span className="text-sm font-bold text-blue-300">📋 对战日志</span>
