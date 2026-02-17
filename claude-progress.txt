@@ -1087,3 +1087,38 @@ Notes:
      - computePlayableCardIds() 增加 hasAttackedThisTurn 检查（攻击后手牌全灰）
 
   测试: 856 全通过，TypeScript 0 错误。
+
+=== Session 26A | 2026-02-17 ===
+Feature: 统一卡牌效果架构 — Session A: 外部数据获取，构建完整本地卡牌数据库
+Status: completed
+Notes:
+  目标: 从 PokemonTCG/pokemon-tcg-data GitHub 仓库补全 F 标及之后所有卡牌数据。
+
+  实现内容:
+  1. download-card-data.ts 全面重写:
+     - 新增 F 标卡组 (11套): swsh9(Brilliant Stars), swsh10(Astral Radiance), swsh11(Lost Origin),
+       swsh12(Silver Tempest), swsh12pt5(Crown Zenith), swsh9tg~swsh12tg(Trainer Gallery), swsh12pt5gg(Galarian Gallery)
+     - 新增未来集自动探测: sv10pt5, sv11, sv11pt5, sv12 等（404静默跳过）
+     - ESM 兼容修复: import { fileURLToPath } 替代原生 __dirname
+     - 重建 buildIndex(): 按 regulationMark 过滤(F/G/H/I/J/K/L), card.id 去重, 必要字段验证
+     - HTTP fetch 支持 301/302 重定向（最多 3 次）
+     - 统计报告: 按 regulationMark 分组输出数量
+
+  2. 数据验证结果:
+     - 总卡牌: 3863 → 5225 (增加 1362 张)
+     - F 标: 0 → 1009 张 (Brilliant Stars ~ Crown Zenith)
+     - G 标: 1633 → 1634
+     - H 标: 1282 → 1283
+     - I 标: 857 → 1200
+     - J 标: 68 → 68
+     - 无标记: 23 → 31 (ME 自定义集)
+     - 0 重复卡牌, 0 缺失必要字段
+
+  文件变更:
+     modified: scripts/download-card-data.ts (全面重写)
+     modified: src/data/cards/_index.json (3863→5225 张)
+     modified: src/data/cards/sv4pt5.json, svp.json (数据更新)
+     new: src/data/cards/swsh9.json ~ swsh12pt5gg.json (11 个 F 标集文件)
+     new: src/data/cards/rsv10pt5.json, zsv10pt5.json (探测性下载)
+
+  测试: 856 全通过，TypeScript 0 错误。
