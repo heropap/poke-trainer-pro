@@ -1122,3 +1122,40 @@ Notes:
      new: src/data/cards/rsv10pt5.json, zsv10pt5.json (探测性下载)
 
   测试: 856 全通过，TypeScript 0 错误。
+
+=== Session 26B | 2026-02-17 ===
+Feature: 增强 Text-Parser — 自动覆盖更多卡牌效果
+Status: completed
+Notes:
+  1. text-parser.ts 增强 (~15→~35 正则模式):
+     新增攻击模式(~20):
+     - 多翻硬币×伤害, 翻硬币免伤, 禁攻击下回合, 禁撤退下回合
+     - 下回合减伤, 弃能量(含全部), 自身伤害反算, 对手伤害反算
+     - 受伤加伤, 按奖赏加伤, 按备战数量加伤, 忽略弱点/抗性
+     - 全场回复, 回复+除状态, 攻击中抽牌, 抽到N张
+     - 自切备战, 切对手主战, 弃对手能量(翻币+直接)
+     - 弃对手牌组, 弃对手手牌, 移动能量到备战
+     - 搜索进化卡, 对特殊状态条件加伤
+
+     新增训练师模式(~8):
+     - 洗手抽牌, 搜索任意宝可梦/进化卡/支援者
+     - 切对手主战, 能量从弃牌堆回手, 从弃牌堆贴能量
+     - 从弃牌堆回收卡牌, 弃场地卡, 弃对手手牌, 对手洗手抽
+
+  2. effect-types.ts AbilityEffect 增强:
+     - modifyIncomingDamage: 被动减伤回调
+     - preventBenchDamage: 免备战伤害标志
+
+  3. markers.ts 增强:
+     - 新增 PREVENT_ALL_DAMAGE_NEXT_TURN 常量
+     - 加入 TURN_BASED_MARKERS 数组(自动回合结束清理)
+
+  4. 测试:
+     - 新建 text-parser-enhanced.test.ts: 40 个测试全通过
+     - 现有 text-parser.test.ts: 37 个测试不变全通过
+     - 全套: 896 测试全通过, TypeScript 0 错误
+
+  关键修复:
+     - 正则优先级: selfShuffleDrawMatch 移到 drawMatch 之前(防止误匹配)
+     - Weakness/Resistance 正则: 改为贪婪匹配 Weakness(?:\s*(?:or|and)\s*Resistance)?
+     - TS 类型: mock.calls 使用 as any[][] 避免空元组推断

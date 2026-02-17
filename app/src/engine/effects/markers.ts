@@ -32,10 +32,14 @@ export const DAMAGE_BOOST = "DAMAGE_BOOST";
 /** Ability is blocked on this Pokemon */
 export const ABILITY_BLOCKED = "ABILITY_BLOCKED";
 
+/** Prevent all damage next turn (e.g., coin flip protection attacks) */
+export const PREVENT_ALL_DAMAGE_NEXT_TURN = "PREVENT_ALL_DAMAGE_NEXT_TURN";
+
 // ─── Marker Category Lists (for cleanup logic) ───
 
 /** Markers that should be decremented at end of each turn */
 export const TURN_BASED_MARKERS = [
   CANT_ATTACK_NEXT_TURN,
   PREVENT_RETREAT_NEXT_TURN,
+  PREVENT_ALL_DAMAGE_NEXT_TURN,
 ] as const;
