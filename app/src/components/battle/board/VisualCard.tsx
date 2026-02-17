@@ -1,7 +1,9 @@
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { GameCard } from "@/engine/game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, VSTAR_USED } from "@/engine/effects/markers";
+import { useAnimation } from "./AnimationProvider";
 
 /** Map energy type name to a color */
 const ENERGY_COLORS: Record<string, string> = {
@@ -113,13 +115,19 @@ export function VisualCard({
 
   // Damage Animation Logic
   const [damageDelta, setDamageDelta] = React.useState<number | null>(null);
+  const [isShaking, setIsShaking] = React.useState(false);
   const prevDamageRef = React.useRef(card.damageCounters);
 
   React.useEffect(() => {
     if (card.damageCounters > prevDamageRef.current) {
       const delta = (card.damageCounters - prevDamageRef.current) * 10;
       setDamageDelta(delta);
-      const timer = setTimeout(() => setDamageDelta(null), 1000);
+      setIsShaking(true);
+      const timer = setTimeout(() => {
+        setDamageDelta(null);
+        setIsShaking(false);
+      }, 1000);
+      prevDamageRef.current = card.damageCounters;
       return () => clearTimeout(timer);
     }
     prevDamageRef.current = card.damageCounters;
@@ -139,7 +147,7 @@ export function VisualCard({
   }
 
   return (
-    <div
+    <motion.div
       className={`relative select-none ${className} ${
         isHoverable
           ? "cursor-pointer transition-transform hover:z-10 hover:scale-110"
@@ -153,6 +161,12 @@ export function VisualCard({
           onContextMenu(e);
         }
       }}
+      animate={
+        isShaking
+          ? { x: [0, -5, 5, -3, 3, 0] }
+          : { x: 0 }
+      }
+      transition={isShaking ? { duration: 0.4, ease: "easeInOut" } : {}}
     >
       {/* Card Image */}
       <div className={`h-full w-full overflow-hidden rounded-lg shadow-md ${
@@ -266,19 +280,20 @@ export function VisualCard({
         </div>
       )}
 
-      {/* HP Bar (Overlay) */}
+      {/* HP Bar (Overlay) — spring animated */}
       {showHp && hp > 0 && (
         <div className="absolute bottom-1 left-1/2 w-10/12 -translate-x-1/2 transform rounded-full bg-zinc-900/80 px-1 py-0.5 shadow-sm backdrop-blur-sm">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-700">
-            <div
-              className={`h-full rounded-full transition-all duration-300 ${
+            <motion.div
+              className={`h-full rounded-full ${
                 hpPercentage > 50
                   ? "bg-green-500"
                   : hpPercentage > 20
                   ? "bg-yellow-500"
                   : "bg-red-500"
               }`}
-              style={{ width: `${hpPercentage}%` }}
+              animate={{ width: `${Math.max(hpPercentage, 0)}%` }}
+              transition={{ type: "spring", stiffness: 100, damping: 15 }}
             />
           </div>
           <div className="mt-0.5 text-center text-[9px] font-bold leading-none text-white">
@@ -294,14 +309,23 @@ export function VisualCard({
         </div>
       )}
 
-      {/* Floating Damage Text */}
-      {damageDelta !== null && (
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-[ping_0.5s_ease-out]">
-          <span className="text-4xl font-black text-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] stroke-black" style={{ WebkitTextStroke: "1px white" }}>
-            -{damageDelta}
-          </span>
-        </div>
-      )}
-    </div>
+      {/* Floating Damage Text — framer-motion */}
+      <AnimatePresence>
+        {damageDelta !== null && (
+          <motion.div
+            key={`dmg-${damageDelta}-${Date.now()}`}
+            className="absolute left-1/2 top-1/2 z-50 pointer-events-none"
+            initial={{ x: "-50%", y: "-50%", opacity: 1, scale: 1.2 }}
+            animate={{ x: "-50%", y: "-120%", opacity: 0, scale: 0.8 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <span className="text-4xl font-black text-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" style={{ WebkitTextStroke: "1px white" }}>
+              -{damageDelta}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

@@ -188,7 +188,7 @@
   {"category":"integration","description":"ryuu-play 卡牌效果批量移植 — 移植 50 张 Standard 核心卡效果","steps":["分析 ryuu-play 696 张卡牌实现","移植 Top 50 核心攻击效果","移植剩余常用训练师","使用 EffectContext API 编写效果","编写集成测试验证效果"],"passes":true,"priority":16},
   {"category":"functional","description":"Marker 系统 — 卡牌标记/计数器支持","steps":["GameCard 添加 markers 字段","EffectContext 添加 marker CRUD 方法","实现常见 marker 类型","VisualCard 显示 marker 徽章","编写 marker 系统测试"],"passes":true,"priority":17},
   {"category":"ui","description":"移动端响应式布局 — 适配手机和平板","steps":["BattleBoard flex-col/flex-row 响应式","手牌 carousel + 触摸传感器","ActionMenu bottom sheet","ActionLog 全屏 modal","多视口测试"],"passes":true,"priority":18},
-  {"category":"ui","description":"卡牌动画系统 — Framer Motion 对战动画","steps":["安装 framer-motion","实现 5 种核心动画(抽牌/打出/攻击/受击/击倒)","进化翻转动画","能量附加飞行动画","AI 动画队列系统"],"passes":false,"priority":19},
+  {"category":"ui","description":"卡牌动画系统 — Framer Motion 对战动画","steps":["安装 framer-motion","实现 5 种核心动画(抽牌/打出/攻击/受击/击倒)","进化翻转动画","能量附加飞行动画","AI 动画队列系统"],"passes":true,"priority":19},
   {"category":"deployment","description":"Docker 容器化部署 — Dockerfile + 健康检查 + 环境变量","steps":["多阶段 Dockerfile","docker-compose.yml","env.example 环境变量","健康检查 /api/health","部署文档"],"passes":false,"priority":20},
   {"category":"functional","description":"WebSocket 断线重连 — 自动重连 + 状态恢复","steps":["服务端游戏状态持久化(30分钟TTL)","game:reconnect 事件实现","客户端 exponential backoff","掉线 UI 提示横幅","编写重连流程测试"],"passes":false,"priority":21},
   {"category":"functional","description":"回合计时器 — 90秒限时 + 超时自动结束","steps":["GameState 添加 turnTimer 字段","服务端倒计时 + 超时自动 end_turn","客户端进度环 UI","10秒警告闪红","编写计时器测试"],"passes":false,"priority":22},

@@ -33,6 +33,9 @@ import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
 import { CardSelectionModal } from "./CardSelectionModal";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { AnimationProvider } from "./AnimationProvider";
+import { EvolutionOverlay } from "./EvolutionOverlay";
+import { EnergyAttachOverlay } from "./EnergyAttachOverlay";
 
 // ────────────────────────────────────────────────
 // Types
@@ -80,6 +83,11 @@ function computePlayableCardIds(
   const playable = new Set<string>();
 
   if (state.phase !== "main" || state.currentPlayer !== playerIndex) {
+    return playable;
+  }
+
+  // PTCG Rule: After attacking, turn is over — no more cards can be played
+  if (state.turnStatus.hasAttackedThisTurn) {
     return playable;
   }
 
@@ -210,6 +218,50 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   // Card Detail Modal state
   const [viewingCard, setViewingCard] = React.useState<GameCard | null>(null);
 
+  // Retreat bench selection state
+  const [retreatSelecting, setRetreatSelecting] = React.useState(false);
+
+  // Attack animation state
+  const [attackingPlayer, setAttackingPlayer] = React.useState<number | null>(null);
+
+  // Evolution animation state
+  const [evolutionAnim, setEvolutionAnim] = React.useState<{ active: boolean; name: string }>({ active: false, name: "" });
+
+  // Energy attach animation state
+  const [energyAnim, setEnergyAnim] = React.useState<{ active: boolean; type: string; key: string }>({ active: false, type: "Colorless", key: "" });
+
+  // Detect game events from log for animations (attacks, evolutions, energy)
+  const lastLogLengthRef = React.useRef(gameState.log.length);
+  React.useEffect(() => {
+    const log = gameState.log;
+    if (log.length > lastLogLengthRef.current) {
+      for (let i = lastLogLengthRef.current; i < log.length; i++) {
+        const entry = log[i];
+
+        // Opponent attack animation
+        if (entry.type === "attack" && entry.playerIndex === opponentIndex) {
+          setAttackingPlayer(opponentIndex);
+          setTimeout(() => setAttackingPlayer(null), 400);
+        }
+
+        // Evolution animation
+        if (entry.type === "evolve_pokemon") {
+          const name = entry.message?.match(/进化为\s*(.+)/)?.[1] || "";
+          setEvolutionAnim({ active: true, name });
+          setTimeout(() => setEvolutionAnim({ active: false, name: "" }), 700);
+        }
+
+        // Energy attach animation
+        if (entry.type === "attach_energy") {
+          const energyType = (entry as any).message?.match(/(Grass|Fire|Water|Lightning|Psychic|Fighting|Darkness|Metal|Dragon|Fairy)/)?.[1] || "Colorless";
+          setEnergyAnim({ active: true, type: energyType, key: `e-${i}-${Date.now()}` });
+          setTimeout(() => setEnergyAnim({ active: false, type: "Colorless", key: "" }), 500);
+        }
+      }
+    }
+    lastLogLengthRef.current = log.length;
+  }, [gameState.log.length, opponentIndex]);
+
   // Toast notifications
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
 
@@ -251,6 +303,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   function cancelSelection() {
     setSelectedCardId(null);
     setTargeting(null);
+    setRetreatSelecting(false);
   }
 
   // ─── Keyboard: Escape cancels ─────────────────
@@ -319,6 +372,59 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
     setActiveId(null);
     setActiveCard(null);
+  }
+
+  // ─── Retreat handler ────────────────────────────
+  function handleRetreat() {
+    if (!isMyTurn || !me.active) return;
+    const retreatCost = me.active.card.convertedRetreatCost ?? 0;
+
+    if (me.bench.cards.length === 0) {
+      showToast("备战区没有宝可梦可以替换", "error");
+      return;
+    }
+
+    if (me.bench.cards.length === 1 && retreatCost === 0) {
+      // Only one bench target and free retreat — do it directly
+      dispatchAction({
+        type: "retreat",
+        benchInstanceId: me.bench.cards[0].instanceId,
+        energyToDiscard: [],
+      });
+      return;
+    }
+
+    // Enter retreat bench-selection mode
+    setRetreatSelecting(true);
+    cancelSelection();
+  }
+
+  function handleRetreatTargetClick(benchInstanceId: string) {
+    if (!me.active) return;
+    const retreatCost = me.active.card.convertedRetreatCost ?? 0;
+
+    // Auto-select energy to discard for retreat cost
+    let energyToDiscard: string[] = [];
+    if (retreatCost > 0) {
+      // Prefer non-useful energy: pick from attached energy greedily
+      const available = [...me.active.attachedEnergy];
+      for (let i = 0; i < retreatCost && available.length > 0; i++) {
+        const picked = available.shift()!;
+        energyToDiscard.push(picked.instanceId);
+      }
+      if (energyToDiscard.length < retreatCost) {
+        showToast(`撤退需要 ${retreatCost} 点能量，当前能量不足`, "error");
+        setRetreatSelecting(false);
+        return;
+      }
+    }
+
+    dispatchAction({
+      type: "retreat",
+      benchInstanceId,
+      energyToDiscard,
+    });
+    setRetreatSelecting(false);
   }
 
   // ─── Card click handler (PTCG Live selection model) ─────
@@ -512,6 +618,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     : null;
 
   return (
+    <AnimationProvider aiSpeed={aiSpeed}>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
       <div
         className="flex h-screen w-full flex-col overflow-hidden bg-zinc-900 text-zinc-100"
@@ -561,6 +668,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             isOpponent
             isFirstTurn={false}
             onCardContextMenu={handleCardContextMenu}
+            isAttacking={attackingPlayer === opponentIndex}
             compact={isMobile}
           />
         </div>
@@ -589,6 +697,21 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             </div>
           )}
 
+          {/* Retreat bench selection banner */}
+          {retreatSelecting && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-600/20 backdrop-blur-[1px]">
+              <div className={`flex items-center gap-2 rounded-full bg-blue-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
+                <span>🔄 选择备战区宝可梦来替换</span>
+                <button
+                  onClick={() => setRetreatSelecting(false)}
+                  className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
           {isMobile ? (
             /* Mobile: compact center info */
             <div className="flex items-center gap-2">
@@ -598,6 +721,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
               {gameState.stadium && (
                 <div className="rounded bg-emerald-700/80 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200 truncate max-w-[80px]">
                   {gameState.stadium.card.card.name}
+                </div>
+              )}
+              {/* Mobile turn status dots */}
+              {isMyTurn && (
+                <div className="flex items-center gap-1">
+                  {me.energyAttachedThisTurn && <div className="h-2 w-2 rounded-full bg-yellow-400" title="已附能" />}
+                  {me.supporterUsedThisTurn && <div className="h-2 w-2 rounded-full bg-purple-400" title="已用支持者" />}
+                  {gameState.turnStatus.retreated && <div className="h-2 w-2 rounded-full bg-blue-400" title="已撤退" />}
+                  {gameState.turnStatus.hasAttackedThisTurn && <div className="h-2 w-2 rounded-full bg-red-400" title="已攻击" />}
                 </div>
               )}
             </div>
@@ -615,6 +747,25 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
               <div className="rounded-full bg-blue-600 px-6 py-1 text-sm font-bold text-white shadow-lg shadow-blue-900/20">
                 {gameState.players[gameState.currentPlayer].name} 的回合
               </div>
+              {/* Desktop turn status indicators */}
+              {isMyTurn && (
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={`rounded px-1.5 py-0.5 font-bold ${me.energyAttachedThisTurn ? "bg-yellow-600 text-yellow-100" : "bg-zinc-800 text-zinc-500"}`}>
+                    ⚡附能
+                  </span>
+                  <span className={`rounded px-1.5 py-0.5 font-bold ${me.supporterUsedThisTurn ? "bg-purple-600 text-purple-100" : "bg-zinc-800 text-zinc-500"}`}>
+                    📜支持者
+                  </span>
+                  <span className={`rounded px-1.5 py-0.5 font-bold ${gameState.turnStatus.retreated ? "bg-blue-600 text-blue-100" : "bg-zinc-800 text-zinc-500"}`}>
+                    🔄撤退
+                  </span>
+                  {gameState.turnStatus.hasAttackedThisTurn && (
+                    <span className="rounded bg-red-600 px-1.5 py-0.5 font-bold text-red-100 animate-pulse">
+                      ⚔攻击完毕
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="text-xs uppercase tracking-widest text-zinc-500">
                 {gameState.phase} Phase
               </div>
@@ -669,14 +820,23 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           <div className={isMobile ? "mb-2" : "mb-4"}>
             <ActiveSpot
               card={me.active}
-              canAttack={isMyTurn && !targeting}
+              gameState={gameState}
+              playerIndex={myIndex as 0 | 1}
+              canAttack={isMyTurn && !targeting && !retreatSelecting}
               isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
-              onAttack={(attackName) => dispatchAction({ type: "attack", attackName })}
+              hasAttackedThisTurn={gameState.turnStatus.hasAttackedThisTurn}
+              onAttack={(attackName) => {
+                setAttackingPlayer(myIndex);
+                setTimeout(() => setAttackingPlayer(null), 400);
+                dispatchAction({ type: "attack", attackName });
+              }}
+              onRetreat={handleRetreat}
               isTargetable={activeIsTargetable}
               onTargetClick={() => {
                 if (me.active) handleTargetClick(me.active.instanceId);
               }}
               onCardContextMenu={handleCardContextMenu}
+              isAttacking={attackingPlayer === myIndex}
               compact={isMobile}
             />
           </div>
@@ -685,18 +845,23 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-6 gap-4"}`}>
             {Array.from({ length: 5 }).map((_, i) => {
               const benchCard = me.bench.cards[i] || null;
-              const isTargetable = benchCard
+              const isTargetableForCard = benchCard
                 ? benchTargetableIds.has(benchCard.instanceId)
                 : false;
+              const isTargetableForRetreat = retreatSelecting && !!benchCard;
 
               return (
                 <BenchSpot
                   key={i}
                   index={i}
                   card={benchCard}
-                  isTargetable={isTargetable}
+                  isTargetable={isTargetableForCard || isTargetableForRetreat}
                   onTargetClick={() => {
-                    if (benchCard) handleTargetClick(benchCard.instanceId);
+                    if (benchCard && retreatSelecting) {
+                      handleRetreatTargetClick(benchCard.instanceId);
+                    } else if (benchCard) {
+                      handleTargetClick(benchCard.instanceId);
+                    }
                   }}
                   onCardContextMenu={handleCardContextMenu}
                   compact={isMobile}
@@ -787,13 +952,18 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
         {/* Card Selection Modal (Prompt) */}
         {gameState.prompt && gameState.prompt.playerIndex === myIndex && (
-          <CardSelectionModal 
+          <CardSelectionModal
             prompt={gameState.prompt}
             gameState={gameState}
             onConfirm={(selectedIds) => onAction?.({ type: "select_cards_response", selectedIds })}
           />
         )}
+
+        {/* Animation Overlays */}
+        <EvolutionOverlay isActive={evolutionAnim.active} pokemonName={evolutionAnim.name} />
+        <EnergyAttachOverlay isActive={energyAnim.active} energyType={energyAnim.type} animKey={energyAnim.key} />
       </div>
     </DndContext>
+    </AnimationProvider>
   );
 }

@@ -1,5 +1,6 @@
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { GameCard } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { ActionMenu } from "./ActionMenu";
@@ -189,24 +190,34 @@ export function Hand({
         className={compact ? "flex snap-x snap-mandatory gap-0 pl-2 pr-8" : "flex"}
         style={compact ? undefined : { marginLeft: "20px" }}
       >
-        {cards.map((card, i) => (
-          <div key={card.instanceId} className={compact ? "snap-start" : ""}>
-            <DraggableCard
-              card={card}
-              index={i}
-              onCardClick={onCardClick}
-              isMyTurn={isMyTurn}
-              isSelected={selectedCardId === card.instanceId}
-              isPlayable={playableCardIds ? playableCardIds.has(card.instanceId) : true}
-              isTargeting={isTargeting}
-              showMenu={selectedCardId === card.instanceId && !isTargeting}
-              onMenuAction={onMenuAction}
-              onMenuCancel={onMenuCancel}
-              onContextMenu={onCardContextMenu}
-              compact={compact}
-            />
-          </div>
-        ))}
+        <AnimatePresence mode="popLayout">
+          {cards.map((card, i) => (
+            <motion.div
+              key={card.instanceId}
+              className={compact ? "snap-start" : ""}
+              initial={{ y: -40, opacity: 0, scale: 0.8 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -30, opacity: 0, scale: 0.8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              layout
+            >
+              <DraggableCard
+                card={card}
+                index={i}
+                onCardClick={onCardClick}
+                isMyTurn={isMyTurn}
+                isSelected={selectedCardId === card.instanceId}
+                isPlayable={playableCardIds ? playableCardIds.has(card.instanceId) : true}
+                isTargeting={isTargeting}
+                showMenu={selectedCardId === card.instanceId && !isTargeting}
+                onMenuAction={onMenuAction}
+                onMenuCancel={onMenuCancel}
+                onContextMenu={onCardContextMenu}
+                compact={compact}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );

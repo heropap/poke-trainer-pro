@@ -1,5 +1,6 @@
 
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { GameCard } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
@@ -60,34 +61,46 @@ export function BenchSpot({
         }
       }}
     >
-      {card ? (
-        <div
-          ref={setPokemonRef}
-          className={`relative h-full w-full ${
-            isOverPokemon ? "rounded-lg ring-4 ring-yellow-400" : ""
-          } ${
-            isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
-          }`}
-        >
-          <VisualCard
-            card={card}
-            scale={cardScale}
-            showHp={true}
-            showEnergy={true}
-            onContextMenu={(e) => {
-              if (onCardContextMenu) {
-                e.preventDefault();
-                e.stopPropagation();
-                onCardContextMenu(card);
-              }
-            }}
-          />
-        </div>
-      ) : (
-        <span className="text-xs text-zinc-300 dark:text-zinc-600">
-          备战 {index + 1}
-        </span>
-      )}
+      <AnimatePresence mode="wait">
+        {card ? (
+          <motion.div
+            key={card.instanceId}
+            ref={setPokemonRef}
+            className={`relative h-full w-full ${
+              isOverPokemon ? "rounded-lg ring-4 ring-yellow-400" : ""
+            } ${
+              isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
+            }`}
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ rotateX: 90, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          >
+            <VisualCard
+              card={card}
+              scale={cardScale}
+              showHp={true}
+              showEnergy={true}
+              onContextMenu={(e) => {
+                if (onCardContextMenu) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCardContextMenu(card);
+                }
+              }}
+            />
+          </motion.div>
+        ) : (
+          <motion.span
+            key="empty"
+            className="text-xs text-zinc-300 dark:text-zinc-600"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            备战 {index + 1}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

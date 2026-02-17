@@ -1056,3 +1056,34 @@ Notes:
 
   总计: 33 套件，856 测试全部通过 (810 → 856)。TypeScript 编译 0 错误。
   文件变更: 9 modified, 1 new test file
+
+=== Session 25b | 2026-02-17 19:25:00 ===
+Feature: UI 规则体现 — 让规则对玩家可见
+Status: completed
+Notes:
+  审计了全部 UI 组件，发现多个关键规则未在前端反映:
+  - 无撤退按钮（核心机制缺失）
+  - 攻击禁用原因不透明
+  - 进化堆叠不可见
+  - 攻击后状态（回合结束）未提示
+  - 回合操作限制（附能/支持者/撤退/攻击）无状态栏
+
+  修改文件:
+  1. ActiveSpot.tsx (全面重写):
+     - 新增撤退按钮，显示撤退费用（灰色圆点），状态禁用原因
+     - 攻击按钮显示能量费用（彩色圆点），禁用时显示原因
+       (已攻击/先攻/麻痹/睡眠/效果封锁/能量不足)
+     - 进化堆叠指示器（左下角徽章+悬浮详情）
+     - "已攻击—等待回合结束" 提示
+     - 新增 props: gameState, playerIndex, onRetreat, hasAttackedThisTurn
+
+  2. BattleBoard.tsx:
+     - 传递新 props 给 ActiveSpot (gameState, playerIndex, hasAttackedThisTurn, onRetreat)
+     - 实现 handleRetreat() 流程: 点击撤退 → 选择备战区宝可梦 → 自动选择能量支付 → dispatch
+     - 撤退选择模式 (retreatSelecting): 备战区宝可梦高亮可点击
+     - 撤退选择横幅: "🔄 选择备战区宝可梦来替换"
+     - 回合状态栏 (桌面端): ⚡附能 / 📜支持者 / 🔄撤退 / ⚔攻击完毕
+     - 回合状态栏 (移动端): 彩色圆点指示器
+     - computePlayableCardIds() 增加 hasAttackedThisTurn 检查（攻击后手牌全灰）
+
+  测试: 856 全通过，TypeScript 0 错误。
