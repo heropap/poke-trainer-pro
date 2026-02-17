@@ -224,6 +224,7 @@ export function ActionLog({
             {group.events.map((event, ei) => {
               const fmt = formatGameEvent(event);
               const isPlayer0 = event.playerIndex === 0;
+              const effectSrc = event.data?.effectSource as string | undefined;
               return (
                 <div
                   key={`${gi}-${ei}`}
@@ -237,6 +238,21 @@ export function ActionLog({
                   <span className={`${fmt.color} break-all`}>
                     {fmt.message}
                   </span>
+                  {/* Effect source badge */}
+                  {effectSrc && effectSrc !== "none" && (
+                    <span className={`ml-1 shrink-0 rounded px-1 py-0 text-[8px] font-medium ${
+                      effectSrc === "L1" || effectSrc === "L2"
+                        ? "bg-green-800 text-green-300"
+                        : "bg-yellow-800 text-yellow-300"
+                    }`}>
+                      {effectSrc === "L1" || effectSrc === "L2" ? "手写" : "解析"}
+                    </span>
+                  )}
+                  {effectSrc === "none" && (
+                    <span className="ml-1 shrink-0 rounded px-1 py-0 text-[8px] font-medium bg-zinc-700 text-zinc-400">
+                      无效果
+                    </span>
+                  )}
                 </div>
               );
             })}

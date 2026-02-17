@@ -6,6 +6,7 @@ import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
 import { checkEnergyCost, canAttack } from "@/engine/game-actions";
 import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, PREVENT_RETREAT_NEXT_TURN } from "@/engine/effects/markers";
+import { getEffectSource } from "@/engine/effects/effect-registry";
 
 /** Map energy type to a dot color for cost display */
 const COST_DOT_COLORS: Record<string, string> = {
@@ -260,6 +261,13 @@ export function ActiveSpot({
                   </div>
                   {/* Attack name and damage */}
                   <span className="mx-1 flex-1 truncate text-left">{attack.name}</span>
+                  {/* Effect source indicator */}
+                  {(() => {
+                    const src = getEffectSource(card.cardId, card.card.name);
+                    const dotColor = !src ? "bg-red-500" : (src === "L1" || src === "L2") ? "bg-green-500" : "bg-yellow-400";
+                    const dotTip = !src ? "未实现" : (src === "L1" || src === "L2") ? "手写效果" : "自动解析";
+                    return <span className={`ml-0.5 inline-flex h-[6px] w-[6px] shrink-0 rounded-full ${dotColor}`} title={dotTip} />;
+                  })()}
                   <span className="shrink-0 text-yellow-300">{attack.damage || "0"}</span>
                 </div>
                 {/* Disabled reason badge */}

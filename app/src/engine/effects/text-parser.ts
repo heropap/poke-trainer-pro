@@ -22,7 +22,7 @@
 
 import { Card, CardAttack } from "@/types/card";
 import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect } from "./effect-types";
-import { registerByName, hasEffect } from "./effect-registry";
+import { registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
 import { StatusCondition } from "../game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
 
@@ -60,7 +60,7 @@ export function parseCardEffects(card: Card): CardEffectDef | null {
  * @param cards Array of Card data to parse
  * @returns Count of registered and skipped cards
  */
-export function autoRegisterTextEffects(cards: Card[]): { registered: number; skipped: number } {
+export function autoRegisterTextEffects(cards: Card[], source: EffectSourceLayer = "L4"): { registered: number; skipped: number } {
   let registered = 0;
   let skipped = 0;
 
@@ -83,7 +83,7 @@ export function autoRegisterTextEffects(cards: Card[]): { registered: number; sk
 
     const def = parseCardEffects(card);
     if (def) {
-      registerByName({ ...def, cardName: card.name });
+      registerByName({ ...def, cardName: card.name }, source);
       registered++;
     } else {
       skipped++;

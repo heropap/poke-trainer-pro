@@ -21,7 +21,7 @@ import {
   logEvent,
 } from "./game-state";
 import { removeCard, addToBottom, findCard } from "./zones";
-import { getEffect } from "./effects/effect-registry";
+import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { processBetweenTurns } from "./effects/status-effects";
 import { validateEvolution } from "./middleware/evolution.middleware";
@@ -406,12 +406,14 @@ export async function playSupporter(
   player.supporterUsedThisTurn = true;
   state.turnStatus.supporterUsed = true;
 
+  const effectSource = getEffectSource(card.cardId, card.card.name) || "none";
+
   logEvent(
     state,
     state.currentPlayer,
     "use_supporter",
     `${player.name} 使用了 ${card.card.name}`,
-    { cardName: card.card.name }
+    { cardName: card.card.name, effectSource }
   );
 
   // Execute trainer effect if registered
@@ -497,12 +499,14 @@ export async function playItem(
     return ok();
   }
 
+  const itemEffectSource = getEffectSource(card.cardId, card.card.name) || "none";
+
   logEvent(
     state,
     state.currentPlayer,
     "use_trainer",
     `${player.name} 使用了 ${card.card.name}`,
-    { cardName: card.card.name }
+    { cardName: card.card.name, effectSource: itemEffectSource }
   );
 
   // Execute item effect if registered

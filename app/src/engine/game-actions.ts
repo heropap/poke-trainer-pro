@@ -16,7 +16,7 @@ import {
   addToBottom,
   isZoneEmpty
 } from "./zones";
-import { getEffect } from "./effects/effect-registry";
+import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
@@ -747,6 +747,7 @@ export function performAttack(
   // 2. Check for registered attack effect
   let effectResult: AttackResult | null = null;
   const cardEffect = getEffect(attacker.active!.cardId, attacker.active!.card.name);
+  const effectSource = getEffectSource(attacker.active!.cardId, attacker.active!.card.name) || "none";
 
   if (cardEffect?.attacks) {
     const attackEffect = cardEffect.attacks.find(a => a.name === attackName);
@@ -806,15 +807,17 @@ export function performAttack(
       baseDamage,
       finalDamage,
       weaknessApplied,
-      resistanceApplied
+      resistanceApplied,
+      effectSource,
     });
   } else if (baseDamage === 0) {
-    logEvent(state, playerIndex, "attack", `${attacker.active!.card.name} 使用了 ${attackName}`);
+    logEvent(state, playerIndex, "attack", `${attacker.active!.card.name} 使用了 ${attackName}`, { effectSource });
   } else {
     logEvent(state, playerIndex, "damage", `${attacker.active!.card.name} 使用 ${attackName}，但伤害被抵消了`, {
       baseDamage,
       finalDamage: 0,
-      resistanceApplied: true
+      resistanceApplied: true,
+      effectSource,
     });
   }
 

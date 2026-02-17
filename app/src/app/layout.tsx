@@ -48,6 +48,9 @@ export default function RootLayout({
               <Link href="/battle" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 对战
               </Link>
+              <Link href="/stats" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                统计
+              </Link>
             </div>
           </div>
         </nav>

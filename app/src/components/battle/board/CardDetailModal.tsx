@@ -2,6 +2,19 @@
 import React from "react";
 import { GameCard } from "@/engine/game-state";
 import { createPortal } from "react-dom";
+import { getEffect, hasEffect, getEffectSource } from "@/engine/effects/effect-registry";
+import type { EffectSourceLayer } from "@/engine/effects/effect-registry";
+
+/** Map source layer to badge label and color */
+function getSourceBadge(source: EffectSourceLayer | null): { label: string; className: string } {
+  switch (source) {
+    case "L1": return { label: "手写效果 (ID)", className: "bg-green-600 text-green-100" };
+    case "L2": return { label: "手写效果 (名称)", className: "bg-green-600 text-green-100" };
+    case "L3": return { label: "自动解析 (Ryuu)", className: "bg-yellow-600 text-yellow-100" };
+    case "L4": return { label: "自动解析 (文本)", className: "bg-yellow-600 text-yellow-100" };
+    default:   return { label: "未实现", className: "bg-red-600 text-red-100" };
+  }
+}
 
 interface CardDetailModalProps {
   card: GameCard;
@@ -122,6 +135,61 @@ export function CardDetailModal({ card, onClose }: CardDetailModalProps) {
                  {card.card.rules.map((rule, i) => <p key={i} className="mb-1">{rule}</p>)}
                </div>
             )}
+
+            {/* Effect Status */}
+            <div className="flex flex-col gap-2">
+              <h3 className="font-semibold text-zinc-300 border-b border-zinc-700 pb-1">效果状态</h3>
+              {(() => {
+                const source = getEffectSource(card.cardId, card.card.name);
+                const badge = getSourceBadge(source);
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      Layer: {source || "无"}
+                    </span>
+                  </div>
+                );
+              })()}
+              {/* Per-attack coverage (Pokemon only) */}
+              {card.card.supertype === "Pokémon" && card.card.attacks && card.card.attacks.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1">
+                  <span className="text-[10px] text-zinc-500 font-medium">攻击效果覆盖:</span>
+                  {card.card.attacks.map((attack, i) => {
+                    const effect = getEffect(card.cardId, card.card.name);
+                    const hasAtkEffect = effect?.attacks?.some(a => a.name === attack.name) ?? false;
+                    const source = getEffectSource(card.cardId, card.card.name);
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className={`inline-flex h-2 w-2 rounded-full ${
+                          hasAtkEffect ? (source === "L1" || source === "L2" ? "bg-green-500" : "bg-yellow-400") : "bg-red-500"
+                        }`} />
+                        <span className="text-zinc-300">{attack.name}</span>
+                        <span className="text-zinc-600">{hasAtkEffect ? "已覆盖" : "未覆盖"}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Trainer effect status */}
+              {card.card.supertype === "Trainer" && (
+                <div className="flex items-center gap-2 text-xs">
+                  {hasEffect(card.cardId, card.card.name) ? (
+                    <>
+                      <span className="inline-flex h-2 w-2 rounded-full bg-green-500" />
+                      <span className="text-zinc-300">训练师效果已注册</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex h-2 w-2 rounded-full bg-red-500" />
+                      <span className="text-zinc-300">训练师效果未注册</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="mt-auto pt-4 text-xs text-zinc-500 border-t border-zinc-800">
                ID: {card.card.id} | Artist: {card.card.artist} | Rarity: {card.card.rarity}

@@ -1200,3 +1200,43 @@ Notes:
      - 去重后可解析: ~500+ 张 (排除基础能量)
      - text-parser 可解析 ryuu 卡: 50+ 张
      - 覆盖率报告: text-parser Layer 4 覆盖 200+ 张 UI 卡
+
+=== Session 26D | 2026-02-17 ===
+Feature: UI/UX 与效果系统完整集成
+Status: completed
+Notes: 一次性修复全部 6 个 UI/UX 缺口，让前端完全感知后端 5 层效果优先链:
+
+  Step 1 — 效果层级追踪基础设施:
+     - effect-registry.ts: 新增 EffectSourceLayer 类型 ("L1"|"L2"|"L3"|"L4")
+     - 并行 sourceByIdRegistry/sourceByNameRegistry Maps
+     - 所有 register 函数新增可选 source 参数（向后兼容）
+     - 新增 getEffectSource(cardId, cardName?) 查询函数
+     - index.ts: initializeEffects() 传入 L1/L2 标记
+     - text-parser.ts: autoRegisterTextEffects 新增 source 参数（默认 L4）
+     - ryuu-metadata-extractor.ts: 传 "L3" 给 autoRegisterTextEffects
+
+  Step 2 — 攻击按钮效果指示器 (ActiveSpot.tsx):
+     - 每个攻击按钮右侧加 6px 圆点
+     - 🟢 L1/L2 手写 | 🟡 L3/L4 解析 | 🔴 未实现
+
+  Step 3 — 卡牌详情模态增强 (CardDetailModal.tsx):
+     - 新增"效果状态"区域：来源徽章 + 每攻击覆盖详情 + 训练师状态
+
+  Step 4 — 对战日志效果来源 (game-actions + turn-actions + ActionLog):
+     - performAttack/playSupporter/playItem logEvent data 中加入 effectSource
+     - ActionLog 显示 "手写"/"解析"/"无效果" 微标签
+
+  Step 5 — 覆盖率统计页 + 导航:
+     - 新建 /stats 路由 (page.tsx + StatsPageClient.tsx)
+     - 4 区域: 总覆盖率英雄条、Supertype 卡片、层级分布条形图、未覆盖列表
+     - layout.tsx 导航栏新增"统计"链接
+
+  Step 6 — 测试:
+     - effect-layer-tracking.test.ts: 19 个测试
+       - ID/Name 注册 source 追踪、clearRegistry 清空、优先级查找、initializeEffects 集成
+     - 全套: 950 测试全通过, TypeScript 0 错误
+
+  修改文件 (11):
+     effect-registry.ts, index.ts, text-parser.ts, ryuu-metadata-extractor.ts,
+     ActiveSpot.tsx, CardDetailModal.tsx, game-actions.ts, turn-actions.ts,
+     ActionLog.tsx, layout.tsx, stats/page.tsx (新), stats/StatsPageClient.tsx (新)

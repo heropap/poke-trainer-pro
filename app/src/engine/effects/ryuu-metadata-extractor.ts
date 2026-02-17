@@ -267,11 +267,11 @@ export function autoRegisterFromRyuuMeta(): {
   total: number;
 } {
   const { autoRegisterTextEffects } = require("./text-parser") as {
-    autoRegisterTextEffects: (cards: UICard[]) => { registered: number; skipped: number };
+    autoRegisterTextEffects: (cards: UICard[], source?: string) => { registered: number; skipped: number };
   };
 
   const ryuuCards = extractRyuuAsUICards();
-  const result = autoRegisterTextEffects(ryuuCards);
+  const result = autoRegisterTextEffects(ryuuCards, "L3");
 
   if (result.registered > 0) {
     console.log(

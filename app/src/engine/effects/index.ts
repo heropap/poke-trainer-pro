@@ -35,12 +35,14 @@ export {
   registerAllByName,
   getEffect,
   hasEffect,
+  getEffectSource,
   getRegisteredCount,
   getNameRegisteredCount,
   clearRegistry,
   getRegisteredCardIds,
   getRegisteredCardNames,
 } from "./effect-registry";
+export type { EffectSourceLayer } from "./effect-registry";
 
 // Re-export context
 export { createEffectContext } from "./effect-context";
@@ -103,13 +105,13 @@ export function initializeEffects(
   options?: { skipRyuuMeta?: boolean }
 ): void {
   // Layer 1: ID-based hand-written effects
-  registerAll(allEffects);
+  registerAll(allEffects, "L1");
 
   // Layer 2: Name-based hand-written effects
-  registerAllByName(trainerNameEffects);
-  registerAllByName(stadiumNameEffects);
-  registerAllByName(metaAttackEffects);
-  registerAllByName(expandedTrainerEffects);
+  registerAllByName(trainerNameEffects, "L2");
+  registerAllByName(stadiumNameEffects, "L2");
+  registerAllByName(metaAttackEffects, "L2");
+  registerAllByName(expandedTrainerEffects, "L2");
 
   // Layer 3: Text-parser from ryuu-play metadata
   // (ryuu card text is often more standardized than _index.json text)
