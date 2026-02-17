@@ -182,6 +182,13 @@ export function evolvePokemon(
 
   const previousName = target.card.name;
 
+  // Push current card onto evolution stack before overwriting
+  // This preserves the complete evolution chain (e.g., Basic → Stage 1 → Stage 2)
+  target.evolutionStack = [
+    ...(target.evolutionStack || []),
+    { cardId: target.cardId, card: target.card },
+  ];
+
   // Transfer properties: energy, tools, damage stay
   // Card data updates to evolution
   target.card = evolutionCard.card;
@@ -717,6 +724,7 @@ export function endTurn(state: GameState): ActionResult {
     supporterUsed: false,
     stadiumPlayed: false,
     retreated: false,
+    hasAttackedThisTurn: false,
   };
 
   // Reset per-turn flags for all of this player's Pokemon

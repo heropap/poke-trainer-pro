@@ -34,6 +34,8 @@ export interface GameCard {
   abilityUsedThisTurn: boolean;
   /** Persistent markers/counters for cross-turn effects (e.g., "can't attack next turn") */
   markers: Record<string, number>;
+  /** Evolution stack: cards underneath this Pokemon (bottom = Basic, top = most recent pre-evolution) */
+  evolutionStack: Array<{ cardId: string; card: Card }>;
 }
 
 export type StatusCondition =
@@ -107,6 +109,8 @@ export interface TurnState {
   stadiumPlayed: boolean;
   /** Has the active Pokemon retreated this turn? */
   retreated: boolean;
+  /** Has the player attacked this turn? (attack = turn-ending action) */
+  hasAttackedThisTurn: boolean;
 }
 
 export interface GameState {
@@ -232,6 +236,7 @@ export function createGameCard(card: Card): GameCard {
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
     markers: {},
+    evolutionStack: [],
   };
 }
 
@@ -281,6 +286,7 @@ export function createGameState(
       supporterUsed: false,
       stadiumPlayed: false,
       retreated: false,
+      hasAttackedThisTurn: false,
     },
     turn: 0,
     isFirstTurn: true,

@@ -326,6 +326,9 @@ export function canAttack(
   // Must be in main phase
   if (state.phase !== "main") return false;
 
+  // PTCG Rule: Can only attack once per turn (attack is turn-ending)
+  if (state.turnStatus.hasAttackedThisTurn) return false;
+
   // Find attack
   const attack = player.active.card.attacks?.find(a => a.name === attackName);
   if (!attack) return false;
@@ -695,6 +698,9 @@ export function performAttack(
   if (!canAttack(state, playerIndex, attackName)) {
     return { success: false, error: "Cannot attack" };
   }
+
+  // PTCG Rule: Attack is a turn-ending action — mark that attack has been used
+  state.turnStatus.hasAttackedThisTurn = true;
 
   const attacker = state.players[playerIndex];
   const defenderIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;

@@ -46,7 +46,8 @@ export function adaptGameState(external: ExternalState): GameState {
       energyAttached,
       supporterUsed,
       stadiumPlayed: false,
-      retreated: false
+      retreated: false,
+      hasAttackedThisTurn: false,
     },
     turn: external.turn,
     isFirstTurn: external.turn === 1,
@@ -157,6 +158,7 @@ function adaptCard(extCard: ExternalCard): GameCard {
     playedThisTurn: false,
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
-    markers: {}
+    markers: {},
+    evolutionStack: [],
   };
 }

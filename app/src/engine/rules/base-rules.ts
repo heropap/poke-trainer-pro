@@ -38,11 +38,15 @@ export const checkGodMode: RuleValidator = (state, action) => {
 export const checkPhase: RuleValidator = (state, action) => {
   // Actions allowed only in MAIN phase
   const mainPhaseActions = ["play_card", "use_ability", "retreat", "evolve"];
-  
+
   if (mainPhaseActions.includes(action.type)) {
     const normalizedPhase = String(state.phase).toLowerCase();
     if (normalizedPhase !== "main") {
       return { valid: false, reason: "只能在主阶段进行此操作", code: "PHASE_ERROR" };
+    }
+    // PTCG Rule: Attack is turn-ending — no more main-phase actions after attacking
+    if (state.turnStatus.hasAttackedThisTurn) {
+      return { valid: false, reason: "攻击后回合结束，不能再进行操作", code: "ATTACK_ENDS_TURN" };
     }
   }
 
@@ -53,7 +57,7 @@ export const checkPhase: RuleValidator = (state, action) => {
        return { valid: false, reason: "只能在主阶段攻击", code: "PHASE_ERROR" };
     }
   }
-  
+
   return { valid: true };
 };
 
@@ -79,6 +83,10 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
 
   // 2. Attack Rules
   if (action.type === "attack") {
+    // Attack is a turn-ending action — can only attack once per turn
+    if (turnStatus.hasAttackedThisTurn) {
+      return { valid: false, reason: "每回合只能攻击一次", code: "ATTACK_LIMIT" };
+    }
     // First Turn Rule
     if (state.turn === 1 && state.isFirstTurn) {
       // Check for specific override (e.g. going second player can attack, but here checking first player)

@@ -58,6 +58,7 @@ function createHiddenCard(instanceId: string): GameCard {
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
     markers: {},
+    evolutionStack: [],
   };
 }
 

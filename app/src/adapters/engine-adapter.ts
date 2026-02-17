@@ -181,6 +181,7 @@ function ryuuCardToGameCard(card: RyuuCard): GameCard {
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
     markers: {},
+    evolutionStack: [],
   };
 }
 
@@ -206,6 +207,7 @@ function pokemonSlotToGameCard(slot: PokemonSlot): GameCard | null {
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
     markers: {},
+    evolutionStack: [],
   };
   return gc;
 }
@@ -295,6 +297,7 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
       supporterUsed: false, // ryuu-play tracks this differently
       stadiumPlayed: ryuuState.players[activePlayerIndex]?.stadiumPlayedTurn >= ryuuState.turn,
       retreated: ryuuState.players[activePlayerIndex]?.retreatedTurn >= ryuuState.turn,
+      hasAttackedThisTurn: false,
     },
     turn: ryuuState.turn,
     isFirstTurn: ryuuState.turn <= 1,

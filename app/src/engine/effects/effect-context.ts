@@ -496,6 +496,7 @@ export function createEffectContext(
       pokemon.playedThisTurn = false;
       pokemon.abilityUsedThisTurn = false;
       pokemon.markers = {};
+      pokemon.evolutionStack = [];
 
       // Add the Pokemon itself
       collected.push(pokemon);

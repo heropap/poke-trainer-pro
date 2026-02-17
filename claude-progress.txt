@@ -942,3 +942,117 @@ Notes:
 - ActionLog: compact 模式渲染为全屏 modal (fixed inset-0)
 - 编写 9 个响应式测试 (useIsMobile hook + 组件尺寸契约 + 375px viewport 适配)
 - 31 suites, 780 tests all passing, TypeScript clean
+
+=== Session 24 | 2026-02-17 ===
+Feature: 卡牌动画系统 — Framer Motion 对战动画 (Priority 19)
+Status: completed
+Notes:
+  安装 framer-motion 并实现了完整的对战动画系统。
+
+  实现内容:
+  1. AnimationProvider.tsx (NEW) — 动画中央调度器
+     - React Context + FIFO 队列，逐个处理 AnimationEvent
+     - 7 种动画类型: draw/play/attack/hit/knockout/evolve/energy_attach
+     - speedMultiplier 与 AI 速度联动: slow=1.5, normal=1.0, fast=0.5, instant=0.05
+     - skipAll() 跳过所有待处理动画
+     - 每种动画有独立的基础时长 (300-600ms)
+
+  2. VisualCard.tsx — 受击震动 + HP 弹簧动画 + 浮动伤害
+     - motion.div 替代原 div，isShaking 状态驱动 x 轴震动 [0,-5,5,-3,3,0]
+     - HP 条使用 motion.div + spring 过渡 (stiffness:100, damping:15)
+     - 浮动伤害数字改用 AnimatePresence + motion.div (从中心飘向上方渐隐)
+
+  3. Hand.tsx — 抽牌/打出动画
+     - AnimatePresence mode="popLayout" 包裹手牌列表
+     - 新卡进入: initial={{ y:-40, opacity:0, scale:0.8 }} → spring 弹入
+     - 卡牌打出/离开: exit={{ y:-30, opacity:0, scale:0.8 }}
+     - layout 属性实现卡牌重排平滑过渡
+
+  4. ActiveSpot.tsx — 攻击冲刺 + 击倒退场
+     - AnimatePresence mode="wait" 包裹卡牌区域
+     - 新卡入场: initial={{ scale:0.5, opacity:0 }} → spring 弹入
+     - 攻击动画: isAttacking 驱动 x/y 偏移冲刺 (方向按对手/己方区分)
+     - 击倒退场: exit={{ rotateX:90, opacity:0, y:30 }}
+     - 新增 isAttacking prop
+
+  5. BenchSpot.tsx — 入场/击倒动画
+     - AnimatePresence mode="wait" 包裹卡牌
+     - 入场: spring 缩放弹入
+     - 击倒: rotateX 翻转退场
+
+  6. EvolutionOverlay.tsx (NEW) — 进化闪光效果
+     - 全屏绿色闪光 + "进化! {name}" 文字缩放渐隐
+     - 由 evolve_pokemon 游戏日志事件触发
+
+  7. EnergyAttachOverlay.tsx (NEW) — 能量飞行动画
+     - 彩色能量圆点从手牌区飞向场地中央
+     - 颜色按能量类型映射 (Fire=红, Water=蓝 等)
+     - spring 物理弹性飞行轨迹
+
+  8. BattleBoard.tsx — 动画集成
+     - AnimationProvider 包裹 DndContext
+     - 攻击动画: 手动触发 (己方) + 日志检测 (对手/AI)
+     - 进化/能量动画: 通过游戏日志新事件自动触发
+     - attackingPlayer state 管理攻击动画目标
+
+  DnD Kit 共存策略:
+  - Framer Motion 的 motion.div 与 DnD Kit 的 useDroppable 共存无冲突
+  - 拖拽期间 DragOverlay 独立渲染，不受 AnimatePresence 影响
+  - 使用 enter/exit 动画 (非 layoutId) 避免与 DnD Kit transform 冲突
+
+  测试: 新增 30 个测试 (animation-system.test.ts), 总计 810 测试全部通过 (32 套件)。TypeScript 编译 0 错误。
+  文件变更: 3 new files (AnimationProvider.tsx, EvolutionOverlay.tsx, EnergyAttachOverlay.tsx, animation-system.test.ts), 5 modified (VisualCard.tsx, Hand.tsx, ActiveSpot.tsx, BenchSpot.tsx, BattleBoard.tsx)
+
+=== Session 25 | 2026-02-17 ===
+Feature: PTCG 规则审计与修正 — 攻击回合终结 + 进化链堆叠
+Status: completed
+Notes:
+  用户提供完整的 PTCG 规则审计清单，对引擎进行全面审计后确认：
+
+  已正确实现的规则 (无需修改):
+  - 奖赏卡区 (prizes: 6张, KO拿取, 拿完获胜) ✅
+  - 牌库区 (deck: 抽牌来源, 耗尽判负) ✅
+  - 游戏准备阶段 (洗牌→抽7张→Mulligan→放基础→奖赏卡) ✅
+  - 特殊状态 (毒/烧/睡/麻/乱) 及互斥规则 ✅
+  - 回合间检测 (Pokemon Checkup, 双方活跃都处理) ✅
+  - 首回合限制 (先攻不能攻击/不能用支持者) ✅
+  - 进化限制 (首回合禁/刚上场禁/同回合禁) ✅
+  - 撤退 (每回合1次, 麻痹/睡眠阻止, 清除状态) ✅
+  - 三个胜利条件 (奖赏拿完/无宝可梦/牌库抽干) ✅
+  - 物品卡不限次数 ✅
+  - 弱点 ×2 / 抵抗力 -30 ✅
+
+  修正内容:
+  1. 攻击作为回合结束动作 — hasAttackedThisTurn 标记
+     - game-state.ts: TurnState 新增 hasAttackedThisTurn 字段
+     - game-actions.ts: performAttack() 设置 hasAttackedThisTurn = true
+     - game-actions.ts: canAttack() 检查 hasAttackedThisTurn
+     - base-rules.ts: ATTACK_LIMIT 阻止重复攻击
+     - base-rules.ts: ATTACK_ENDS_TURN 阻止攻击后的其他主阶段操作
+     - turn-actions.ts: endTurn() 重置 hasAttackedThisTurn = false
+
+  2. 进化链/堆叠记录 — evolutionStack 字段
+     - game-state.ts: GameCard 新增 evolutionStack: Array<{cardId, card}>
+     - turn-actions.ts: evolvePokemon() 进化前将当前卡推入 evolutionStack
+     - effect-context.ts: pickUpPokemon() 清空 evolutionStack
+     - 所有 GameCard 构造点 (5处) 添加 evolutionStack: []
+     - 支持退化喷雾等效果读取底层卡信息
+
+  3. 更新所有适配层构造函数
+     - engine-adapter.ts (2处): 添加 evolutionStack + hasAttackedThisTurn
+     - ryuu-adapter/adapter.ts: 添加 evolutionStack + hasAttackedThisTurn
+     - server/game-room.ts: hidden card 添加 evolutionStack
+
+  测试: 新增 46 个测试 (rule-corrections-25.test.ts)，覆盖:
+    - 攻击回合终结 (9): hasAttackedThisTurn 设置/重置/阻止重复攻击/阻止攻击后操作
+    - 进化堆叠 (5): 空栈/单次进化/双重进化/保留属性/清除状态
+    - 区域完整性 (4): 奖赏卡/牌库耗尽/无宝可梦/奖赏拿完
+    - 特殊状态 (8): 互斥/共存/撤退清除/麻痹阻攻/睡眠阻攻/麻痹阻退/睡眠阻退/毒伤/麻痹恢复
+    - 首回合限制 (3): 不能攻击/不能用支持者/解除限制
+    - 操作限制 (4): 能量1次/支持者1次/撤退1次/备战区5只
+    - 多奖赏 (5): 普通1张/ex 2张/V 2张/VMAX 3张/VSTAR 2张
+    - 控制器集成 (2): 攻击自动结束回合/重置状态
+    - 字段初始化 (2): TurnState/GameCard 新字段
+
+  总计: 33 套件，856 测试全部通过 (810 → 856)。TypeScript 编译 0 错误。
+  文件变更: 9 modified, 1 new test file
