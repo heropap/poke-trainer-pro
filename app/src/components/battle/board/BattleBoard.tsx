@@ -25,6 +25,9 @@ import {
 } from "@/engine/turn-actions";
 import { hasEffect } from "@/engine/effects/effect-registry";
 import { ManualToolkit } from "./ManualToolkit";
+import { ActionLog } from "./ActionLog";
+import { CardDetailModal } from "./CardDetailModal";
+import { CardSelectionModal } from "./CardSelectionModal";
 
 // ────────────────────────────────────────────────
 // Types
@@ -39,6 +42,9 @@ interface BattleBoardProps {
   gameState: GameState;
   currentPlayerId: string; // "p1" or "p2"
   onAction?: (action: any) => ActionFeedback | void;
+  battleMode?: "ai" | "local" | "online";
+  aiSpeed?: "slow" | "normal" | "fast" | "instant";
+  onAiSpeedChange?: (speed: string) => void;
 }
 
 interface ToastMessage {
@@ -162,7 +168,7 @@ function getEnergyTargets(player: Player): string[] {
 
 let toastIdCounter = 0;
 
-export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoardProps) {
+export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, aiSpeed, onAiSpeedChange }: BattleBoardProps) {
   const myIndex = currentPlayerId === "p1" ? 0 : 1;
   const opponentIndex = currentPlayerId === "p1" ? 1 : 0;
 
@@ -181,6 +187,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
 
   // Manual Toolkit state (Layer 2)
   const [toolkitOpen, setToolkitOpen] = React.useState(false);
+
+  // Action Log sidebar state
+  const [logOpen, setLogOpen] = React.useState(true);
+
+  // Card Detail Modal state
+  const [viewingCard, setViewingCard] = React.useState<GameCard | null>(null);
 
   // Toast notifications
   const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
@@ -236,6 +248,11 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
   React.useEffect(() => {
     cancelSelection();
   }, [gameState.currentPlayer, gameState.turn]);
+
+  // ─── Card Context Menu Handler ────────────────
+  function handleCardContextMenu(card: GameCard) {
+    setViewingCard(card);
+  }
 
   // ─── Drag handlers ────────────────────────────
   function handleDragStart(event: DragStartEvent) {
@@ -488,14 +505,24 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           </div>
 
           {/* Opponent Bench */}
-          <div className="mb-4 mt-8 flex gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <BenchSpot key={i} index={i} card={opponent.bench.cards[i] || null} />
-            ))}
-          </div>
+            <div className="mb-4 mt-8 flex gap-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <BenchSpot 
+                  key={i} 
+                  index={i} 
+                  card={opponent.bench.cards[i] || null} 
+                  onCardContextMenu={handleCardContextMenu}
+                />
+              ))}
+            </div>
 
           {/* Opponent Active */}
-          <ActiveSpot card={opponent.active} isOpponent isFirstTurn={false} />
+          <ActiveSpot 
+            card={opponent.active} 
+            isOpponent 
+            isFirstTurn={false} 
+            onCardContextMenu={handleCardContextMenu}
+          />
         </div>
 
         {/* ─── MIDDLE ZONE (Arena / Status) ─── */}
@@ -534,6 +561,21 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
             </div>
           </div>
 
+          {/* Log Toggle (left side) */}
+          <div className="absolute left-8">
+            <button
+              className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
+                logOpen
+                  ? "bg-blue-500 text-white hover:bg-blue-400"
+                  : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
+              }`}
+              onClick={() => setLogOpen(!logOpen)}
+              title="对战日志"
+            >
+              📋 日志
+            </button>
+          </div>
+
           {/* Action Buttons */}
           <div className="absolute right-8 flex gap-2">
             <button
@@ -569,6 +611,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
               onTargetClick={() => {
                 if (me.active) handleTargetClick(me.active.instanceId);
               }}
+              onCardContextMenu={handleCardContextMenu}
             />
           </div>
 
@@ -589,6 +632,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
                   onTargetClick={() => {
                     if (benchCard) handleTargetClick(benchCard.instanceId);
                   }}
+                  onCardContextMenu={handleCardContextMenu}
                 />
               );
             })}
@@ -606,6 +650,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
               isTargeting={!!targeting}
               onMenuAction={handleMenuAction}
               onMenuCancel={cancelSelection}
+              onCardContextMenu={handleCardContextMenu}
             />
 
             {/* Player Info (Bottom Right) */}
@@ -642,6 +687,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           ))}
         </div>
 
+        {/* Action Log Sidebar */}
+        <ActionLog
+          gameState={gameState}
+          isOpen={logOpen}
+          onToggle={() => setLogOpen(!logOpen)}
+          battleMode={battleMode}
+          aiSpeed={aiSpeed}
+          onAiSpeedChange={onAiSpeedChange as any}
+        />
+
         {/* Manual Override Toolkit (Layer 2) */}
         <ManualToolkit
           gameState={gameState}
@@ -650,6 +705,23 @@ export function BattleBoard({ gameState, currentPlayerId, onAction }: BattleBoar
           isOpen={toolkitOpen}
           onToggle={() => setToolkitOpen(!toolkitOpen)}
         />
+
+        {/* Card Detail Modal */}
+        {viewingCard && (
+          <CardDetailModal 
+            card={viewingCard} 
+            onClose={() => setViewingCard(null)} 
+          />
+        )}
+
+        {/* Card Selection Modal (Prompt) */}
+        {gameState.prompt && gameState.prompt.playerIndex === myIndex && (
+          <CardSelectionModal 
+            prompt={gameState.prompt}
+            gameState={gameState}
+            onConfirm={(selectedIds) => onAction?.({ type: "select_cards_response", selectedIds })}
+          />
+        )}
       </div>
     </DndContext>
   );

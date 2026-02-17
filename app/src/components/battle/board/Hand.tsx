@@ -17,6 +17,7 @@ interface DraggableCardProps {
   showMenu?: boolean;
   onMenuAction?: (action: string) => void;
   onMenuCancel?: () => void;
+  onContextMenu?: (card: GameCard) => void;
 }
 
 function DraggableCard({
@@ -30,6 +31,7 @@ function DraggableCard({
   showMenu,
   onMenuAction,
   onMenuCancel,
+  onContextMenu,
 }: DraggableCardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.instanceId,
@@ -88,6 +90,13 @@ function DraggableCard({
             scale={0.8}
             isHoverable={false}
             onClick={() => onCardClick?.(card)}
+            onContextMenu={(e) => {
+              if (onContextMenu) {
+                e.preventDefault();
+                e.stopPropagation();
+                onContextMenu(card);
+              }
+            }}
           />
         </div>
 
@@ -115,6 +124,7 @@ interface HandProps {
   isTargeting?: boolean;
   onMenuAction?: (action: string) => void;
   onMenuCancel?: () => void;
+  onCardContextMenu?: (card: GameCard) => void;
 }
 
 export function Hand({
@@ -128,6 +138,7 @@ export function Hand({
   isTargeting = false,
   onMenuAction,
   onMenuCancel,
+  onCardContextMenu,
 }: HandProps) {
   if (isOpponent) {
     // Render opponent hand (cards face down)
@@ -165,6 +176,7 @@ export function Hand({
             showMenu={selectedCardId === card.instanceId && !isTargeting}
             onMenuAction={onMenuAction}
             onMenuCancel={onMenuCancel}
+            onContextMenu={onCardContextMenu}
           />
         ))}
       </div>

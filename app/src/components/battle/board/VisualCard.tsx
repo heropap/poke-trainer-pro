@@ -64,6 +64,7 @@ interface VisualCardProps {
   scale?: number; // Default 1.0
   isHoverable?: boolean;
   onClick?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   className?: string;
   showHp?: boolean;
   showEnergy?: boolean;
@@ -74,6 +75,7 @@ export function VisualCard({
   scale = 1.0,
   isHoverable = true,
   onClick,
+  onContextMenu,
   className = "",
   showHp = false,
   showEnergy = false,
@@ -86,6 +88,20 @@ export function VisualCard({
   const hp = card.card.hp ? parseInt(card.card.hp, 10) : 0;
   const currentHp = hp > 0 ? hp - card.damageCounters * 10 : 0;
   const hpPercentage = hp > 0 ? (currentHp / hp) * 100 : 0;
+
+  // Damage Animation Logic
+  const [damageDelta, setDamageDelta] = React.useState<number | null>(null);
+  const prevDamageRef = React.useRef(card.damageCounters);
+
+  React.useEffect(() => {
+    if (card.damageCounters > prevDamageRef.current) {
+      const delta = (card.damageCounters - prevDamageRef.current) * 10;
+      setDamageDelta(delta);
+      const timer = setTimeout(() => setDamageDelta(null), 1000);
+      return () => clearTimeout(timer);
+    }
+    prevDamageRef.current = card.damageCounters;
+  }, [card.damageCounters]);
 
   // Group attached energy by type for display
   const energySummary: { type: string; count: number }[] = [];
@@ -109,6 +125,12 @@ export function VisualCard({
       }`}
       style={{ width: `${width}px`, height: `${height}px` }}
       onClick={onClick}
+      onContextMenu={(e) => {
+        if (onContextMenu) {
+          e.preventDefault();
+          onContextMenu(e);
+        }
+      }}
     >
       {/* Card Image */}
       <div className={`h-full w-full overflow-hidden rounded-lg shadow-md ${
@@ -218,6 +240,15 @@ export function VisualCard({
       {card.damageCounters > 0 && !showHp && (
         <div className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white shadow-md">
           {card.damageCounters * 10}
+        </div>
+      )}
+
+      {/* Floating Damage Text */}
+      {damageDelta !== null && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none animate-[ping_0.5s_ease-out]">
+          <span className="text-4xl font-black text-red-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] stroke-black" style={{ WebkitTextStroke: "1px white" }}>
+            -{damageDelta}
+          </span>
         </div>
       )}
     </div>

@@ -40,7 +40,10 @@ import {
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
+import { resolveAttack } from "./systems/attack-system"; // New pipeline
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
+import { basePipeline } from "./rules/base-rules";
+import { ValidationResult } from "./interfaces/validation";
 
 // ───────────────────────────────────────────────
 // Action Types (from UI)
@@ -56,7 +59,8 @@ export interface GameAction {
     | "promote"
     | "concede"
     | "use_ability"
-    | "manual_override";
+    | "manual_override"
+    | "select_cards_response";
   cardId?: string;
   targetZone?: "active" | "bench" | "attach";
   targetId?: string;
@@ -64,6 +68,8 @@ export interface GameAction {
   abilityName?: string;
   energyToDiscard?: string[];
   benchInstanceId?: string;
+  /** Response for select_cards */
+  selectedIds?: string[];
   /** Manual override fields (Layer 2) */
   overrideType?: ManualOverrideType;
   params?: Record<string, any>;
@@ -79,6 +85,20 @@ export interface ActionResult {
   promotionPlayerIndex?: 0 | 1;
   /** Updated game state after the action */
   newState: GameState;
+}
+
+// ───────────────────────────────────────────────
+// Validator
+// ───────────────────────────────────────────────
+
+function validateAction(state: GameState, action: GameAction, playerIndex: 0 | 1): ValidationResult {
+  // 1. God Mode Override
+  if (state.activeOverrides.godMode) {
+    return { valid: true };
+  }
+
+  // 2. Base Pipeline
+  return basePipeline(state, action, playerIndex);
 }
 
 // ───────────────────────────────────────────────
@@ -102,27 +122,15 @@ export function processAction(
   playerIndex: 0 | 1,
   action: GameAction
 ): ActionResult {
-  // Game already over
-  if (state.phase === "game_over") {
+  // ─── Phase 1: Validation Chain ───
+  const validation = validateAction(state, action, playerIndex);
+  if (!validation.valid) {
+    console.warn(`[Action Blocked] ${action.type}: ${validation.reason} (${validation.code})`);
     return {
       success: false,
-      error: "游戏已结束",
+      error: validation.reason,
       newState: { ...state }
     };
-  }
-
-  // Turn validation: is it this player's turn?
-  // Exception: "promote" can happen when it's not your turn (after your active is KO'd)
-  // Exception: "concede" can happen anytime
-  // Exception: "manual_override" bypasses turn order (god mode)
-  if (action.type !== "promote" && action.type !== "concede" && action.type !== "manual_override") {
-    if (state.currentPlayer !== playerIndex) {
-      return {
-        success: false,
-        error: "不是你的回合",
-        newState: { ...state }
-      };
-    }
   }
 
   let result: ActionResult;
@@ -163,6 +171,18 @@ export function processAction(
         };
         const overrideResult = executeManualOverride(state, playerIndex, overrideAction);
         result = { ...overrideResult, newState: overrideResult.newState };
+      }
+      break;
+    }
+    case "select_cards_response": {
+      if (!state.prompt) {
+        result = { success: false, error: "没有待处理的选择请求", newState: { ...state } };
+      } else {
+        // Here we would typically resume a suspended effect.
+        // For now, we just clear the prompt to unblock the UI.
+        // In a real implementation, we would route this to the effect callback.
+        state.prompt = null;
+        result = { success: true, newState: { ...state } };
       }
       break;
     }
@@ -289,7 +309,7 @@ function handleAttack(
     return { success: false, error: "只能在主阶段攻击", newState: { ...state } };
   }
 
-  const res = performAttack(state, playerIndex, action.attackName);
+  const res = resolveAttack(state, playerIndex, action.attackName);
 
   if (!res.success) {
     return { success: false, error: res.error, newState: { ...state } };

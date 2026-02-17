@@ -674,3 +674,69 @@ Notes:
      modified: package.json (dev 指向统一服务器)
      modified: SocketContext.tsx (添加 connect_error 处理)
      modified: BattlePageClient.tsx (AI 动作上限 + 提示文字更新)
+
+=== Session 17 | 2026-02-16 ===
+Feature: 分级降级系统 (Graduated Degradation System)
+Status: completed
+Notes: 实现了三层防御系统解决"无法正常对战"问题：
+
+  Layer 1 (P0) — 代理卡生成:
+  - 新建 proxy-card.ts: createProxyCard() 从名称/setCode/number/category 推断 supertype/subtypes/HP
+  - 名称启发式: ex→HP230, V→HP220, VMAX→HP330, Supporter/Tool 子类型推断
+  - deck-storage.ts: 新增 getAllDeckCardEntries() 获取含未解析卡条目
+  - battle-setup.ts: loadDeckCards() 新增 enableProxyCards 参数
+  - VisualCard.tsx: 代理卡显示橙色 PROXY 标签 + 琥珀渐变背景
+  - 20 个测试全部通过
+
+  Layer 2 (P1) — 手动操作面板:
+  - 新建 manual-override.ts: 14 种手动操作 (draw/discard/search/damage/heal/switch/evolve/energy/status)
+  - game-controller.ts: 新增 manual_override action type，绕过回合检查
+  - 新建 ManualToolkit.tsx: 折叠式侧边栏 UI，4 组操作按钮 + 参数表单
+  - BattleBoard.tsx: 集成 ManualToolkit 组件 + 🔧 切换按钮
+  - 21 个测试全部通过
+
+  Layer 3 (P2) — 文本效果解析器:
+  - 新建 text-parser.ts: ~15 种正则匹配模式 (攻击: 状态/自伤/硬币/丢弃能量/板凳伤害/每能量伤害/治疗; 训练师: 抽牌/弃牌抽牌/搜索/换人/治疗/双方洗牌)
+  - effects/index.ts: initializeEffects() 接受可选 cards 参数触发自动注册
+  - battle-setup.ts: 加载卡牌后调用 autoRegisterTextEffects()
+  - 37 个测试全部通过
+
+  测试: 567 → 644 (新增 78 个), 0 TS 错误
+  文件变更: 20 files changed, 4461 insertions
+  新文件: proxy-card.ts, manual-override.ts, text-parser.ts, ManualToolkit.tsx, evolution.middleware.ts + 4 个测试文件
+
+=== Session 18 | 2026-02-17 ===
+Feature: 动作日志侧边栏 (Action Log Sidebar) — Feature 11 (最后一个功能)
+Status: completed
+Notes: 实现了对战日志侧边栏，显示所有游戏事件：
+
+  ActionLog 组件 (新建 ActionLog.tsx):
+  - 左侧折叠式侧边栏 (absolute left-0 z-30 w-80)
+  - 21 种事件类型 → 图标 + 颜色映射 (攻击=红, 抽牌=蓝, KO=橙, 状态=紫)
+  - 回合分组显示 (groupEventsByTurn): 检测 "回合 N" 和 "第 N 回合" 模式
+  - 自动滚动: 新事件到底部，向上滚动暂停，"↓ 最新" 按钮恢复
+  - 玩家颜色区分: player0 蓝底, player1 红底
+  - 导出纯函数 formatGameEvent/groupEventsByTurn 供测试
+
+  AI 速度控制 (修改 BattlePageClient.tsx):
+  - 4 档速度: 慢(1500ms)/中(800ms)/快(300ms)/瞬间(50ms)
+  - aiSpeedRef 避免闭包问题
+  - 速度选择器集成在日志侧边栏 header (仅 AI 模式显示)
+
+  BattleBoard 集成:
+  - 左侧 "📋 日志" 切换按钮 (蓝色主题)
+  - 默认展开 (logOpen=true)
+  - 传递 battleMode/aiSpeed/onAiSpeedChange props
+
+  撤退验证:
+  - 确认 retreatedThisTurn 检查已存在于 base-rules.ts:71 (checkHardRules)
+  - turnStatus.retreated 在 retreat()设置、endTurn()重置、basePipeline 验证
+  - 无需额外修改
+
+  测试: 22 个新测试全部通过 (格式化 9 + 分组 6 + 撤退 3 + 集成 4)
+  注意: 4 个测试套件 (44 个测试) 因前一 session 未提交的验证管道重构而失败
+        (game-controller.ts 的 basePipeline 替换旧的 inline 验证)，非本 session 引入
+
+  文件变更: 19 files, +1637 lines
+  新文件: ActionLog.tsx, action-log.test.ts, CardDetailModal.tsx, CardSelectionModal.tsx,
+         validation.ts, base-rules.ts, attack-system.ts + 2 个引擎测试文件

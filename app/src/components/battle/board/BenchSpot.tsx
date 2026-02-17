@@ -12,6 +12,7 @@ interface BenchSpotProps {
   isTargetable?: boolean;
   /** Callback when clicked as a target */
   onTargetClick?: () => void;
+  onCardContextMenu?: (card: GameCard) => void;
 }
 
 export function BenchSpot({
@@ -20,6 +21,7 @@ export function BenchSpot({
   onClick,
   isTargetable = false,
   onTargetClick,
+  onCardContextMenu,
 }: BenchSpotProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `bench-spot-${index}`,
@@ -60,7 +62,19 @@ export function BenchSpot({
             isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
           }`}
         >
-          <VisualCard card={card} scale={0.65} showHp={true} showEnergy={true} />
+          <VisualCard 
+            card={card} 
+            scale={0.65} 
+            showHp={true} 
+            showEnergy={true} 
+            onContextMenu={(e) => {
+              if (onCardContextMenu) {
+                e.preventDefault();
+                e.stopPropagation();
+                onCardContextMenu(card);
+              }
+            }}
+          />
         </div>
       ) : (
         <span className="text-xs text-zinc-300 dark:text-zinc-600">

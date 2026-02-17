@@ -94,6 +94,19 @@ export type WinCondition =
 // Game State: The complete state of a battle
 // ───────────────────────────────────────────────
 
+export interface TurnState {
+  /** Current phase of the turn */
+  phase: "DRAW" | "MAIN" | "ATTACK" | "CHECKUP";
+  /** Has energy been attached this turn? */
+  energyAttached: boolean;
+  /** Has a supporter been used this turn? */
+  supporterUsed: boolean;
+  /** Has a stadium been played this turn? */
+  stadiumPlayed: boolean;
+  /** Has the active Pokemon retreated this turn? */
+  retreated: boolean;
+}
+
 export interface GameState {
   /** Unique game ID */
   gameId: string;
@@ -101,8 +114,10 @@ export interface GameState {
   players: [Player, Player];
   /** Which player's turn (0 or 1) */
   currentPlayer: 0 | 1;
-  /** Current game phase */
+  /** Current game phase (Legacy: synced with turnStatus.phase) */
   phase: GamePhase;
+  /** Turn status (Golden Loop) */
+  turnStatus: TurnState;
   /** Turn counter */
   turn: number;
   /** Whether this is the very first turn of the game */
@@ -114,6 +129,15 @@ export interface GameState {
   } | null;
   /** Event log for UI display */
   log: GameEvent[];
+  /** Pending user interaction */
+  prompt: GamePrompt | null;
+  /** Active effect overrides (Phase 2: God Mode / Card Effects) */
+  activeOverrides: {
+    allowEvolutionTurn1?: boolean;
+    skipEvolutionStage?: boolean;
+    supporterUsedCountLimit?: number;
+    godMode?: boolean; // Ultimate override
+  };
 }
 
 // ───────────────────────────────────────────────
@@ -150,6 +174,25 @@ export type GameEventType =
   | "search_deck"
   | "heal"
   | "manual_override";
+
+// ───────────────────────────────────────────────
+// Game Prompt (for manual selection)
+// ───────────────────────────────────────────────
+
+export interface GamePrompt {
+  id: string;
+  type: "select_cards";
+  playerIndex: 0 | 1;
+  zone: "deck" | "discard" | "hand" | "bench";
+  min: number;
+  max: number;
+  filter?: {
+    supertype?: string;
+    subtypes?: string[];
+    name?: string;
+  };
+  message: string;
+}
 
 // ───────────────────────────────────────────────
 // Factory Functions
@@ -216,10 +259,19 @@ export function createGameState(
     ],
     currentPlayer: 0,
     phase: "not_started",
+    turnStatus: {
+      phase: "DRAW",
+      energyAttached: false,
+      supporterUsed: false,
+      stadiumPlayed: false,
+      retreated: false,
+    },
     turn: 0,
     isFirstTurn: true,
     winner: null,
     log: [],
+    prompt: null,
+    activeOverrides: {},
   };
 }
 

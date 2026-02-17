@@ -31,6 +31,7 @@ interface ActiveSpotProps {
   isTargetable?: boolean;
   /** Callback when clicked as a target */
   onTargetClick?: () => void;
+  onCardContextMenu?: (card: GameCard) => void;
 }
 
 export function ActiveSpot({
@@ -42,6 +43,7 @@ export function ActiveSpot({
   isFirstTurn = false,
   isTargetable = false,
   onTargetClick,
+  onCardContextMenu,
 }: ActiveSpotProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: isOpponent ? "opponent-active" : "active-spot",
@@ -84,7 +86,19 @@ export function ActiveSpot({
               isTargetable ? "rounded-lg ring-4 ring-green-400" : ""
             }`}
           >
-            <VisualCard card={card} scale={1.0} showHp={true} showEnergy={true} />
+            <VisualCard 
+              card={card} 
+              scale={1.0} 
+              showHp={true} 
+              showEnergy={true}
+              onContextMenu={(e) => {
+                if (onCardContextMenu) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onCardContextMenu(card);
+                }
+              }}
+            />
           </div>
         ) : (
           <span className="text-sm font-medium text-zinc-400">

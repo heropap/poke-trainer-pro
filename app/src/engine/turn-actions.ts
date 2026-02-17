@@ -111,8 +111,10 @@ export function attachEnergy(
   const energyCard = removeCard(player.hand, energyInstanceId)!;
   const target = findTarget(player, targetInstanceId)!;
 
-  target.attachedEnergy.push(energyCard);
+  // Use immutable update for attachedEnergy to ensure React detects the change
+  target.attachedEnergy = [...target.attachedEnergy, energyCard];
   player.energyAttachedThisTurn = true;
+  state.turnStatus.energyAttached = true;
 
   logEvent(
     state,
@@ -304,6 +306,7 @@ export function retreat(
   removeCard(player.bench, benchInstanceId);
   addToBottom(player.bench, active);
   player.active = benchCard;
+  state.turnStatus.retreated = true;
 
   logEvent(
     state,
@@ -372,6 +375,7 @@ export function playSupporter(
   const card = removeCard(player.hand, supporterInstanceId)!;
 
   player.supporterUsedThisTurn = true;
+  state.turnStatus.supporterUsed = true;
 
   logEvent(
     state,
@@ -585,6 +589,15 @@ export function endTurn(state: GameState): ActionResult {
   player.energyAttachedThisTurn = false;
   player.supporterUsedThisTurn = false;
 
+  // Reset turn status for the NEXT turn
+  state.turnStatus = {
+    phase: "DRAW",
+    energyAttached: false,
+    supporterUsed: false,
+    stadiumPlayed: false,
+    retreated: false,
+  };
+
   // Reset per-turn flags for all of this player's Pokemon
   if (player.active) {
     player.active.playedThisTurn = false;
@@ -649,6 +662,7 @@ export function drawCard(state: GameState): ActionResult {
   player.hand.cards.push(drawn);
 
   state.phase = "main";
+  state.turnStatus.phase = "MAIN";
 
   logEvent(
     state,

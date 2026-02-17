@@ -155,7 +155,7 @@
       "集成到对战界面侧边栏",
       "编写日志显示测试"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 11
   },
   {

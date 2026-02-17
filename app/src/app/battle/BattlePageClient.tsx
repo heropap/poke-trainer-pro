@@ -47,6 +47,21 @@ export default function BattlePageClient() {
   // Ref to hold the latest gameState for AI async callbacks
   const gameStateRef = useRef<GameState | null>(null);
 
+  // AI speed control
+  type AiSpeed = "slow" | "normal" | "fast" | "instant";
+  const AI_SPEED_MAP: Record<AiSpeed, number> = {
+    slow: 1500,
+    normal: 800,
+    fast: 300,
+    instant: 50,
+  };
+  const [aiSpeed, setAiSpeed] = useState<AiSpeed>("normal");
+  const aiSpeedRef = useRef<number>(AI_SPEED_MAP["normal"]);
+  // Keep ref in sync
+  useEffect(() => {
+    aiSpeedRef.current = AI_SPEED_MAP[aiSpeed];
+  }, [aiSpeed]);
+
   // Track whether we're in local mode or online mode
   const isLocalGame = useRef(false);
 
@@ -266,7 +281,7 @@ export default function BattlePageClient() {
               setAiThinking(false);
               setAiLastAction("");
             }
-          }, AI_ACTION_DELAY);
+          }, aiSpeedRef.current);
         } else {
           // Turn switched to human
           setAiThinking(false);
@@ -282,7 +297,7 @@ export default function BattlePageClient() {
         setAiThinking(false);
         setAiLastAction("");
       }
-    }, AI_ACTION_DELAY);
+    }, aiSpeedRef.current);
   }, []);
 
   /**
@@ -485,6 +500,9 @@ export default function BattlePageClient() {
               return { success: false, error: "未连接服务器" };
             }
           }}
+          battleMode={battleMode}
+          aiSpeed={aiSpeed}
+          onAiSpeedChange={(speed) => setAiSpeed(speed as AiSpeed)}
         />
 
         {/* Online Error Toast */}
