@@ -865,3 +865,60 @@ Notes:
 
   测试: 新增 58 个测试 (meta-effects-integration.test.ts), 总计 736 测试全部通过 (29 套件)。TypeScript 编译 0 错误。
   文件变更: 3 new files (meta-attacks.ts, trainers-expanded.ts, meta-effects-integration.test.ts), 1 modified (effects/index.ts)
+
+=== Session 22 | 2026-02-17 ===
+Feature: Marker 系统 — 卡牌标记/计数器支持 (Priority 17)
+Status: completed
+Notes:
+  实现了持久标记系统，支持跨回合效果追踪（如"下回合不能攻击"、"不能撤退"、"VSTAR已使用"等）。
+
+  实现内容:
+  1. game-state.ts — GameCard 新增 markers: Record<string, number> 字段
+     - createGameCard() 初始化 markers: {}
+     - 所有构造 GameCard 的位置都已更新 (engine-adapter, ryuu-adapter, game-room)
+
+  2. effect-types.ts + effect-context.ts — 4 个 marker CRUD 方法
+     - addMarker(target, name, count?): 增加标记计数（默认 +1）
+     - removeMarker(target, name, count?): 减少或删除标记
+     - getMarker(target, name): 获取标记值（0 如果不存在）
+     - hasMarker(target, name): 检查标记是否存在
+
+  3. markers.ts — 标记常量（NEW）
+     - CANT_ATTACK_NEXT_TURN: 下回合不能攻击
+     - PREVENT_RETREAT_NEXT_TURN: 下回合不能撤退
+     - cantUseAttackMarker(name): 不能使用特定攻击
+     - VSTAR_USED, ABILITY_BLOCKED, DAMAGE_BOOST: 永久标记
+     - TURN_BASED_MARKERS: 需要回合间递减的标记列表
+
+  4. status-effects.ts — processBetweenTurns() 增加标记清理
+     - 回合间自动递减 TURN_BASED_MARKERS 和 CANT_USE_ATTACK:* 标记
+     - 达到 0 时删除标记
+     - 活跃/备战区宝可梦都处理
+     - 修复了早期返回条件（无状态异常时仍需处理标记）
+
+  5. game-actions.ts — canAttack() 增加标记检查
+     - CANT_ATTACK_NEXT_TURN > 0 → 所有攻击被阻止
+     - cantUseAttackMarker(attackName) > 0 → 特定攻击被阻止
+
+  6. turn-actions.ts — canRetreat() 增加标记检查
+     - PREVENT_RETREAT_NEXT_TURN > 0 → 撤退被阻止
+     - evolvePokemon() 进化时清空所有标记
+
+  7. meta-attacks.ts — 6 处 ctx.log() 替换为 ctx.addMarker()
+     - Miraidon ex (Photon Blaster): addMarker CANT_ATTACK_NEXT_TURN
+     - Koraidon ex (Wild Impact): addMarker CANT_ATTACK_NEXT_TURN
+     - Bloodmoon Ursaluna ex (Blood Moon): addMarker CANT_ATTACK_NEXT_TURN
+     - Dusknoir (Shadow Bind): addMarker PREVENT_RETREAT_NEXT_TURN on defender
+     - Greninja ex (Shinobi Blade): addMarker cantUseAttackMarker("Shinobi Blade")
+
+  8. VisualCard.tsx — 左侧标记徽章显示
+     - 红色: 攻击封锁(封)/限制(限)/撤退锁定(锁)
+     - 蓝色: 特性禁用(禁)
+     - 黄色: VSTAR已使用(V★)/其他标记
+
+  9. 测试兼容性
+     - text-parser.test.ts mock 添加 4 个 marker 方法
+     - effect-context.ts pickUpPokemon() 清空 markers
+
+  测试: 新增 35 个测试 (marker-system.test.ts), 总计 771 测试全部通过 (30 套件)。TypeScript 编译 0 错误。
+  文件变更: 2 new files (markers.ts, marker-system.test.ts), 10 modified

@@ -20,6 +20,7 @@ import { getEffect } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
+import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker } from "./effects/markers";
 
 export interface PlayCardResult {
   success: boolean;
@@ -343,6 +344,13 @@ export function canAttack(
 
   // Asleep Pokemon cannot attack
   if (player.active.statusConditions.includes("asleep")) return false;
+
+  // ─── Marker checks ───
+  // Can't attack next turn marker (e.g., Photon Blaster, Wild Impact)
+  if (player.active.markers[CANT_ATTACK_NEXT_TURN] > 0) return false;
+
+  // Can't use this specific attack (e.g., Shinobi Blade)
+  if (player.active.markers[cantUseAttackMarker(attackName)] > 0) return false;
 
   return true;
 }

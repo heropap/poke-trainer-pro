@@ -1,6 +1,7 @@
 
 import React from "react";
 import { GameCard } from "@/engine/game-state";
+import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, VSTAR_USED } from "@/engine/effects/markers";
 
 /** Map energy type name to a color */
 const ENERGY_COLORS: Record<string, string> = {
@@ -57,6 +58,27 @@ function getEnergyTypeFromCard(energyCard: GameCard): string {
     if (name.includes(t)) return t;
   }
   return "Colorless";
+}
+
+/** Map marker name to display style */
+function getMarkerStyle(name: string): { bg: string; text: string; label: string } {
+  if (name === CANT_ATTACK_NEXT_TURN) {
+    return { bg: "bg-red-600", text: "text-white", label: "封" };
+  }
+  if (name.startsWith("CANT_USE_ATTACK:")) {
+    return { bg: "bg-red-500", text: "text-white", label: "限" };
+  }
+  if (name === PREVENT_RETREAT_NEXT_TURN) {
+    return { bg: "bg-red-700", text: "text-white", label: "锁" };
+  }
+  if (name === ABILITY_BLOCKED) {
+    return { bg: "bg-blue-600", text: "text-white", label: "禁" };
+  }
+  if (name === VSTAR_USED) {
+    return { bg: "bg-yellow-500", text: "text-black", label: "V★" };
+  }
+  // Default: yellow for unknown markers
+  return { bg: "bg-yellow-600", text: "text-white", label: "●" };
 }
 
 interface VisualCardProps {
@@ -215,6 +237,25 @@ export function VisualCard({
                status === "confused" ? "混" : status}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Marker Badges (left side) */}
+      {card.markers && Object.keys(card.markers).length > 0 && (
+        <div className="absolute left-0.5 top-7 flex flex-col gap-0.5">
+          {Object.entries(card.markers).map(([name, value]) => {
+            if (value <= 0) return null;
+            const { bg, text, label } = getMarkerStyle(name);
+            return (
+              <div
+                key={name}
+                className={`rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${bg} ${text}`}
+                title={name}
+              >
+                {label}
+              </div>
+            );
+          })}
         </div>
       )}
 

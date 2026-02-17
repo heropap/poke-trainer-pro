@@ -14,6 +14,7 @@
 import { GameState, GameCard, logEvent } from "../game-state";
 import { flipCoin } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
+import { TURN_BASED_MARKERS } from "./markers";
 
 /**
  * Process between-turns status effects for one player.
@@ -30,7 +31,28 @@ export function processBetweenTurns(
   const player = state.players[playerIndex];
   const active = player.active;
 
-  if (!active || active.statusConditions.length === 0) {
+  if (!active) {
+    // Still process bench marker cleanup even without active
+    for (const benchCard of player.bench.cards) {
+      if (!benchCard.markers) continue;
+      for (const markerName of TURN_BASED_MARKERS) {
+        if (benchCard.markers[markerName] !== undefined) {
+          benchCard.markers[markerName]--;
+          if (benchCard.markers[markerName] <= 0) {
+            delete benchCard.markers[markerName];
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  const hasStatusOrMarkers =
+    active.statusConditions.length > 0 ||
+    Object.keys(active.markers).length > 0 ||
+    player.bench.cards.some(c => c.markers && Object.keys(c.markers).length > 0);
+
+  if (!hasStatusOrMarkers) {
     return false;
   }
 
@@ -114,6 +136,41 @@ export function processBetweenTurns(
       `${active.card.name} 的麻痹状态解除了`,
       { status: "paralyzed", cured: true }
     );
+  }
+
+  // ─── Turn-based marker cleanup ───
+  // Decrement turn-based markers on active Pokemon; remove at 0
+  if (!koOccurred && active.markers) {
+    for (const markerName of TURN_BASED_MARKERS) {
+      if (active.markers[markerName] !== undefined) {
+        active.markers[markerName]--;
+        if (active.markers[markerName] <= 0) {
+          delete active.markers[markerName];
+        }
+      }
+    }
+    // Also handle attack-specific markers (CANT_USE_ATTACK:*)
+    for (const key of Object.keys(active.markers)) {
+      if (key.startsWith("CANT_USE_ATTACK:")) {
+        active.markers[key]--;
+        if (active.markers[key] <= 0) {
+          delete active.markers[key];
+        }
+      }
+    }
+  }
+
+  // ─── Turn-based marker cleanup on bench ───
+  for (const benchCard of player.bench.cards) {
+    if (!benchCard.markers) continue;
+    for (const markerName of TURN_BASED_MARKERS) {
+      if (benchCard.markers[markerName] !== undefined) {
+        benchCard.markers[markerName]--;
+        if (benchCard.markers[markerName] <= 0) {
+          delete benchCard.markers[markerName];
+        }
+      }
+    }
   }
 
   return koOccurred;

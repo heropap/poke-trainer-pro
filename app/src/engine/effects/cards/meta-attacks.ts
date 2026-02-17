@@ -24,6 +24,7 @@
  */
 
 import { CardEffectDef, AttackResult } from "../effect-types";
+import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, cantUseAttackMarker } from "../markers";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -302,8 +303,8 @@ const miraidonEx: NamedEffect = {
     {
       name: "Photon Blaster",
       onAttack: (ctx, baseDamage) => {
-        // Can't attack next turn (logged as reminder)
-        ctx.log("Photon Blaster: 下回合不能攻击");
+        // Can't attack next turn
+        ctx.addMarker(ctx.source, CANT_ATTACK_NEXT_TURN);
         return { damage: baseDamage };
       },
     },
@@ -321,7 +322,8 @@ const koraidonEx: NamedEffect = {
     {
       name: "Wild Impact",
       onAttack: (ctx, baseDamage) => {
-        ctx.log("Wild Impact: 下回合不能攻击");
+        // Can't attack next turn
+        ctx.addMarker(ctx.source, CANT_ATTACK_NEXT_TURN);
         return { damage: baseDamage };
       },
     },
@@ -387,7 +389,8 @@ const bloodmoonUrsalunaEx: NamedEffect = {
     {
       name: "Blood Moon",
       onAttack: (ctx, baseDamage) => {
-        ctx.log("Blood Moon: 下回合不能攻击");
+        // Can't attack next turn
+        ctx.addMarker(ctx.source, CANT_ATTACK_NEXT_TURN);
         return { damage: baseDamage };
       },
     },
@@ -405,7 +408,10 @@ const dusknoir: NamedEffect = {
     {
       name: "Shadow Bind",
       onAttack: (ctx, baseDamage) => {
-        ctx.log("Shadow Bind: 对手下回合不能撤退");
+        // Opponent's active can't retreat next turn
+        if (ctx.opponent.active) {
+          ctx.addMarker(ctx.opponent.active, PREVENT_RETREAT_NEXT_TURN);
+        }
         return {
           damage: baseDamage,
           preventRetreat: true,
@@ -597,7 +603,8 @@ const greninjaEx: NamedEffect = {
     {
       name: "Shinobi Blade",
       onAttack: (ctx, baseDamage) => {
-        ctx.log("Shinobi Blade: 下回合不能使用此攻击");
+        // Can't use this specific attack next turn
+        ctx.addMarker(ctx.source, cantUseAttackMarker("Shinobi Blade"));
         return { damage: baseDamage };
       },
     },

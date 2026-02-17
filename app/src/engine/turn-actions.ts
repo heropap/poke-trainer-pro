@@ -27,6 +27,7 @@ import { processBetweenTurns } from "./effects/status-effects";
 import { validateEvolution } from "./middleware/evolution.middleware";
 import { ActionEvent } from "./middleware/types";
 import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
+import { PREVENT_RETREAT_NEXT_TURN } from "./effects/markers";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -185,8 +186,9 @@ export function evolvePokemon(
   // Card data updates to evolution
   target.card = evolutionCard.card;
   target.cardId = evolutionCard.cardId;
-  // Evolution removes all status conditions
+  // Evolution removes all status conditions and markers
   target.statusConditions = [];
+  target.markers = {};
   // Mark as played this turn (can't evolve again this turn)
   target.playedThisTurn = true;
   // Mark as evolved this turn (distinct from "just entered play")
@@ -236,6 +238,11 @@ export function canRetreat(
   // ─── Status condition check: Asleep Pokemon cannot retreat ───
   if (player.active.statusConditions.includes("asleep")) {
     return fail("睡眠状态的宝可梦不能撤退");
+  }
+
+  // ─── Marker check: PREVENT_RETREAT_NEXT_TURN ───
+  if (player.active.markers[PREVENT_RETREAT_NEXT_TURN] > 0) {
+    return fail("该宝可梦被禁止撤退");
   }
 
   // Check retreat cost (with tool + stadium modifiers)

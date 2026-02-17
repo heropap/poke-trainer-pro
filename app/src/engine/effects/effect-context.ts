@@ -495,6 +495,7 @@ export function createEffectContext(
       pokemon.statusConditions = [];
       pokemon.playedThisTurn = false;
       pokemon.abilityUsedThisTurn = false;
+      pokemon.markers = {};
 
       // Add the Pokemon itself
       collected.push(pokemon);
@@ -544,6 +545,34 @@ export function createEffectContext(
       if (p.active) all.push(p.active);
       all.push(...p.bench.cards);
       return all;
+    },
+
+    // ─── Markers ───
+
+    addMarker(target: GameCard, name: string, count: number = 1): void {
+      target.markers[name] = (target.markers[name] || 0) + count;
+    },
+
+    removeMarker(target: GameCard, name: string, count?: number): void {
+      if (count === undefined) {
+        delete target.markers[name];
+      } else {
+        const current = target.markers[name] || 0;
+        const newVal = current - count;
+        if (newVal <= 0) {
+          delete target.markers[name];
+        } else {
+          target.markers[name] = newVal;
+        }
+      }
+    },
+
+    getMarker(target: GameCard, name: string): number {
+      return target.markers[name] || 0;
+    },
+
+    hasMarker(target: GameCard, name: string): boolean {
+      return (target.markers[name] || 0) > 0;
     },
 
     // ─── Logging ───

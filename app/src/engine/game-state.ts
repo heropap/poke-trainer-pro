@@ -32,6 +32,8 @@ export interface GameCard {
   evolvedThisTurn: boolean;
   /** Whether this card's ability was used this turn (for once-per-turn abilities) */
   abilityUsedThisTurn: boolean;
+  /** Persistent markers/counters for cross-turn effects (e.g., "can't attack next turn") */
+  markers: Record<string, number>;
 }
 
 export type StatusCondition =
@@ -229,6 +231,7 @@ export function createGameCard(card: Card): GameCard {
     playedThisTurn: false,
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
+    markers: {},
   };
 }
 

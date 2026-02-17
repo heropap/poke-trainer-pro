@@ -180,6 +180,7 @@ function ryuuCardToGameCard(card: RyuuCard): GameCard {
     playedThisTurn: false,
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
+    markers: {},
   };
 }
 
@@ -204,6 +205,7 @@ function pokemonSlotToGameCard(slot: PokemonSlot): GameCard | null {
     playedThisTurn: slot.pokemonPlayedTurn > 0, // approximation
     evolvedThisTurn: false,
     abilityUsedThisTurn: false,
+    markers: {},
   };
   return gc;
 }

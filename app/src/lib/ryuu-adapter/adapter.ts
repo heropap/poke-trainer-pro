@@ -156,6 +156,7 @@ function adaptCard(extCard: ExternalCard): GameCard {
     statusConditions: [],
     playedThisTurn: false,
     evolvedThisTurn: false,
-    abilityUsedThisTurn: false
+    abilityUsedThisTurn: false,
+    markers: {}
   };
 }

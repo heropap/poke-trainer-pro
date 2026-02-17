@@ -157,6 +157,18 @@ export interface EffectContext {
   /** Remove the current stadium card (discard it to its owner's discard pile) */
   removeStadium(): boolean;
 
+  /** Add a marker to a card (increments by count, default 1) */
+  addMarker(target: GameCard, name: string, count?: number): void;
+
+  /** Remove a marker from a card (decrements by count, default removes entirely) */
+  removeMarker(target: GameCard, name: string, count?: number): void;
+
+  /** Get the current value of a marker on a card (0 if not set) */
+  getMarker(target: GameCard, name: string): number;
+
+  /** Check if a card has a specific marker (value > 0) */
+  hasMarker(target: GameCard, name: string): boolean;
+
   /** Log a message to the game event log */
   log(message: string): void;
 
