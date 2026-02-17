@@ -3,9 +3,16 @@
  *
  * Exports all effect system components and auto-registers initial card effects.
  *
+ * 5-Layer Priority Chain:
+ *   Layer 1: ID-based hand-written effects (highest priority)
+ *   Layer 2: Name-based hand-written effects
+ *   Layer 3: Text-parser from ryuu-play metadata (ryuu card text is more standardized)
+ *   Layer 4: Text-parser from UI Card data (_index.json)
+ *   Layer 5: No effect (silent skip)
+ *
  * Usage:
  *   import { initializeEffects } from "@/engine/effects";
- *   initializeEffects(); // Call once at app startup
+ *   initializeEffects(cards); // Call once at app startup
  */
 
 // Re-export types
@@ -47,6 +54,23 @@ export { processBetweenTurns } from "./status-effects";
 // Re-export text parser
 export { parseCardEffects, autoRegisterTextEffects } from "./text-parser";
 
+// Re-export ryuu metadata extractor
+export {
+  extractAllRyuuMetadata,
+  extractRyuuAsUICards,
+  autoRegisterFromRyuuMeta,
+  extractCardMeta,
+  metaToUICard,
+} from "./ryuu-metadata-extractor";
+export type { RyuuCardMeta } from "./ryuu-metadata-extractor";
+
+// Re-export coverage report
+export {
+  generateCoverageReport,
+  formatCoverageReport,
+} from "./coverage-report";
+export type { CoverageStats, CoverageReport, UncoveredCard } from "./coverage-report";
+
 // Card implementations
 import { trainerEffects, trainerNameEffects } from "./cards/trainers";
 import { attackEffects } from "./cards/attacks";
@@ -64,25 +88,58 @@ const allEffects = [...trainerEffects, ...attackEffects];
  * Initialize the effect system by registering all built-in card effects.
  * Call this once at app startup.
  *
- * @param cards Optional array of Card data — when provided, auto-registers
- *              text-parsed effects for cards without existing registered effects.
+ * Follows the 5-layer priority chain:
+ *   Layer 1: registerAll(allEffects) — ID-based hand-written
+ *   Layer 2: registerAllByName(trainerNameEffects, ...) — Name-based hand-written
+ *   Layer 3: autoRegisterFromRyuuMeta() — Text-parser on ryuu-play metadata
+ *   Layer 4: autoRegisterTextEffects(cards) — Text-parser on UI card data
+ *   Layer 5: Implicit — cards with no registered effect are silently skipped
+ *
+ * @param cards Optional array of Card data from _index.json — used for Layer 4.
+ * @param options.skipRyuuMeta If true, skip Layer 3 (useful for testing)
  */
-export function initializeEffects(cards?: Card[]): void {
+export function initializeEffects(
+  cards?: Card[],
+  options?: { skipRyuuMeta?: boolean }
+): void {
+  // Layer 1: ID-based hand-written effects
   registerAll(allEffects);
+
+  // Layer 2: Name-based hand-written effects
   registerAllByName(trainerNameEffects);
   registerAllByName(stadiumNameEffects);
   registerAllByName(metaAttackEffects);
   registerAllByName(expandedTrainerEffects);
 
-  // Layer 3: Auto-register text-parsed effects for unregistered cards
+  // Layer 3: Text-parser from ryuu-play metadata
+  // (ryuu card text is often more standardized than _index.json text)
+  if (!options?.skipRyuuMeta) {
+    try {
+      const { autoRegisterFromRyuuMeta } = require("./ryuu-metadata-extractor") as {
+        autoRegisterFromRyuuMeta: () => { registered: number; skipped: number; total: number };
+      };
+      autoRegisterFromRyuuMeta();
+    } catch (err) {
+      // Silently skip if ryuu-play sets are not available
+      console.warn("[Effects] Could not load ryuu-play metadata:", (err as Error).message);
+    }
+  }
+
+  // Layer 4: Text-parser from UI Card data (_index.json)
   if (cards && cards.length > 0) {
     autoRegisterTextEffects(cards);
   }
 }
 
 /**
- * Get count of all available built-in effects.
+ * Get count of all available built-in effects (Layer 1 + Layer 2).
  */
 export function getBuiltInEffectCount(): number {
-  return allEffects.length + trainerNameEffects.length + stadiumNameEffects.length + metaAttackEffects.length + expandedTrainerEffects.length;
+  return (
+    allEffects.length +
+    trainerNameEffects.length +
+    stadiumNameEffects.length +
+    metaAttackEffects.length +
+    expandedTrainerEffects.length
+  );
 }

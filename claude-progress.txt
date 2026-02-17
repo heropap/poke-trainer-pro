@@ -1159,3 +1159,44 @@ Notes:
      - 正则优先级: selfShuffleDrawMatch 移到 drawMatch 之前(防止误匹配)
      - Weakness/Resistance 正则: 改为贪婪匹配 Weakness(?:\s*(?:or|and)\s*Resistance)?
      - TS 类型: mock.calls 使用 as any[][] 避免空元组推断
+
+=== Session 26C | 2026-02-17 ===
+Feature: Ryuu-play 元数据提取 + 5 层优先级链 + 覆盖率报告
+Status: completed
+Notes:
+  1. ryuu-metadata-extractor.ts (新建):
+     - extractCardMeta(): 从 ryuu-play Card 实例提取文本元数据(attacks, powers, text)
+     - metaToUICard(): 转换为 UI Card 格式供 text-parser 使用
+     - extractAllRyuuMetadata(): 批量从 baseSets/exSets/standardSets 提取 717 张卡
+     - extractRyuuAsUICards(): 去重+过滤后输出可解析的 UI 卡牌数组
+     - autoRegisterFromRyuuMeta(): Layer 3 入口，调用 text-parser 自动注册
+
+  2. coverage-report.ts (新建):
+     - generateCoverageReport(): 分析全数据库覆盖率，按 5 层分类统计
+     - formatCoverageReport(): 人类可读的报告格式（ASCII 表格）
+     - 支持 bySupertype 分类、uncovered 卡牌列表带 sampleText
+
+  3. effects/index.ts (改造为 5 层优先级链):
+     Layer 1: ID-based 手写效果 (registerAll)
+     Layer 2: Name-based 手写效果 (registerAllByName × 4)
+     Layer 3: Text-parser 从 ryuu-play 元数据 (autoRegisterFromRyuuMeta)
+     Layer 4: Text-parser 从 UI Card 数据 (autoRegisterTextEffects)
+     Layer 5: 无效果（静默跳过）
+     - 新增 options.skipRyuuMeta 参数支持测试环境跳过 Layer 3
+     - try/catch 包裹 Layer 3 防止 ryuu-play 不可用时崩溃
+
+  4. 测试:
+     - ryuu-metadata-extractor.test.ts: 25 个测试
+       - 单元: Pokemon/Trainer/Energy 元数据提取(14), metaToUICard 转换(3)
+       - 集成: extractAllRyuuMetadata 批量验证(4), extractRyuuAsUICards 去重验证(3)
+       - 整合: text-parser 可解析 ryuu 卡牌(1)
+     - coverage-report.test.ts: 10 个测试
+       - 单元: 覆盖率计算(7), 格式化输出(2)
+       - 集成: 全数据库报告(1)
+     - 全套: 931 测试全通过, TypeScript 0 错误
+
+  关键数据:
+     - ryuu-play 总卡牌: 717 张
+     - 去重后可解析: ~500+ 张 (排除基础能量)
+     - text-parser 可解析 ryuu 卡: 50+ 张
+     - 覆盖率报告: text-parser Layer 4 覆盖 200+ 张 UI 卡
