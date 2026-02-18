@@ -1,5 +1,6 @@
 
 import React from "react";
+import Image from "next/image";
 import { GameCard } from "@/engine/game-state";
 import { createPortal } from "react-dom";
 import { getEffect, hasEffect, getEffectSource } from "@/engine/effects/effect-registry";
@@ -58,11 +59,23 @@ export function CardDetailModal({ card, onClose }: CardDetailModalProps) {
           {/* Large Card Image */}
           <div className="flex-shrink-0">
              {card.card.images?.large ? (
-              <img
-                src={card.card.images.large}
-                alt={card.card.name}
-                className="max-h-[70vh] w-auto rounded-xl shadow-2xl"
-              />
+              card.card.images.large.startsWith("http") ? (
+                <Image
+                  src={card.card.images.large}
+                  alt={card.card.name}
+                  width={400}
+                  height={560}
+                  sizes="400px"
+                  priority
+                  className="max-h-[70vh] w-auto rounded-xl shadow-2xl"
+                />
+              ) : (
+                <img
+                  src={card.card.images.large}
+                  alt={card.card.name}
+                  className="max-h-[70vh] w-auto rounded-xl shadow-2xl"
+                />
+              )
             ) : (
               <div className="flex h-[400px] w-[300px] items-center justify-center rounded-xl bg-indigo-900 text-white">
                 No Image Available

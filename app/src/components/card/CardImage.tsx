@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card } from "@/types/card";
 
 interface CardImageProps {
@@ -8,6 +9,8 @@ interface CardImageProps {
   size?: "small" | "large";
   className?: string;
   onClick?: (card: Card) => void;
+  /** Use next/image for optimized loading (WebP/AVIF, responsive). Default: false for backward compat. */
+  optimized?: boolean;
 }
 
 export default function CardImage({
@@ -15,6 +18,7 @@ export default function CardImage({
   size = "small",
   className = "",
   onClick,
+  optimized = false,
 }: CardImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -22,6 +26,8 @@ export default function CardImage({
   const src = size === "small" ? card.images.small : card.images.large;
   const width = size === "small" ? 245 : 734;
   const height = size === "small" ? 342 : 1024;
+
+  const useNextImage = optimized && src && src.startsWith("http");
 
   return (
     <div
@@ -55,6 +61,21 @@ export default function CardImage({
             <div className="mt-1 px-2">{card.name}</div>
           </div>
         </div>
+      ) : useNextImage ? (
+        <Image
+          src={src}
+          alt={card.name}
+          width={width}
+          height={height}
+          loading="lazy"
+          sizes={size === "small" ? "245px" : "734px"}
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+          className={`rounded-lg ${isLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-200`}
+        />
       ) : (
         <img
           src={src}

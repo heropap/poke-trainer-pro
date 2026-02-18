@@ -1,5 +1,6 @@
 
 import React from "react";
+import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { GameCard } from "@/engine/game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, VSTAR_USED } from "@/engine/effects/markers";
@@ -175,12 +176,25 @@ export function VisualCard({
           : "bg-zinc-800"
       }`}>
         {card.card.images?.small ? (
-          <img
-            src={card.card.images.small}
-            alt={card.card.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          card.card.images.small.startsWith("http") ? (
+            <Image
+              src={card.card.images.small}
+              alt={card.card.name}
+              width={Math.round(width)}
+              height={Math.round(height)}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              sizes={`${Math.round(width)}px`}
+              placeholder="empty"
+            />
+          ) : (
+            <img
+              src={card.card.images.small}
+              alt={card.card.name}
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          )
         ) : (
           <div className={`flex h-full w-full flex-col items-center justify-center p-2 text-center text-xs text-white ${
             card.card.rarity === "Proxy"

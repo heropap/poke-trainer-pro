@@ -16,6 +16,7 @@ import { adaptGameState } from "@/lib/ryuu-adapter/adapter";
 import { MockEngine } from "@/lib/ryuu-adapter/mock-engine";
 import { ExternalState, ExternalPlayer, ExternalCard, CardList } from "@/lib/ryuu-adapter/external-types";
 import { createMockInitialState } from "@/lib/ryuu-adapter/mock-data";
+import { preloadDeckImages, addPreloadLinks } from "@/lib/image-preloader";
 
 // ─── Battle Mode Types ───
 
@@ -100,6 +101,44 @@ export default function BattlePageClient() {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
   }, []);
+
+  // ─── Image Preloading at Battle Start ───
+  const preloadCancelRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (!gameState) return;
+
+    // Collect all visible card image URLs for preloading
+    const urls: string[] = [];
+    for (const player of gameState.players) {
+      // Active Pokemon (priority)
+      if (player.active?.card.images?.small) urls.push(player.active.card.images.small);
+      // Bench Pokemon
+      for (const benchCard of player.bench.cards) {
+        if (benchCard.card.images?.small) urls.push(benchCard.card.images.small);
+      }
+      // Hand cards
+      for (const handCard of player.hand.cards) {
+        if (handCard.card.images?.small) urls.push(handCard.card.images.small);
+      }
+    }
+
+    // Add <link rel="preload"> for the most critical images (active Pokemon)
+    const criticalUrls: string[] = [];
+    if (gameState.players[0]?.active?.card.images?.small) criticalUrls.push(gameState.players[0].active.card.images.small);
+    if (gameState.players[1]?.active?.card.images?.small) criticalUrls.push(gameState.players[1].active.card.images.small);
+    const removeLinks = addPreloadLinks(criticalUrls);
+
+    // Preload all visible card images in background
+    const { cancel } = preloadDeckImages(urls);
+    preloadCancelRef.current = cancel;
+
+    return () => {
+      cancel();
+      removeLinks();
+    };
+  // Only run once when game starts (gameState becomes non-null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState !== null]);
 
   // Load card data
   useEffect(() => {
