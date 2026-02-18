@@ -1,12 +1,12 @@
 
 import React from "react";
-import { GameCard, GamePrompt, GameState } from "@/engine/game-state";
+import { GameCard, SelectCardsPrompt, GameState } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { createPortal } from "react-dom";
 import { zoneSize } from "@/engine/zones";
 
 interface CardSelectionModalProps {
-  prompt: GamePrompt;
+  prompt: SelectCardsPrompt;
   gameState: GameState;
   onConfirm: (selectedIds: string[]) => void;
   onCancel?: () => void; // Only if prompt allows cancel (min=0?)

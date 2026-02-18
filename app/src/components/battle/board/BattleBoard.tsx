@@ -37,6 +37,10 @@ import { AnimationProvider } from "./AnimationProvider";
 import { EvolutionOverlay } from "./EvolutionOverlay";
 import { EnergyAttachOverlay } from "./EnergyAttachOverlay";
 import { EnergySelectionModal } from "./EnergySelectionModal";
+import { CoinFlipModal } from "./CoinFlipModal";
+import { ChooseOptionModal } from "./ChooseOptionModal";
+import { ConfirmModal } from "./ConfirmModal";
+import { OrderCardsModal } from "./OrderCardsModal";
 
 // ────────────────────────────────────────────────
 // Types
@@ -1123,11 +1127,43 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         )}
 
         {/* Card Selection Modal (Prompt) */}
-        {gameState.prompt && gameState.prompt.playerIndex === myIndex && (
+        {gameState.prompt && gameState.prompt.type === "select_cards" && gameState.prompt.playerIndex === myIndex && (
           <CardSelectionModal
             prompt={gameState.prompt}
             gameState={gameState}
             onConfirm={(selectedIds) => onAction?.({ type: "select_cards_response", selectedIds })}
+          />
+        )}
+
+        {/* Coin Flip Modal */}
+        {gameState.prompt && gameState.prompt.type === "coin_flip" && gameState.prompt.playerIndex === myIndex && (
+          <CoinFlipModal
+            prompt={gameState.prompt}
+            onDone={() => onAction?.({ type: "prompt_response", data: { acknowledged: true } })}
+          />
+        )}
+
+        {/* Choose Option Modal */}
+        {gameState.prompt && gameState.prompt.type === "choose_option" && gameState.prompt.playerIndex === myIndex && (
+          <ChooseOptionModal
+            prompt={gameState.prompt}
+            onConfirm={(selectedIds) => onAction?.({ type: "prompt_response", data: { selectedOptions: selectedIds } })}
+          />
+        )}
+
+        {/* Confirm Modal */}
+        {gameState.prompt && gameState.prompt.type === "confirm" && gameState.prompt.playerIndex === myIndex && (
+          <ConfirmModal
+            prompt={gameState.prompt}
+            onConfirm={(yes) => onAction?.({ type: "prompt_response", data: { confirmed: yes } })}
+          />
+        )}
+
+        {/* Order Cards Modal */}
+        {gameState.prompt && gameState.prompt.type === "order_cards" && gameState.prompt.playerIndex === myIndex && (
+          <OrderCardsModal
+            prompt={gameState.prompt}
+            onConfirm={(orderedIds) => onAction?.({ type: "prompt_response", data: { orderedIds } })}
           />
         )}
 

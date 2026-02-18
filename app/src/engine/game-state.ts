@@ -205,10 +205,16 @@ export type GameEventType =
 // Game Prompt (for manual selection)
 // ───────────────────────────────────────────────
 
-export interface GamePrompt {
+/** Base prompt fields shared by all prompt types */
+interface PromptBase {
   id: string;
-  type: "select_cards";
   playerIndex: 0 | 1;
+  message: string;
+}
+
+/** Select one or more cards from a zone */
+export interface SelectCardsPrompt extends PromptBase {
+  type: "select_cards";
   zone: "deck" | "discard" | "hand" | "bench" | "opponent_bench";
   min: number;
   max: number;
@@ -219,8 +225,57 @@ export interface GamePrompt {
   };
   /** Explicit list of allowed card IDs (overrides zone/filter if present) */
   targets?: string[];
-  message: string;
 }
+
+/** Coin flip prompt (visual + result) */
+export interface CoinFlipPrompt extends PromptBase {
+  type: "coin_flip";
+  /** Number of coins to flip */
+  count: number;
+  /** Pre-determined results (server-authoritative). true = heads, false = tails */
+  results?: boolean[];
+}
+
+/** Select a Pokemon from a specific zone */
+export interface SelectPokemonPrompt extends PromptBase {
+  type: "select_pokemon";
+  zone: "bench" | "opponent_bench" | "active" | "opponent_active";
+  /** Allowed instanceIds (if restricted) */
+  targets?: string[];
+  min: number;
+  max: number;
+}
+
+/** Order/sort a list of cards (e.g. arrange prizes, reorder deck top) */
+export interface OrderCardsPrompt extends PromptBase {
+  type: "order_cards";
+  /** Card instanceIds to order */
+  cardIds: string[];
+  /** The cards themselves (for display) */
+  cards: GameCard[];
+}
+
+/** Choose from multiple options (e.g. choose an attack effect, choose a type) */
+export interface ChooseOptionPrompt extends PromptBase {
+  type: "choose_option";
+  options: { id: string; label: string; description?: string }[];
+  min: number;
+  max: number;
+}
+
+/** Confirm or deny a yes/no question */
+export interface ConfirmPrompt extends PromptBase {
+  type: "confirm";
+}
+
+/** All 6 prompt types as a discriminated union */
+export type GamePrompt =
+  | SelectCardsPrompt
+  | CoinFlipPrompt
+  | SelectPokemonPrompt
+  | OrderCardsPrompt
+  | ChooseOptionPrompt
+  | ConfirmPrompt;
 
 // ───────────────────────────────────────────────
 // Factory Functions
