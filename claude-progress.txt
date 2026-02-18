@@ -1354,3 +1354,30 @@ Notes: 本次 session 完成了最后 4 个功能 (priority 21-24)，项目全�
 
   测试统计: 1014/1014 全部通过, TypeScript 0 错误
   项目状态: 25/25 功能全部完成 (100%)
+
+=== Session 26F-fix | 2026-02-18 ===
+Feature: 对战 UI 交互修复 — 弃牌选择 + Prompt 状态通知系统
+Status: completed
+Notes:
+  用户报告三个问题: 撤退缺失/弃牌自动选/备战区无法操作
+
+  分析发现:
+  - 撤退功能 (EnergySelectionModal) 已完整实现
+  - 备战区操作菜单 (⚡附能, 🔧道具, 📋详情) 已完整实现
+  - ActiveSpot 桌面端 flex-row 布局已完整实现
+  - 核心问题: promptDiscardFromHand 无法让 UI 显示选择弹窗
+
+  根因: processAction 被完整 await，effect 执行中设置的 state.prompt
+  对 React 不可见（直到 action 处理完成才 re-render），导致 prompt 被 fallback 自动解析
+
+  修复:
+  1. effect-context.ts: 新增 onPromptStateChange 回调系统
+     - promptDiscardFromHand: deferred promise + UI 通知
+     - 无 UI 时自动弃牌（测试兼容）
+     - promptUser: 同样添加通知
+  2. BattlePageClient.tsx: 订阅回调
+     - AI prompt 自动解析
+     - 人类 prompt 触发 setState → 显示 CardSelectionModal
+  3. 新增 6 项测试 (prompt-state-change.test.ts)
+
+  测试统计: 1020/1020 全部通过, TypeScript 0 错误
