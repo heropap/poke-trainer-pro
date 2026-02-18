@@ -2,6 +2,17 @@
 import React from "react";
 import Image from "next/image";
 import { GameCard } from "@/engine/game-state";
+
+/** Hostnames configured in next.config.ts remotePatterns */
+const OPTIMIZED_IMAGE_HOSTS = new Set([
+  "images.pokemontcg.io",
+  "images.scrydex.com",
+]);
+
+function isOptimizableUrl(src: string): boolean {
+  try { return OPTIMIZED_IMAGE_HOSTS.has(new URL(src).hostname); }
+  catch { return false; }
+}
 import { createPortal } from "react-dom";
 import { getEffect, hasEffect, getEffectSource } from "@/engine/effects/effect-registry";
 import type { EffectSourceLayer } from "@/engine/effects/effect-registry";
@@ -59,7 +70,7 @@ export function CardDetailModal({ card, onClose }: CardDetailModalProps) {
           {/* Large Card Image */}
           <div className="flex-shrink-0">
              {card.card.images?.large ? (
-              card.card.images.large.startsWith("http") ? (
+              isOptimizableUrl(card.card.images.large) ? (
                 <Image
                   src={card.card.images.large}
                   alt={card.card.name}

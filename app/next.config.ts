@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       new URL("https://images.pokemontcg.io/**"),
+      new URL("https://images.scrydex.com/**"),
     ],
     // Optimized sizes for card thumbnails and full-size cards
     deviceSizes: [640, 750, 828, 1080, 1200],

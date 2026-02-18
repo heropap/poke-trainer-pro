@@ -6,6 +6,23 @@ import { GameCard } from "@/engine/game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, VSTAR_USED } from "@/engine/effects/markers";
 import { useAnimation } from "./AnimationProvider";
 
+/** Hostnames configured in next.config.ts remotePatterns — must match exactly */
+const OPTIMIZED_IMAGE_HOSTS = new Set([
+  "images.pokemontcg.io",
+  "images.scrydex.com",
+]);
+
+/** Check if a URL's hostname is configured for next/image optimization.
+ *  Must be a remote URL that startsWith("http") and have a known hostname. */
+function isOptimizableUrl(src: string): boolean {
+  if (!src.startsWith("http")) return false;
+  try {
+    return OPTIMIZED_IMAGE_HOSTS.has(new URL(src).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Map energy type name to a color */
 const ENERGY_COLORS: Record<string, string> = {
   Grass: "bg-green-500",
@@ -176,7 +193,7 @@ export function VisualCard({
           : "bg-zinc-800"
       }`}>
         {card.card.images?.small ? (
-          card.card.images.small.startsWith("http") ? (
+          isOptimizableUrl(card.card.images.small) ? (
             <Image
               src={card.card.images.small}
               alt={card.card.name}
