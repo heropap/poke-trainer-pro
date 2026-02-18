@@ -29,7 +29,7 @@ const AI_MAX_ACTIONS_PER_TURN = 30;
 
 export default function BattlePageClient() {
   const { validDecks, loading: decksLoading } = useDeckContext();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, playerId, setPlayerId, isReconnecting, opponentDisconnected, opponentGraceMs } = useSocket();
   const [cardIndex, setCardIndex] = useState<Map<string, Card>>(new Map());
   const [cardsLoading, setCardsLoading] = useState(true);
 
@@ -142,6 +142,25 @@ export default function BattlePageClient() {
       if (data.gameId) {
         setOnlineGameId(data.gameId);
       }
+      // Save persistent playerId for reconnection
+      if (data.playerId) {
+        setPlayerId(data.playerId);
+      }
+    }
+
+    function onReconnected(data: any) {
+      console.log("Reconnected to game!", data);
+      if (data.gameState) {
+        isLocalGame.current = false;
+        setBattleMode("online");
+        setGameState(data.gameState);
+      }
+      if (typeof data.yourPlayerId === "number") {
+        setMyPlayerId(data.yourPlayerId);
+      }
+      if (data.gameId) {
+        setOnlineGameId(data.gameId);
+      }
     }
 
     function onStateUpdate(data: any) {
@@ -179,6 +198,7 @@ export default function BattlePageClient() {
 
     socket.on("matchmaking:found", onMatchFound);
     socket.on("game:start", onGameStart);
+    socket.on("game:reconnected", onReconnected);
     socket.on("game:state_update", onStateUpdate);
     socket.on("game:over", onGameOver);
     socket.on("game:action_error", onActionError);
@@ -188,6 +208,7 @@ export default function BattlePageClient() {
     return () => {
       socket.off("matchmaking:found", onMatchFound);
       socket.off("game:start", onGameStart);
+      socket.off("game:reconnected", onReconnected);
       socket.off("game:state_update", onStateUpdate);
       socket.off("game:over", onGameOver);
       socket.off("game:action_error", onActionError);
@@ -602,8 +623,26 @@ export default function BattlePageClient() {
           </div>
         )}
 
+        {/* Reconnecting Banner */}
+        {isReconnecting && battleMode === "online" && (
+          <div className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 flex items-center gap-3 rounded-xl bg-yellow-600/90 px-6 py-3 shadow-xl backdrop-blur-md">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-yellow-200 border-t-transparent"></div>
+            <span className="text-sm font-medium text-white">连接断开，正在重连...</span>
+          </div>
+        )}
+
+        {/* Opponent Disconnected Banner */}
+        {opponentDisconnected && battleMode === "online" && gameState.phase !== "game_over" && (
+          <div className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 flex items-center gap-3 rounded-xl bg-orange-600/90 px-6 py-3 shadow-xl backdrop-blur-md">
+            <div className="h-3 w-3 animate-pulse rounded-full bg-orange-300"></div>
+            <span className="text-sm font-medium text-white">
+              对手已掉线 {opponentGraceMs > 0 && `(${Math.ceil(opponentGraceMs / 1000)}s 后自动判负)`}
+            </span>
+          </div>
+        )}
+
         {/* Online Mode Indicator */}
-        {battleMode === "online" && gameState.phase !== "game_over" && (
+        {battleMode === "online" && gameState.phase !== "game_over" && !isReconnecting && !opponentDisconnected && (
           <div className="fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-full bg-green-600/80 px-4 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md">
             <div className="h-2 w-2 animate-pulse rounded-full bg-green-300"></div>
             在线对战

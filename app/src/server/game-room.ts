@@ -71,14 +71,22 @@ function createHiddenZone(zone: Zone): Zone {
   };
 }
 
+/** Grace period before auto-concede on disconnect (ms) */
+export const DISCONNECT_GRACE_MS = 60_000; // 60 seconds
+
 export class GameRoom {
   public id: string;
   public state: GameState;
   public player1SocketId: string;
   public player2SocketId: string;
+  /** Persistent player IDs that survive reconnections */
+  public player1Id: string;
+  public player2Id: string;
   public cardLookup: (id: string) => Card | undefined;
   public createdAt: number;
   public lastActivityAt: number;
+  /** Tracks which players are currently disconnected */
+  public disconnectedPlayers: Map<string, { playerIndex: 0 | 1; disconnectedAt: number; timer: ReturnType<typeof setTimeout> | null }> = new Map();
 
   constructor(
     id: string,
@@ -91,6 +99,9 @@ export class GameRoom {
     this.id = id;
     this.player1SocketId = p1SocketId;
     this.player2SocketId = p2SocketId;
+    // Generate persistent player IDs (survive socket reconnections)
+    this.player1Id = `pid-${p1SocketId}-${Date.now()}`;
+    this.player2Id = `pid-${p2SocketId}-${Date.now()}`;
     this.cardLookup = cardLookup;
     this.createdAt = Date.now();
     this.lastActivityAt = Date.now();
@@ -251,7 +262,7 @@ export class GameRoom {
 
   /**
    * Handle a player disconnecting mid-game.
-   * The disconnected player concedes.
+   * The disconnected player concedes immediately.
    */
   public async handleDisconnect(socketId: string): Promise<ActionResult | null> {
     const playerIndex = this.getPlayerIndex(socketId);
@@ -264,5 +275,89 @@ export class GameRoom {
       this.state = result.newState;
     }
     return result;
+  }
+
+  /**
+   * Mark a player as disconnected with a grace period (no immediate concede).
+   * Used by the server layer to allow reconnection before conceding.
+   */
+  public markDisconnected(socketId: string): { playerId: string; playerIndex: 0 | 1 } | null {
+    const playerIndex = this.getPlayerIndex(socketId);
+    if (playerIndex === -1) return null;
+    if (this.isGameOver()) return null;
+
+    const playerId = playerIndex === 0 ? this.player1Id : this.player2Id;
+
+    this.disconnectedPlayers.set(playerId, {
+      playerIndex,
+      disconnectedAt: Date.now(),
+      timer: null, // Timer is set by the server layer (needs io reference)
+    });
+
+    return { playerId, playerIndex };
+  }
+
+  /**
+   * Force-concede a disconnected player (called after grace period expires).
+   */
+  public async forceConcede(playerId: string): Promise<ActionResult | null> {
+    const dc = this.disconnectedPlayers.get(playerId);
+    if (!dc) return null;
+    if (this.isGameOver()) return null;
+
+    this.disconnectedPlayers.delete(playerId);
+
+    const result = await processAction(this.state, dc.playerIndex, { type: "concede" });
+    if (result.success) {
+      this.state = result.newState;
+    }
+    return result;
+  }
+
+  /**
+   * Reconnect a player by their persistent playerId.
+   * Updates the socket ID so future actions route correctly.
+   * Returns the player index or -1 if not found.
+   */
+  public reconnectPlayer(playerId: string, newSocketId: string): 0 | 1 | -1 {
+    if (this.isGameOver()) return -1;
+
+    let playerIndex: 0 | 1 | -1 = -1;
+    if (playerId === this.player1Id) {
+      this.player1SocketId = newSocketId;
+      playerIndex = 0;
+    } else if (playerId === this.player2Id) {
+      this.player2SocketId = newSocketId;
+      playerIndex = 1;
+    }
+
+    if (playerIndex !== -1) {
+      // Cancel grace period timer
+      const dc = this.disconnectedPlayers.get(playerId);
+      if (dc?.timer) {
+        clearTimeout(dc.timer);
+      }
+      this.disconnectedPlayers.delete(playerId);
+      this.lastActivityAt = Date.now();
+    }
+
+    return playerIndex;
+  }
+
+  /**
+   * Get player ID from socket ID
+   */
+  public getPlayerId(socketId: string): string | null {
+    if (socketId === this.player1SocketId) return this.player1Id;
+    if (socketId === this.player2SocketId) return this.player2Id;
+    return null;
+  }
+
+  /**
+   * Check if a player is currently disconnected
+   */
+  public isPlayerDisconnected(playerIndex: 0 | 1): boolean {
+    const playerId = playerIndex === 0 ? this.player1Id : this.player2Id;
+    return this.disconnectedPlayers.has(playerId);
   }
 }
