@@ -1313,3 +1313,44 @@ Notes:
      src/app/api/health/route.ts, src/__tests__/health-api.test.ts
   修改文件 (2):
      next.config.ts (standalone output), jest.config.ts (modulePathIgnorePatterns)
+
+=== Session 27 | 2026-02-18 ===
+Feature: 21/22/23/24 批量完成 — WebSocket 断线重连 + 回合计时器 + 高级 Prompt 系统 + 卡牌图片优化
+Status: completed
+Notes: 本次 session 完成了最后 4 个功能 (priority 21-24)，项目全部 25 个功能均已完成。
+
+  Feature 21 — WebSocket 断线重连:
+     - GameRoom 添加持久玩家 ID (player1Id, player2Id)
+     - markDisconnected() 60 秒宽限期 + forceConcede()
+     - reconnectPlayer() 更新 socket 映射
+     - 客户端指数退避重连 (1s→15s, 最多 10 次)
+     - 断线/重连 UI 横幅 + 对手断线倒计时
+     - 17 项测试通过
+
+  Feature 22 — 回合计时器:
+     - GameState 新增 turnTimer 字段 ({ remaining, total, active } | null)
+     - TURN_TIME_LIMIT = 90 秒
+     - 服务端 1s 间隔倒计时 + onTurnTimeout 回调
+     - 客户端 SVG 圆形进度环 + 10 秒警告闪红
+     - timer_sync 事件定期同步
+     - 9 项测试通过
+
+  Feature 23 — 高级 Prompt 系统:
+     - GamePrompt 扩展为 6 类型判别联合 (discriminated union)
+       SelectCards / CoinFlip / SelectPokemon / OrderCards / ChooseOption / Confirm
+     - 4 个新 Modal 组件: CoinFlipModal (动画翻转), ChooseOptionModal,
+       ConfirmModal, OrderCardsModal (拖拽排序)
+     - BattleBoard 通过 type guard 分发到对应弹窗
+     - 14 项测试通过
+
+  Feature 24 — 卡牌图片优化:
+     - next.config.ts: remotePatterns (pokemontcg.io), AVIF/WebP, 自定义 imageSizes
+     - VisualCard + CardDetailModal: 远程图使用 next/image 自动优化
+     - CardImage: optimized prop (opt-in, 向后兼容已有测试)
+     - image-preloader.ts: preloadDeckImages (批量并发), addPreloadLinks, IntersectionObserver
+     - CardBack.tsx: SVG 卡背占位符组件
+     - BattlePageClient: 对战开始自动预加载可见卡牌
+     - 24 项测试通过
+
+  测试统计: 1014/1014 全部通过, TypeScript 0 错误
+  项目状态: 25/25 功能全部完成 (100%)
