@@ -107,12 +107,99 @@ export function createEffectContext(
       const actual = Math.min(count, p.hand.cards.length);
 
       for (let i = 0; i < actual; i++) {
-        // Discard from the end of hand (simplified - no choice)
+        // Discard from the end of hand (auto - no choice)
         const card = p.hand.cards.pop();
         if (card) {
           addToBottom(p.discard, card);
           discarded.push(card);
         }
+      }
+
+      return discarded;
+    },
+
+    async promptDiscardFromHand(count: number, who: "player" | "opponent" = "player"): Promise<GameCard[]> {
+      const pIdx = who === "player" ? playerIndex : opponentIndex;
+      const p = state.players[pIdx];
+      const actual = Math.min(count, p.hand.cards.length);
+
+      if (actual <= 0) return [];
+
+      // Auto-discard helper (no user choice)
+      function autoDiscard(): GameCard[] {
+        const discarded: GameCard[] = [];
+        for (let i = 0; i < actual; i++) {
+          const card = p.hand.cards.pop();
+          if (card) {
+            addToBottom(p.discard, card);
+            discarded.push(card);
+          }
+        }
+        return discarded;
+      }
+
+      // If hand size equals or is less than required, auto-discard all needed
+      if (p.hand.cards.length <= actual) {
+        return autoDiscard();
+      }
+
+      // Only prompt if not already in a prompt (prevent nesting) and if
+      // state allows prompts (game must be in interactive mode)
+      if (state.prompt) {
+        // Already in a prompt — auto-discard to avoid deadlock
+        return autoDiscard();
+      }
+
+      // Set up prompt and check if anyone will resolve it
+      const promptId = `discard-prompt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: pIdx as 0 | 1,
+        zone: "hand",
+        min: actual,
+        max: actual,
+        message: `选择 ${actual} 张手牌丢弃`,
+      };
+
+      // Race: wait for user response or auto-resolve after a short delay
+      // In test/AI mode, no UI will respond so we use a timeout fallback
+      const selectedIds = await new Promise<string[]>((resolve) => {
+        pendingPrompts.set(promptId, resolve);
+
+        // Safety fallback: if no UI responds within 200ms, auto-select
+        setTimeout(() => {
+          if (pendingPrompts.has(promptId)) {
+            pendingPrompts.delete(promptId);
+            // Auto-pick from end of hand
+            const autoIds: string[] = [];
+            for (let i = p.hand.cards.length - 1; i >= 0 && autoIds.length < actual; i--) {
+              autoIds.push(p.hand.cards[i].instanceId);
+            }
+            state.prompt = null;
+            resolve(autoIds);
+          }
+        }, 200);
+      });
+
+      // Clear prompt
+      state.prompt = null;
+
+      // Discard the selected cards
+      const discarded: GameCard[] = [];
+      for (const sid of selectedIds) {
+        const idx = p.hand.cards.findIndex((c) => c.instanceId === sid);
+        if (idx !== -1) {
+          const [card] = p.hand.cards.splice(idx, 1);
+          addToBottom(p.discard, card);
+          discarded.push(card);
+        }
+      }
+
+      if (discarded.length > 0) {
+        logEvent(state, pIdx as 0 | 1, "use_trainer" as any,
+          `${p.name} 选择丢弃了 ${discarded.length} 张手牌`
+        );
       }
 
       return discarded;

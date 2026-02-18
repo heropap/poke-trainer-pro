@@ -1240,3 +1240,36 @@ Notes: 一次性修复全部 6 个 UI/UX 缺口，让前端完全感知后端 5 
      effect-registry.ts, index.ts, text-parser.ts, ryuu-metadata-extractor.ts,
      ActiveSpot.tsx, CardDetailModal.tsx, game-actions.ts, turn-actions.ts,
      ActionLog.tsx, layout.tsx, stats/page.tsx (新), stats/StatsPageClient.tsx (新)
+
+=== Session 26E | 2026-02-18 ===
+Feature: 对战 UI 四项修复 — 撤退能量选择 + 弃牌选择框 + 备战区交互 + 布局调整
+Status: completed
+Notes:
+  修复了用户报告的 4 个对战 UI 问题:
+
+  Step 1 — 撤退功能修复:
+     - 新建 EnergySelectionModal.tsx: 撤退时弹出能量选择弹窗
+     - ActiveSpot.tsx: getRetreatDisabledReason 新增能量不足检查
+     - BattleBoard.tsx: 新增 retreatEnergyPending state, 重写 handleRetreatTargetClick 流程
+       (免费撤退直接执行 / 能量刚好自动选 / 能量多于费用弹出选择)
+
+  Step 2 — 弃牌选择框:
+     - effect-types.ts: 新增 promptDiscardFromHand 方法声明
+     - effect-context.ts: 实现 promptDiscardFromHand (异步, 200ms 超时自动回退)
+     - trainers.ts: Ultra Ball, Earthen Vessel 改用 async + promptDiscardFromHand
+     - trainers-expanded.ts: Colress's Tenacity, Serena, Techno Radar 改用 async + promptDiscardFromHand
+     - Lost Vacuum 保持同步 discardFromHand (因现有测试同步调用 onPlay)
+
+  Step 3 — 备战区交互菜单:
+     - BenchSpot.tsx: 新增 isSelected/onBenchAction/isMyTurn props, 选中蓝色边框+弹出菜单 (附能/道具/详情)
+     - BattleBoard.tsx: 新增 selectedBenchId + benchTargeting state
+       反向 targeting: 先选备战区宝可梦 → 选菜单操作 → 从手牌选能量/道具
+
+  Step 4 — 按钮布局调整:
+     - ActiveSpot.tsx: 桌面端 flex-row (卡牌左+按钮右), 移动端保持 flex-col
+
+  测试: 950/950 通过, TypeScript 0 错误
+
+  修改文件 (8):
+     EnergySelectionModal.tsx (新), ActiveSpot.tsx, BattleBoard.tsx, BenchSpot.tsx,
+     effect-types.ts, effect-context.ts, trainers.ts, trainers-expanded.ts

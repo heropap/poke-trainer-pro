@@ -462,9 +462,9 @@ const ultraBallEffect: NamedEffect = {
       // Need at least 2 other hand cards to discard (ultra ball already removed from hand by engine)
       return ctx.player.hand.cards.length >= 2;
     },
-    onPlay: (ctx) => {
-      // Discard 2 cards from hand
-      ctx.discardFromHand(2, "player");
+    onPlay: async (ctx) => {
+      // Prompt user to choose 2 cards to discard
+      await ctx.promptDiscardFromHand(2, "player");
 
       // Search for any Pokemon
       const found = ctx.searchDeck(
@@ -716,8 +716,8 @@ const earthenVesselEffect: NamedEffect = {
     canPlay: (ctx) => {
       return ctx.player.hand.cards.length >= 1;
     },
-    onPlay: (ctx) => {
-      ctx.discardFromHand(1, "player");
+    onPlay: async (ctx) => {
+      await ctx.promptDiscardFromHand(1, "player");
       const found = ctx.searchDeck(
         (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
         2

@@ -45,8 +45,15 @@ export interface EffectContext {
   /** Draw cards for player or opponent */
   drawCards(count: number, who?: "player" | "opponent"): GameCard[];
 
-  /** Discard cards from player's hand (random selection) */
+  /** Discard cards from player's hand (auto-select from end, no user choice) */
   discardFromHand(count: number, who?: "player" | "opponent"): GameCard[];
+
+  /**
+   * Prompt the user to choose which cards to discard from hand.
+   * Shows a selection modal. Use this instead of discardFromHand when
+   * the user should have a choice.
+   */
+  promptDiscardFromHand(count: number, who?: "player" | "opponent"): Promise<GameCard[]>;
 
   /** Discard entire hand */
   discardHand(who?: "player" | "opponent"): GameCard[];

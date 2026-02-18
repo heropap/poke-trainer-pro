@@ -36,6 +36,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { AnimationProvider } from "./AnimationProvider";
 import { EvolutionOverlay } from "./EvolutionOverlay";
 import { EnergyAttachOverlay } from "./EnergyAttachOverlay";
+import { EnergySelectionModal } from "./EnergySelectionModal";
 
 // ────────────────────────────────────────────────
 // Types
@@ -202,6 +203,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   const [selectedCardId, setSelectedCardId] = React.useState<string | null>(null);
   const [targeting, setTargeting] = React.useState<TargetingState | null>(null);
 
+  // Bench Pokemon selection state
+  const [selectedBenchId, setSelectedBenchId] = React.useState<string | null>(null);
+
+  // Bench-initiated targeting state (user clicked bench → "attach energy" → pick from hand)
+  const [benchTargeting, setBenchTargeting] = React.useState<{
+    benchInstanceId: string;
+    action: "attach_energy" | "equip_tool";
+  } | null>(null);
+
   // Manual Toolkit state (Layer 2)
   const [toolkitOpen, setToolkitOpen] = React.useState(false);
 
@@ -220,6 +230,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   // Retreat bench selection state
   const [retreatSelecting, setRetreatSelecting] = React.useState(false);
+
+  // Retreat energy selection state (after bench target is chosen)
+  const [retreatEnergyPending, setRetreatEnergyPending] = React.useState<{ benchInstanceId: string } | null>(null);
 
   // Attack animation state
   const [attackingPlayer, setAttackingPlayer] = React.useState<number | null>(null);
@@ -276,10 +289,25 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   const sensors = useSensors(pointerSensor, touchSensor);
 
   // Compute playable cards
-  const playableCardIds = React.useMemo(
+  const basePlayableCardIds = React.useMemo(
     () => computePlayableCardIds(gameState, myIndex, me),
     [gameState, myIndex, me]
   );
+
+  // Override playable cards when bench targeting is active
+  const playableCardIds = React.useMemo(() => {
+    if (!benchTargeting) return basePlayableCardIds;
+    const ids = new Set<string>();
+    for (const card of me.hand.cards) {
+      if (benchTargeting.action === "attach_energy" && card.card.supertype === "Energy" && !me.energyAttachedThisTurn) {
+        ids.add(card.instanceId);
+      }
+      if (benchTargeting.action === "equip_tool" && card.card.subtypes?.includes("Pokémon Tool")) {
+        ids.add(card.instanceId);
+      }
+    }
+    return ids;
+  }, [benchTargeting, basePlayableCardIds, me.hand.cards, me.energyAttachedThisTurn]);
 
   // ─── Toast helper ─────────────────────────────
   function showToast(text: string, type: "info" | "error" | "warning" = "info") {
@@ -304,6 +332,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     setSelectedCardId(null);
     setTargeting(null);
     setRetreatSelecting(false);
+    setRetreatEnergyPending(null);
+    setSelectedBenchId(null);
+    setBenchTargeting(null);
   }
 
   // ─── Keyboard: Escape cancels ─────────────────
@@ -403,28 +434,48 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     if (!me.active) return;
     const retreatCost = me.active.card.convertedRetreatCost ?? 0;
 
-    // Auto-select energy to discard for retreat cost
-    let energyToDiscard: string[] = [];
-    if (retreatCost > 0) {
-      // Prefer non-useful energy: pick from attached energy greedily
-      const available = [...me.active.attachedEnergy];
-      for (let i = 0; i < retreatCost && available.length > 0; i++) {
-        const picked = available.shift()!;
-        energyToDiscard.push(picked.instanceId);
-      }
-      if (energyToDiscard.length < retreatCost) {
-        showToast(`撤退需要 ${retreatCost} 点能量，当前能量不足`, "error");
-        setRetreatSelecting(false);
-        return;
-      }
+    if (retreatCost === 0) {
+      // Free retreat — dispatch directly
+      dispatchAction({
+        type: "retreat",
+        benchInstanceId,
+        energyToDiscard: [],
+      });
+      setRetreatSelecting(false);
+      return;
     }
 
+    // Retreat costs energy — show energy selection modal
+    if (me.active.attachedEnergy.length < retreatCost) {
+      showToast(`撤退需要 ${retreatCost} 点能量，当前能量不足`, "error");
+      setRetreatSelecting(false);
+      return;
+    }
+
+    if (me.active.attachedEnergy.length === retreatCost) {
+      // Exactly enough — auto-select all
+      dispatchAction({
+        type: "retreat",
+        benchInstanceId,
+        energyToDiscard: me.active.attachedEnergy.map((e) => e.instanceId),
+      });
+      setRetreatSelecting(false);
+      return;
+    }
+
+    // More energy than needed — let user choose
+    setRetreatEnergyPending({ benchInstanceId });
+    setRetreatSelecting(false);
+  }
+
+  function handleRetreatEnergyConfirm(selectedEnergyIds: string[]) {
+    if (!retreatEnergyPending) return;
     dispatchAction({
       type: "retreat",
-      benchInstanceId,
-      energyToDiscard,
+      benchInstanceId: retreatEnergyPending.benchInstanceId,
+      energyToDiscard: selectedEnergyIds,
     });
-    setRetreatSelecting(false);
+    setRetreatEnergyPending(null);
   }
 
   // ─── Card click handler (PTCG Live selection model) ─────
@@ -437,11 +488,109 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
       return;
     }
 
+    // If bench targeting (user clicked bench → "attach energy" → now picking from hand)
+    if (benchTargeting) {
+      const { benchInstanceId, action } = benchTargeting;
+      if (action === "attach_energy" && card.card.supertype === "Energy") {
+        dispatchAction({
+          type: "play_card",
+          cardId: card.instanceId,
+          targetZone: "attach",
+          targetId: benchInstanceId,
+        });
+        cancelSelection();
+        return;
+      }
+      if (action === "equip_tool" && card.card.subtypes?.includes("Pokémon Tool")) {
+        dispatchAction({
+          type: "play_card",
+          cardId: card.instanceId,
+          targetZone: "attach",
+          targetId: benchInstanceId,
+        });
+        cancelSelection();
+        return;
+      }
+      // Clicked a non-matching card — cancel
+      cancelSelection();
+      return;
+    }
+
     // Toggle selection
     if (selectedCardId === card.instanceId) {
       cancelSelection();
     } else {
       setSelectedCardId(card.instanceId);
+      setSelectedBenchId(null);
+    }
+  }
+
+  // ─── Bench click handler ─────────────────────
+  function handleBenchClick(benchCard: GameCard) {
+    if (!isMyTurn) return;
+    if (targeting || retreatSelecting || benchTargeting) return;
+
+    // Toggle bench selection
+    if (selectedBenchId === benchCard.instanceId) {
+      setSelectedBenchId(null);
+    } else {
+      setSelectedBenchId(benchCard.instanceId);
+      setSelectedCardId(null); // Clear hand selection
+    }
+  }
+
+  // ─── Bench action handler ────────────────────
+  function handleBenchAction(benchInstanceId: string, action: string) {
+    const benchCard = me.bench.cards.find((c) => c.instanceId === benchInstanceId);
+    if (!benchCard) {
+      setSelectedBenchId(null);
+      return;
+    }
+
+    switch (action) {
+      case "attach_energy": {
+        // Check if player can attach energy and has energy in hand
+        if (me.energyAttachedThisTurn) {
+          showToast("本回合已附加过能量", "warning");
+          setSelectedBenchId(null);
+          return;
+        }
+        const hasEnergy = me.hand.cards.some((c) => c.card.supertype === "Energy");
+        if (!hasEnergy) {
+          showToast("手牌中没有能量卡", "warning");
+          setSelectedBenchId(null);
+          return;
+        }
+        // Enter bench targeting mode — highlight energy cards in hand
+        setBenchTargeting({ benchInstanceId, action: "attach_energy" });
+        setSelectedBenchId(null);
+        break;
+      }
+      case "equip_tool": {
+        if (benchCard.attachedTools.length > 0) {
+          showToast("该宝可梦已装备道具", "warning");
+          setSelectedBenchId(null);
+          return;
+        }
+        const hasTools = me.hand.cards.some(
+          (c) => c.card.subtypes?.includes("Pokémon Tool")
+        );
+        if (!hasTools) {
+          showToast("手牌中没有道具卡", "warning");
+          setSelectedBenchId(null);
+          return;
+        }
+        setBenchTargeting({ benchInstanceId, action: "equip_tool" });
+        setSelectedBenchId(null);
+        break;
+      }
+      case "view_detail": {
+        setViewingCard(benchCard);
+        setSelectedBenchId(null);
+        break;
+      }
+      default:
+        setSelectedBenchId(null);
     }
   }
 
@@ -712,6 +861,25 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             </div>
           )}
 
+          {/* Bench targeting banner (pick from hand) */}
+          {benchTargeting && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-600/20 backdrop-blur-[1px]">
+              <div className={`flex items-center gap-2 rounded-full bg-yellow-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
+                <span>
+                  {benchTargeting.action === "attach_energy"
+                    ? "⚡ 从手牌选择能量卡"
+                    : "🔧 从手牌选择道具卡"}
+                </span>
+                <button
+                  onClick={cancelSelection}
+                  className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
           {isMobile ? (
             /* Mobile: compact center info */
             <div className="flex items-center gap-2">
@@ -863,6 +1031,10 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                       handleTargetClick(benchCard.instanceId);
                     }
                   }}
+                  onClick={() => benchCard && handleBenchClick(benchCard)}
+                  isSelected={!!benchCard && selectedBenchId === benchCard.instanceId}
+                  onBenchAction={(action) => benchCard && handleBenchAction(benchCard.instanceId, action)}
+                  isMyTurn={isMyTurn}
                   onCardContextMenu={handleCardContextMenu}
                   compact={isMobile}
                 />
@@ -956,6 +1128,17 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             prompt={gameState.prompt}
             gameState={gameState}
             onConfirm={(selectedIds) => onAction?.({ type: "select_cards_response", selectedIds })}
+          />
+        )}
+
+        {/* Energy Selection Modal (Retreat) */}
+        {retreatEnergyPending && me.active && (
+          <EnergySelectionModal
+            energyCards={me.active.attachedEnergy}
+            required={me.active.card.convertedRetreatCost ?? 0}
+            pokemonName={me.active.card.name}
+            onConfirm={handleRetreatEnergyConfirm}
+            onCancel={() => setRetreatEnergyPending(null)}
           />
         )}
 

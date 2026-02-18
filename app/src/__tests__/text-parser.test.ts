@@ -117,6 +117,7 @@ function makeMockCtx(overrides: Partial<EffectContext> = {}): EffectContext {
     getMarker: jest.fn(() => 0),
     hasMarker: jest.fn(() => false),
     promptUser: jest.fn(() => Promise.resolve([])),
+    promptDiscardFromHand: jest.fn(() => Promise.resolve([])),
     log: jest.fn(),
     ...overrides,
   };

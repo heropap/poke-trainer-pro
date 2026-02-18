@@ -75,6 +75,11 @@ function getRetreatDisabledReason(card: GameCard, hasBench: boolean, retreatedTh
   if (card.statusConditions.includes("paralyzed")) return "麻痹状态不能撤退";
   if (card.statusConditions.includes("asleep")) return "睡眠状态不能撤退";
   if (card.markers[PREVENT_RETREAT_NEXT_TURN] > 0) return "被效果锁定，不能撤退";
+  // Check energy sufficiency
+  const retreatCost = card.card.convertedRetreatCost ?? 0;
+  if (retreatCost > 0 && card.attachedEnergy.length < retreatCost) {
+    return `能量不足 (需要 ${retreatCost}，当前 ${card.attachedEnergy.length})`;
+  }
   return null;
 }
 
@@ -123,10 +128,10 @@ export function ActiveSpot({
   const retreatCost = card?.card.convertedRetreatCost ?? 0;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-2">
+    <div className={`flex ${compact ? "flex-col" : "flex-row"} items-center justify-center gap-2`}>
       <div
         ref={setNodeRef}
-        className={`relative flex ${containerClass} items-center justify-center rounded-lg border-2 border-dashed transition-all ${
+        className={`relative flex ${containerClass} shrink-0 items-center justify-center rounded-lg border-2 border-dashed transition-all ${
           // Targetable state: green glowing border
           isTargetable
             ? "border-green-400 bg-green-500/10 shadow-lg shadow-green-500/20 cursor-pointer animate-pulse"
@@ -225,9 +230,9 @@ export function ActiveSpot({
         </AnimatePresence>
       </div>
 
-      {/* Action Buttons (Attack + Retreat) */}
+      {/* Action Buttons (Attack + Retreat) — right side on desktop, below on mobile */}
       {!isOpponent && card && canAttackProp && (
-        <div className={`flex ${attackBtnClass} flex-col gap-1`}>
+        <div className={`flex ${compact ? attackBtnClass : "w-[160px]"} flex-col gap-1`}>
           {/* Attack Buttons */}
           {card.card.attacks?.map((attack, i) => {
             const disabledReason = getAttackDisabledReason(card, attack.name, isFirstTurn, hasAttackedThisTurn);

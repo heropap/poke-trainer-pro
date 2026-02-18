@@ -154,8 +154,8 @@ const colresssTenacity: NamedEffect = {
   cardName: "Colress's Tenacity",
   trainer: {
     canPlay: (ctx) => ctx.player.hand.cards.length >= 1,
-    onPlay: (ctx) => {
-      ctx.discardFromHand(1, "player");
+    onPlay: async (ctx) => {
+      await ctx.promptDiscardFromHand(1, "player");
       ctx.drawCards(5, "player");
     },
   },
@@ -205,14 +205,14 @@ const serena: NamedEffect = {
   cardId: "name:Serena",
   cardName: "Serena",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       // Simplified: if opponent has bench, switch; otherwise draw
       if (ctx.opponent.bench.cards.length > 0) {
         ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
       } else {
         // Discard up to 3, draw until 5
         const toDiscard = Math.min(3, ctx.player.hand.cards.length);
-        ctx.discardFromHand(toDiscard, "player");
+        await ctx.promptDiscardFromHand(toDiscard, "player");
         const toDraw = Math.max(0, 5 - ctx.player.hand.cards.length);
         if (toDraw > 0) ctx.drawCards(toDraw, "player");
       }
@@ -326,8 +326,8 @@ const technoRadar: NamedEffect = {
   cardName: "Techno Radar",
   trainer: {
     canPlay: (ctx) => ctx.player.hand.cards.length >= 2,
-    onPlay: (ctx) => {
-      ctx.discardFromHand(2, "player");
+    onPlay: async (ctx) => {
+      await ctx.promptDiscardFromHand(2, "player");
       const found = ctx.searchDeck(
         (c) => c.card.supertype === "Pokémon",
         2,
