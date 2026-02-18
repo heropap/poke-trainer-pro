@@ -17,6 +17,7 @@ import { MockEngine } from "@/lib/ryuu-adapter/mock-engine";
 import { ExternalState, ExternalPlayer, ExternalCard, CardList } from "@/lib/ryuu-adapter/external-types";
 import { createMockInitialState } from "@/lib/ryuu-adapter/mock-data";
 import { preloadDeckImages, addPreloadLinks } from "@/lib/image-preloader";
+import { setPromptStateChangeCallback, pendingPrompts } from "@/engine/effects/effect-context";
 
 // ─── Battle Mode Types ───
 
@@ -101,6 +102,48 @@ export default function BattlePageClient() {
       if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     };
   }, []);
+
+  // ─── Prompt State Change Subscription ───
+  // When an effect (e.g. promptDiscardFromHand) sets state.prompt mid-execution,
+  // this callback fires immediately, triggering a React re-render so the
+  // prompt modal appears while processAction is still awaiting the user's response.
+  useEffect(() => {
+    if (!gameState) return;
+
+    setPromptStateChangeCallback((updatedState: GameState) => {
+      const prompt = updatedState.prompt;
+      if (!prompt) return;
+
+      // If this is an AI player's prompt, auto-resolve immediately
+      // (AI doesn't need to see a modal — just pick cards automatically)
+      if (battleMode === "ai" && prompt.playerIndex === 1) {
+        const resolve = pendingPrompts.get(prompt.id);
+        if (resolve) {
+          // Auto-select: pick the last N cards from the relevant zone
+          const aiPlayer = updatedState.players[1];
+          const zone = prompt.type === "select_cards" ? prompt.zone : "hand";
+          const cards = zone === "hand" ? aiPlayer.hand.cards : [];
+          const needed = prompt.type === "select_cards" ? prompt.min : 0;
+          const autoIds: string[] = [];
+          for (let i = cards.length - 1; i >= 0 && autoIds.length < needed; i--) {
+            autoIds.push(cards[i].instanceId);
+          }
+          pendingPrompts.delete(prompt.id);
+          updatedState.prompt = null;
+          resolve(autoIds);
+          return;
+        }
+      }
+
+      // For human player: trigger re-render with the intermediate state
+      // that has prompt set, so BattleBoard shows the selection modal
+      setGameState({ ...updatedState });
+    });
+
+    return () => {
+      setPromptStateChangeCallback(null);
+    };
+  }, [gameState, battleMode]);
 
   // ─── Image Preloading at Battle Start ───
   const preloadCancelRef = useRef<(() => void) | null>(null);

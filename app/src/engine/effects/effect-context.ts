@@ -21,6 +21,22 @@ import { EffectContext } from "./effect-types";
 export const pendingPrompts = new Map<string, (ids: string[]) => void>();
 
 /**
+ * Callback to notify the UI when a prompt is set during effect execution.
+ * This allows the UI to render the prompt modal mid-execution by receiving
+ * intermediate state updates. Set this before calling processAction.
+ */
+export let onPromptStateChange: ((state: GameState) => void) | null = null;
+
+/**
+ * Set the callback that gets invoked when an effect sets a prompt on state.
+ * This allows the React UI to render the prompt immediately during async
+ * effect execution instead of waiting for the entire action to complete.
+ */
+export function setPromptStateChangeCallback(cb: ((state: GameState) => void) | null) {
+  onPromptStateChange = cb;
+}
+
+/**
  * Create an EffectContext for a card effect execution.
  *
  * @param state - The current game state (will be mutated)
@@ -150,7 +166,12 @@ export function createEffectContext(
         return autoDiscard();
       }
 
-      // Set up prompt and check if anyone will resolve it
+      // If no UI is listening (test mode or non-interactive), auto-discard
+      if (!onPromptStateChange) {
+        return autoDiscard();
+      }
+
+      // Set up prompt for interactive user selection
       const promptId = `discard-prompt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       state.prompt = {
         id: promptId,
@@ -162,25 +183,33 @@ export function createEffectContext(
         message: `选择 ${actual} 张手牌丢弃`,
       };
 
-      // Race: wait for user response or auto-resolve after a short delay
-      // In test/AI mode, no UI will respond so we use a timeout fallback
-      const selectedIds = await new Promise<string[]>((resolve) => {
-        pendingPrompts.set(promptId, resolve);
-
-        // Safety fallback: if no UI responds within 200ms, auto-select
-        setTimeout(() => {
-          if (pendingPrompts.has(promptId)) {
-            pendingPrompts.delete(promptId);
-            // Auto-pick from end of hand
-            const autoIds: string[] = [];
-            for (let i = p.hand.cards.length - 1; i >= 0 && autoIds.length < actual; i--) {
-              autoIds.push(p.hand.cards[i].instanceId);
-            }
-            state.prompt = null;
-            resolve(autoIds);
-          }
-        }, 200);
+      // Create a deferred promise so we can register the resolver BEFORE
+      // notifying the UI (the callback may resolve synchronously in tests).
+      let resolvePrompt!: (ids: string[]) => void;
+      const selectedIdsPromise = new Promise<string[]>((resolve) => {
+        resolvePrompt = resolve;
       });
+      pendingPrompts.set(promptId, resolvePrompt);
+
+      // Safety fallback: 30 second timeout for unresponsive UI
+      setTimeout(() => {
+        if (pendingPrompts.has(promptId)) {
+          pendingPrompts.delete(promptId);
+          const autoIds: string[] = [];
+          for (let i = p.hand.cards.length - 1; i >= 0 && autoIds.length < actual; i--) {
+            autoIds.push(p.hand.cards[i].instanceId);
+          }
+          state.prompt = null;
+          resolvePrompt(autoIds);
+        }
+      }, 30000);
+
+      // Notify UI of prompt so it can render the selection modal immediately.
+      // Without this, the UI wouldn't see the prompt until processAction completes.
+      onPromptStateChange({ ...state });
+
+      // Wait for user response via select_cards_response action.
+      const selectedIds = await selectedIdsPromise;
 
       // Clear prompt
       state.prompt = null;
@@ -673,7 +702,7 @@ export function createEffectContext(
 
     promptUser(options): Promise<string[]> {
       const promptId = `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      
+
       state.prompt = {
         id: promptId,
         type: "select_cards",
@@ -685,7 +714,12 @@ export function createEffectContext(
         filter: options.filter,
         targets: options.targets
       };
-      
+
+      // Notify UI of prompt so it can render the selection modal immediately.
+      if (onPromptStateChange) {
+        onPromptStateChange({ ...state });
+      }
+
       return new Promise<string[]>((resolve) => {
         pendingPrompts.set(promptId, resolve);
       });
