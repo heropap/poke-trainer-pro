@@ -21,6 +21,9 @@ const config: Config = {
     "<rootDir>/src/lib/ptcg-engine/",
     "<rootDir>/src/lib/ptcg-sets/",
   ],
+  modulePathIgnorePatterns: [
+    "<rootDir>/.next/",
+  ],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
 };
 

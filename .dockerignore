@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+app/node_modules/
+
+# Build output
+app/.next/
+app/out/
+
+# Version control
+.git/
+.gitignore
+
+# Development files
+*.md
+!app/README.md
+CLAUDE.md
+claude-progress.txt
+feature_list.json
+plan.md
+spec.txt
+init.sh
+
+# External repos (not needed in image)
+ryuu-play/
+tcgone-engine-contrib/
+templates/
+
+# Claude / IDE
+.claude/
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+
+# Env files (use runtime env vars instead)
+.env
+.env.*
+
+# Test files (not needed in production)
+app/src/__tests__/
+app/jest.config.ts
+app/jest.setup.ts
+app/coverage/
+
+# TypeScript build info
+*.tsbuildinfo

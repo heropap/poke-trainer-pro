@@ -1273,3 +1273,43 @@ Notes:
   修改文件 (8):
      EnergySelectionModal.tsx (新), ActiveSpot.tsx, BattleBoard.tsx, BenchSpot.tsx,
      effect-types.ts, effect-context.ts, trainers.ts, trainers-expanded.ts
+
+=== Session 27 | 2026-02-18 ===
+Feature: Docker 容器化部署 — Dockerfile + 健康检查 + 环境变量
+Status: completed
+Notes:
+  实现了 Docker 容器化部署功能 (feature priority 20):
+
+  Step 1 — 多阶段 Dockerfile:
+     - 3 阶段构建: deps (npm ci) → builder (next build) → runner (node:22-alpine)
+     - standalone 输出模式, 最小化镜像体积
+     - 非 root 用户运行 (nextjs:nodejs, uid/gid 1001)
+     - HEALTHCHECK 指令内置, 30s 间隔
+
+  Step 2 — docker-compose.yml:
+     - 单服务配置, 支持环境变量覆盖
+     - 资源限制 (512M 内存, 1 CPU)
+     - restart: unless-stopped
+     - 健康检查配置
+
+  Step 3 — env.example 环境变量:
+     - NODE_ENV, PORT, HOSTNAME
+     - NEXT_PUBLIC_SOCKET_URL (WebSocket 连接地址)
+
+  Step 4 — 健康检查 /api/health:
+     - Next.js API Route: GET /api/health
+     - 返回 status, timestamp, uptime, version, node
+     - Dockerfile HEALTHCHECK + docker-compose healthcheck 均使用此端点
+
+  Step 5 — 辅助文件:
+     - .dockerignore: 排除不必要文件 (tests, dev files, external repos)
+     - next.config.ts: 启用 output: "standalone"
+     - jest.config.ts: 添加 modulePathIgnorePatterns 排除 .next/ 避免 haste collision
+
+  测试: 953/953 通过 (950 原有 + 3 新增 health API 测试), TypeScript 0 错误
+
+  新建文件 (5):
+     Dockerfile, .dockerignore, docker-compose.yml, env.example,
+     src/app/api/health/route.ts, src/__tests__/health-api.test.ts
+  修改文件 (2):
+     next.config.ts (standalone output), jest.config.ts (modulePathIgnorePatterns)
