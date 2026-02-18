@@ -4,11 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.pokemontcg.io",
-        pathname: "/**",
-      },
+      new URL("https://images.pokemontcg.io/**"),
     ],
     // Optimized sizes for card thumbnails and full-size cards
     deviceSizes: [640, 750, 828, 1080, 1200],
