@@ -192,6 +192,6 @@
   {"category":"deployment","description":"Docker 容器化部署 — Dockerfile + 健康检查 + 环境变量","steps":["多阶段 Dockerfile","docker-compose.yml","env.example 环境变量","健康检查 /api/health","部署文档"],"passes":true,"priority":20},
   {"category":"functional","description":"WebSocket 断线重连 — 自动重连 + 状态恢复","steps":["服务端游戏状态持久化(30分钟TTL)","game:reconnect 事件实现","客户端 exponential backoff","掉线 UI 提示横幅","编写重连流程测试"],"passes":true,"priority":21},
   {"category":"functional","description":"回合计时器 — 90秒限时 + 超时自动结束","steps":["GameState 添加 turnTimer 字段","服务端倒计时 + 超时自动 end_turn","客户端进度环 UI","10秒警告闪红","编写计时器测试"],"passes":true,"priority":22},
-  {"category":"functional","description":"高级 Prompt 系统 — 硬币翻转/选择宝可梦/排序卡牌","steps":["扩展 GamePrompt 支持 6 种类型","PromptModal 组件(按类型渲染)","硬币翻转动画","拖拽排序卡牌","Prompt 队列(连续提示)"],"passes":false,"priority":23},
+  {"category":"functional","description":"高级 Prompt 系统 — 硬币翻转/选择宝可梦/排序卡牌","steps":["扩展 GamePrompt 支持 6 种类型","PromptModal 组件(按类型渲染)","硬币翻转动画","拖拽排序卡牌","Prompt 队列(连续提示)"],"passes":true,"priority":23},
   {"category":"polish","description":"卡牌图片优化 — next/image + 预加载 + 离线缓存","steps":["配置 Next.js images.remotePatterns","VisualCard 使用 next/image","对战开始预加载卡组图片","卡背图片替代占位符","IntersectionObserver 懒加载"],"passes":false,"priority":24}
 ]
