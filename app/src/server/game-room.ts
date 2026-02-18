@@ -74,6 +74,9 @@ function createHiddenZone(zone: Zone): Zone {
 /** Grace period before auto-concede on disconnect (ms) */
 export const DISCONNECT_GRACE_MS = 60_000; // 60 seconds
 
+/** Default turn time limit in seconds */
+export const TURN_TIME_LIMIT = 90;
+
 export class GameRoom {
   public id: string;
   public state: GameState;
@@ -87,6 +90,10 @@ export class GameRoom {
   public lastActivityAt: number;
   /** Tracks which players are currently disconnected */
   public disconnectedPlayers: Map<string, { playerIndex: 0 | 1; disconnectedAt: number; timer: ReturnType<typeof setTimeout> | null }> = new Map();
+  /** Turn timer interval ID */
+  public turnTimerInterval: ReturnType<typeof setInterval> | null = null;
+  /** Callback when turn times out */
+  public onTurnTimeout: ((room: GameRoom) => void) | null = null;
 
   constructor(
     id: string,
@@ -359,5 +366,56 @@ export class GameRoom {
   public isPlayerDisconnected(playerIndex: 0 | 1): boolean {
     const playerId = playerIndex === 0 ? this.player1Id : this.player2Id;
     return this.disconnectedPlayers.has(playerId);
+  }
+
+  /**
+   * Start (or restart) the turn timer. Called at the beginning of each turn.
+   */
+  public startTurnTimer(): void {
+    this.stopTurnTimer();
+
+    this.state.turnTimer = {
+      remaining: TURN_TIME_LIMIT,
+      total: TURN_TIME_LIMIT,
+      active: true,
+    };
+
+    this.turnTimerInterval = setInterval(() => {
+      if (!this.state.turnTimer || !this.state.turnTimer.active) return;
+
+      this.state.turnTimer.remaining -= 1;
+
+      if (this.state.turnTimer.remaining <= 0) {
+        this.state.turnTimer.remaining = 0;
+        this.state.turnTimer.active = false;
+        this.stopTurnTimer();
+
+        // Trigger timeout callback (server handles auto end_turn)
+        if (this.onTurnTimeout) {
+          this.onTurnTimeout(this);
+        }
+      }
+    }, 1000);
+  }
+
+  /**
+   * Stop the turn timer.
+   */
+  public stopTurnTimer(): void {
+    if (this.turnTimerInterval) {
+      clearInterval(this.turnTimerInterval);
+      this.turnTimerInterval = null;
+    }
+  }
+
+  /**
+   * Cleanup all timers (call when game ends or room is destroyed)
+   */
+  public cleanup(): void {
+    this.stopTurnTimer();
+    for (const dc of this.disconnectedPlayers.values()) {
+      if (dc.timer) clearTimeout(dc.timer);
+    }
+    this.disconnectedPlayers.clear();
   }
 }

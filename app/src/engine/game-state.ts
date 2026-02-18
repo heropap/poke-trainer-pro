@@ -153,6 +153,15 @@ export interface GameState {
   rules: {
     prizeCardsPerPlayer: number;
   };
+  /** Turn timer state (optional, for online games) */
+  turnTimer: {
+    /** Seconds remaining in the current turn */
+    remaining: number;
+    /** Total seconds allowed per turn */
+    total: number;
+    /** Whether the timer is active */
+    active: boolean;
+  } | null;
 }
 
 // ───────────────────────────────────────────────
@@ -298,6 +307,7 @@ export function createGameState(
     rules: {
       prizeCardsPerPlayer: 6,
     },
+    turnTimer: null,
   };
 }
 

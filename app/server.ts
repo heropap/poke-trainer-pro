@@ -3,7 +3,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { Server, Socket } from "socket.io";
-import { GameRoom, DISCONNECT_GRACE_MS } from "./src/server/game-room";
+import { GameRoom, DISCONNECT_GRACE_MS, TURN_TIME_LIMIT } from "./src/server/game-room";
 import { Card } from "./src/types/card";
 import fs from "fs";
 import path from "path";
@@ -84,6 +84,19 @@ function broadcastGameOver(io: Server, game: GameRoom) {
   }
 }
 
+function broadcastTimerSync(io: Server, game: GameRoom) {
+  if (!game.state.turnTimer) return;
+  const data = {
+    remaining: game.state.turnTimer.remaining,
+    total: game.state.turnTimer.total,
+    currentPlayer: game.state.currentPlayer,
+  };
+  const p1Socket = io.sockets.sockets.get(game.player1SocketId);
+  const p2Socket = io.sockets.sockets.get(game.player2SocketId);
+  if (p1Socket) p1Socket.emit("game:timer_sync", data);
+  if (p2Socket) p2Socket.emit("game:timer_sync", data);
+}
+
 // ─── Cleanup stale games (every 5 minutes) ───
 
 const GAME_TTL_MS = 30 * 60 * 1000; // 30 minutes
@@ -93,6 +106,7 @@ function cleanupStaleGames() {
   for (const [gameId, game] of games) {
     if (game.isGameOver() || now - game.lastActivityAt > GAME_TTL_MS) {
       console.log(`[Server] Cleaning up game ${gameId}`);
+      game.cleanup(); // Stop timers
       // Clean playerGameMap entries
       for (const [socketId, gId] of playerGameMap) {
         if (gId === gameId) {
@@ -191,6 +205,22 @@ app.prepare().then(() => {
             socketPlayerIdMap.set(socket.id, room.player2Id);
             console.log(`[Server] Created and initialized game room ${gameId}`);
 
+            // Set up turn timer with auto end_turn on timeout
+            room.onTurnTimeout = async (r) => {
+              if (r.isGameOver()) return;
+              console.log(`[Server] Turn timer expired in game ${r.id}, auto end_turn for player ${r.state.currentPlayer}`);
+              const currentSocketId = r.state.currentPlayer === 0 ? r.player1SocketId : r.player2SocketId;
+              const result = await r.handleAction(currentSocketId, { type: "end_turn" });
+              if (result.success) {
+                broadcastMaskedState(io, r);
+                // Start timer for next turn
+                r.startTurnTimer();
+                // Emit timer sync
+                broadcastTimerSync(io, r);
+              }
+            };
+            room.startTurnTimer();
+
             // Notify match found
             io.to(gameId).emit("matchmaking:found", {
               gameId,
@@ -270,9 +300,14 @@ app.prepare().then(() => {
           }
         }
 
-        // If the game ended, emit a game_over event
+        // If the game ended, emit a game_over event and stop timer
         if (result.gameEnded) {
+          game.stopTurnTimer();
           broadcastGameOver(io, game);
+        } else if (action.type === "end_turn" || action.type === "attack") {
+          // Turn changed — restart timer for new turn
+          game.startTurnTimer();
+          broadcastTimerSync(io, game);
         }
       } else {
         socket.emit("game:action_error", {

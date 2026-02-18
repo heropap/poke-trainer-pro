@@ -309,6 +309,7 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
     rules: {
       prizeCardsPerPlayer: 6, // ryuu-play uses standard 6 prizes
     },
+    turnTimer: null,
   };
 }
 

@@ -44,6 +44,23 @@ export default function BattlePageClient() {
   const [battleMode, setBattleMode] = useState<BattleMode>("ai");
   const [lobbyTab, setLobbyTab] = useState<"ai" | "online" | "mock">("ai");
 
+  // Turn timer state (online games)
+  const [turnTimeRemaining, setTurnTimeRemaining] = useState<number>(90);
+  const [turnTimeTotal, setTurnTimeTotal] = useState<number>(90);
+  const turnTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Client-side turn timer countdown (synced periodically by server)
+  useEffect(() => {
+    if (battleMode !== "online" || !gameState || gameState.phase === "game_over") {
+      if (turnTimerRef.current) { clearInterval(turnTimerRef.current); turnTimerRef.current = null; }
+      return;
+    }
+    turnTimerRef.current = setInterval(() => {
+      setTurnTimeRemaining(prev => Math.max(0, prev - 1));
+    }, 1000);
+    return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
+  }, [battleMode, gameState?.phase, gameState?.currentPlayer]);
+
   // Mock Engine Ref
   const mockEngineRef = useRef<MockEngine | null>(null);
 
@@ -190,6 +207,11 @@ export default function BattlePageClient() {
       // No extra handling needed — the user clicks a bench Pokemon to promote
     }
 
+    function onTimerSync(data: { remaining: number; total: number }) {
+      setTurnTimeRemaining(data.remaining);
+      setTurnTimeTotal(data.total);
+    }
+
     function onError(data: any) {
       console.error("[Socket] Error:", data.message);
       setOnlineError(data.message || "服务器错误");
@@ -203,6 +225,7 @@ export default function BattlePageClient() {
     socket.on("game:over", onGameOver);
     socket.on("game:action_error", onActionError);
     socket.on("game:promotion_required", onPromotionRequired);
+    socket.on("game:timer_sync", onTimerSync);
     socket.on("error", onError);
 
     return () => {
@@ -213,6 +236,7 @@ export default function BattlePageClient() {
       socket.off("game:over", onGameOver);
       socket.off("game:action_error", onActionError);
       socket.off("game:promotion_required", onPromotionRequired);
+      socket.off("game:timer_sync", onTimerSync);
       socket.off("error", onError);
     };
   }, [socket]);
@@ -648,6 +672,45 @@ export default function BattlePageClient() {
             在线对战
           </div>
         )}
+
+        {/* Turn Timer (Online) */}
+        {battleMode === "online" && gameState.phase !== "game_over" && !isReconnecting && (() => {
+          const pct = turnTimeTotal > 0 ? turnTimeRemaining / turnTimeTotal : 1;
+          const isWarning = turnTimeRemaining <= 10;
+          const isMyTurn = gameState.currentPlayer === (myPlayerId ?? 0);
+          const circumference = 2 * Math.PI * 18;
+          const strokeDashoffset = circumference * (1 - pct);
+          return (
+            <div className={`fixed left-4 top-4 z-[60] flex items-center gap-2 rounded-full px-3 py-1.5 shadow-lg backdrop-blur-md ${
+              isWarning ? "animate-pulse bg-red-600/90" : "bg-zinc-800/80"
+            }`}>
+              <svg width="40" height="40" className="-rotate-90">
+                <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+                <circle
+                  cx="20" cy="20" r="18" fill="none"
+                  stroke={isWarning ? "#fca5a5" : isMyTurn ? "#4ade80" : "#60a5fa"}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  style={{ transition: "stroke-dashoffset 1s linear" }}
+                />
+                <text
+                  x="20" y="20"
+                  textAnchor="middle" dominantBaseline="central"
+                  className="rotate-90"
+                  transform="rotate(90, 20, 20)"
+                  fill="white" fontSize="11" fontWeight="bold"
+                >
+                  {turnTimeRemaining}
+                </text>
+              </svg>
+              <span className={`text-xs font-medium ${isWarning ? "text-red-100" : "text-zinc-300"}`}>
+                {isMyTurn ? "你的回合" : "对手回合"}
+              </span>
+            </div>
+          );
+        })()}
 
         {/* AI Thinking Indicator */}
         {isAITurn && aiThinking && gameState.phase !== "game_over" && (
