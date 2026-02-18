@@ -6,6 +6,8 @@ import { Card } from "@/types/card";
 
 interface DeckImportProps {
   cardLookup: (id: string) => Card | undefined;
+  /** Optional: name-based fallback lookup for cards not found by exact set+number */
+  nameLookup?: (name: string) => Card[];
   onDeckImported?: (validation: DeckValidation, deckText: string) => void;
 }
 
@@ -40,6 +42,7 @@ Total Cards: 60`;
 
 export default function DeckImport({
   cardLookup,
+  nameLookup,
   onDeckImported,
 }: DeckImportProps) {
   const [deckText, setDeckText] = useState("");
@@ -48,10 +51,10 @@ export default function DeckImport({
 
   const handleImport = useCallback(() => {
     const parsed = parseDeckList(deckText);
-    const result = validateDeck(parsed, cardLookup);
+    const result = validateDeck(parsed, cardLookup, nameLookup);
     setValidation(result);
     onDeckImported?.(result, deckText);
-  }, [deckText, cardLookup, onDeckImported]);
+  }, [deckText, cardLookup, nameLookup, onDeckImported]);
 
   const handleLoadSample = useCallback(() => {
     setDeckText(SAMPLE_DECK);
@@ -237,6 +240,10 @@ export default function DeckImport({
                         <span className="text-yellow-500">未知系列</span>
                       ) : !detail.found ? (
                         <span className="text-yellow-500">未找到</span>
+                      ) : detail.fallback ? (
+                        <span className="text-blue-500" title={`名称匹配 → ${detail.cardId}`}>
+                          ↔ 名称匹配
+                        </span>
                       ) : detail.standardLegal ? (
                         <span className="text-green-500">Standard</span>
                       ) : (

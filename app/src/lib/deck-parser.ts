@@ -74,7 +74,17 @@ const SET_CODE_MAP: Record<string, string> = {
   SIT: "swsh12",
   CRZ: "swsh12pt5",
   PGO: "pgo",
+
+  // Promo sets (Chinese PTCG Live uses SWSH for Black Star Promos)
+  SWSH: "swshp", // SWSH Black Star Promos (not in our DB — triggers name fallback)
+  SWP: "swshp",  // Alternative SWSH promo code
 };
+
+/**
+ * Set codes that are known to be promo/reprint sets where cards may not exist
+ * by exact ID in our database. These trigger name-based fallback lookup.
+ */
+export const FALLBACK_SET_CODES = new Set(["SWSH", "SWP"]);
 
 /**
  * 将 PTCG Live 系列代码转换为 pokemon-tcg-data 的 set ID
@@ -170,14 +180,31 @@ export interface DeckCardDetail {
   cardId: string | null;
   found: boolean;
   standardLegal: boolean;
+  /** If the card was resolved via name-based fallback rather than exact set+number */
+  fallback?: boolean;
+}
+
+/**
+ * Card info returned by name-based lookup (for fallback resolution).
+ */
+interface NameLookupCard {
+  id: string;
+  name: string;
+  legalities: { standard?: string };
 }
 
 /**
  * 验证卡组合规性
+ *
+ * @param parsed - Parsed deck entries
+ * @param cardLookup - Lookup by card ID (e.g., "sv3-125" → Card)
+ * @param nameLookup - Optional: lookup by card name for fallback resolution
+ *   (returns all cards matching the name, used when exact set+number fails)
  */
 export function validateDeck(
   parsed: ParsedDeck,
-  cardLookup: (id: string) => { legalities: { standard?: string } } | undefined
+  cardLookup: (id: string) => { legalities: { standard?: string } } | undefined,
+  nameLookup?: (name: string) => NameLookupCard[]
 ): DeckValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -192,8 +219,30 @@ export function validateDeck(
 
   // Check each entry
   for (const entry of parsed.entries) {
-    const cardId = buildCardId(entry.setCode, entry.number);
-    const card = cardId ? cardLookup(cardId) : undefined;
+    let cardId = buildCardId(entry.setCode, entry.number);
+    let card = cardId ? cardLookup(cardId) : undefined;
+    let fallback = false;
+
+    // ─── Name-based fallback ───
+    // When exact set+number lookup fails (unknown set code or card not in DB),
+    // try to find the card by name. This handles:
+    // 1. SWSH Black Star Promos (Chinese Live uses "SWSH 250" but we don't have swshp set)
+    // 2. Reprint cards that exist in a different set in our database
+    // 3. Regional set code differences between Chinese/Japanese/English Live
+    if (!card && nameLookup) {
+      const candidates = nameLookup(entry.name);
+      if (candidates.length > 0) {
+        // Prefer Standard-legal cards, then pick the first match
+        const standardLegalCard = candidates.find(
+          (c) => c.legalities?.standard === "Legal"
+        );
+        const bestMatch = standardLegalCard || candidates[0];
+        cardId = bestMatch.id;
+        card = cardLookup(cardId);
+        fallback = true;
+      }
+    }
+
     const found = !!card;
     const standardLegal = card?.legalities?.standard === "Legal";
 
@@ -202,9 +251,10 @@ export function validateDeck(
       cardId,
       found,
       standardLegal,
+      fallback,
     });
 
-    if (!cardId) {
+    if (!cardId && !found) {
       warnings.push(
         `未知系列代码: ${entry.setCode}（${entry.name}）`
       );
@@ -212,7 +262,14 @@ export function validateDeck(
       warnings.push(
         `卡牌未找到: ${entry.name} (${cardId})`
       );
-    } else if (!standardLegal) {
+    } else if (fallback) {
+      // Inform user that a name-based fallback was used
+      warnings.push(
+        `名称匹配: ${entry.name} [${entry.setCode} ${entry.number}] → ${cardId}`
+      );
+    }
+
+    if (found && !standardLegal) {
       warnings.push(
         `非 Standard 合法: ${entry.name} (${cardId})`
       );

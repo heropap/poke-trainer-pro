@@ -14,13 +14,23 @@ export default function DeckPageClient() {
   const [lastSaved, setLastSaved] = useState<StoredDeck | null>(null);
   const { decks, importDeck, removeDeck } = useDeckContext();
 
+  const [nameIndex, setNameIndex] = useState<Map<string, Card[]>>(new Map());
+
   useEffect(() => {
     async function loadData() {
       const data = await import("@/data/cards/_index.json");
       const cards = data.default as Card[];
-      const index = new Map<string, Card>();
-      cards.forEach((c) => index.set(c.id, c));
-      setCardIndex(index);
+      const idMap = new Map<string, Card>();
+      const nMap = new Map<string, Card[]>();
+      cards.forEach((c) => {
+        idMap.set(c.id, c);
+        const key = c.name.toLowerCase();
+        const arr = nMap.get(key);
+        if (arr) arr.push(c);
+        else nMap.set(key, [c]);
+      });
+      setCardIndex(idMap);
+      setNameIndex(nMap);
       setLoading(false);
     }
     loadData();
@@ -29,6 +39,11 @@ export default function DeckPageClient() {
   const cardLookup = useCallback(
     (id: string) => cardIndex.get(id),
     [cardIndex]
+  );
+
+  const nameLookup = useCallback(
+    (name: string) => nameIndex.get(name.toLowerCase()) ?? [],
+    [nameIndex]
   );
 
   const handleDeckImported = useCallback(
@@ -49,7 +64,7 @@ export default function DeckPageClient() {
 
   return (
     <div className="space-y-8">
-      <DeckImport cardLookup={cardLookup} onDeckImported={handleDeckImported} />
+      <DeckImport cardLookup={cardLookup} nameLookup={nameLookup} onDeckImported={handleDeckImported} />
 
       {/* Save confirmation */}
       {lastSaved && (
