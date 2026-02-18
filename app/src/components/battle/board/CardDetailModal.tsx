@@ -1,7 +1,10 @@
 
 import React from "react";
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import { GameCard } from "@/engine/game-state";
+import { getEffect, hasEffect, getEffectSource } from "@/engine/effects/effect-registry";
+import type { EffectSourceLayer } from "@/engine/effects/effect-registry";
 
 /** Hostnames configured in next.config.ts remotePatterns */
 const OPTIMIZED_IMAGE_HOSTS = new Set([
@@ -10,12 +13,10 @@ const OPTIMIZED_IMAGE_HOSTS = new Set([
 ]);
 
 function isOptimizableUrl(src: string): boolean {
+  if (!src.startsWith("http")) return false;
   try { return OPTIMIZED_IMAGE_HOSTS.has(new URL(src).hostname); }
-  catch { return false; }
+  catch (_e) { return false; }
 }
-import { createPortal } from "react-dom";
-import { getEffect, hasEffect, getEffectSource } from "@/engine/effects/effect-registry";
-import type { EffectSourceLayer } from "@/engine/effects/effect-registry";
 
 /** Map source layer to badge label and color */
 function getSourceBadge(source: EffectSourceLayer | null): { label: string; className: string } {

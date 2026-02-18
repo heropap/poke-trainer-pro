@@ -107,16 +107,18 @@ export default function BattlePageClient() {
   // When an effect (e.g. promptDiscardFromHand) sets state.prompt mid-execution,
   // this callback fires immediately, triggering a React re-render so the
   // prompt modal appears while processAction is still awaiting the user's response.
-  useEffect(() => {
-    if (!gameState) return;
+  // Use a ref for battleMode to avoid re-registering the callback on every state change.
+  const battleModeRef = useRef(battleMode);
+  useEffect(() => { battleModeRef.current = battleMode; }, [battleMode]);
 
+  useEffect(() => {
     setPromptStateChangeCallback((updatedState: GameState) => {
       const prompt = updatedState.prompt;
       if (!prompt) return;
 
       // If this is an AI player's prompt, auto-resolve immediately
       // (AI doesn't need to see a modal — just pick cards automatically)
-      if (battleMode === "ai" && prompt.playerIndex === 1) {
+      if (battleModeRef.current === "ai" && prompt.playerIndex === 1) {
         const resolve = pendingPrompts.get(prompt.id);
         if (resolve) {
           // Auto-select: pick the last N cards from the relevant zone
@@ -143,7 +145,7 @@ export default function BattlePageClient() {
     return () => {
       setPromptStateChangeCallback(null);
     };
-  }, [gameState, battleMode]);
+  }, []);
 
   // ─── Image Preloading at Battle Start ───
   const preloadCancelRef = useRef<(() => void) | null>(null);

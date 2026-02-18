@@ -18,7 +18,7 @@ function isOptimizableUrl(src: string): boolean {
   if (!src.startsWith("http")) return false;
   try {
     return OPTIMIZED_IMAGE_HOSTS.has(new URL(src).hostname);
-  } catch {
+  } catch (_e) {
     return false;
   }
 }
