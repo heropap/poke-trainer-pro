@@ -71,6 +71,25 @@ export type {
   TrainerSchema,
 } from "./effect-schema";
 
+// Re-export pattern catalog
+export {
+  allPatterns,
+  attackPatterns,
+  trainerPatterns,
+  abilityPatterns,
+  getPatternsByCategory,
+  getPatternsBySubCategory,
+  getPatternById,
+  getSubCategoryLabels,
+  getPatternCounts,
+} from "./pattern-catalog";
+export type {
+  PatternEntry,
+  PatternCategory,
+  ParamDef,
+  ParamType,
+} from "./pattern-catalog";
+
 // Re-export ryuu metadata extractor
 export {
   extractAllRyuuMetadata,
