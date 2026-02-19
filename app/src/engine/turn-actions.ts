@@ -46,6 +46,25 @@ function fail(error: string): ActionResult {
   return { success: false, error };
 }
 
+function checkTrainerEffectCanPlay(state: GameState, playerIndex: 0 | 1, card: GameCard): ActionResult {
+  const cardEffect = getEffect(card.cardId, card.card.name);
+  if (cardEffect?.trainer?.canPlay) {
+    const ctx = createEffectContext(state, playerIndex, card);
+    if (!cardEffect.trainer.canPlay(ctx)) {
+      return fail("该卡当前无法使用");
+    }
+  }
+  return ok();
+}
+
+async function runTrainerEffect(state: GameState, playerIndex: 0 | 1, card: GameCard): Promise<void> {
+  const cardEffect = getEffect(card.cardId, card.card.name);
+  if (cardEffect?.trainer?.onPlay) {
+    const ctx = createEffectContext(state, playerIndex, card);
+    await cardEffect.trainer.onPlay(ctx);
+  }
+}
+
 // ───────────────────────────────────────────────
 // Helper: Get the current player
 // ───────────────────────────────────────────────
@@ -401,7 +420,7 @@ export function canPlaySupporter(
     return fail("所选卡牌不是支持者卡");
   }
 
-  return ok();
+  return checkTrainerEffectCanPlay(state, state.currentPlayer, card);
 }
 
 /**
@@ -432,11 +451,7 @@ export async function playSupporter(
   );
 
   // Execute trainer effect if registered
-  const cardEffect = getEffect(card.cardId, card.card.name);
-  if (cardEffect?.trainer?.onPlay) {
-    const ctx = createEffectContext(state, state.currentPlayer, card);
-    await cardEffect.trainer.onPlay(ctx);
-  }
+  await runTrainerEffect(state, state.currentPlayer, card);
 
   addToBottom(player.discard, card);
 
@@ -472,7 +487,7 @@ export function canPlayItem(
     return fail("所选卡牌不是物品卡");
   }
 
-  return ok();
+  return checkTrainerEffectCanPlay(state, state.currentPlayer, card);
 }
 
 /**
@@ -525,11 +540,7 @@ export async function playItem(
   );
 
   // Execute item effect if registered
-  const cardEffect = getEffect(card.cardId, card.card.name);
-  if (cardEffect?.trainer?.onPlay) {
-    const ctx = createEffectContext(state, state.currentPlayer, card);
-    await cardEffect.trainer.onPlay(ctx);
-  }
+  await runTrainerEffect(state, state.currentPlayer, card);
 
   addToBottom(player.discard, card);
 
@@ -675,7 +686,7 @@ export function canPlayStadium(
     return fail("不能打出与当前场地同名的场地卡");
   }
 
-  return ok();
+  return checkTrainerEffectCanPlay(state, state.currentPlayer, card);
 }
 
 /**
@@ -723,11 +734,7 @@ export async function playStadium(
   );
 
   // Execute stadium effect if registered
-  const cardEffect = getEffect(card.cardId, card.card.name);
-  if (cardEffect?.trainer?.onPlay) {
-    const ctx = createEffectContext(state, state.currentPlayer, card);
-    await cardEffect.trainer.onPlay(ctx);
-  }
+  await runTrainerEffect(state, state.currentPlayer, card);
 
   return ok();
 }

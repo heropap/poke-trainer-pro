@@ -1,0 +1,58 @@
+[
+  {
+    "cardName": "Tangela",
+    "attacks": [
+      {
+        "name": "Poison Powder",
+        "effects": [
+          { "type": "status_apply", "params": { "status": "poisoned" } }
+        ]
+      }
+    ]
+  },
+  {
+    "cardName": "Shroodle",
+    "attacks": [
+      {
+        "name": "Poison Jab",
+        "effects": [
+          { "type": "status_apply", "params": { "status": "poisoned" } }
+        ]
+      }
+    ]
+  },
+  {
+    "cardName": "Tyrogue",
+    "attacks": [
+      {
+        "name": "Pow-Pow Punching",
+        "effects": [
+          { "type": "multi_coin", "params": { "coinCount": 3, "damagePerHeads": 30 } }
+        ]
+      }
+    ]
+  },
+  {
+    "cardName": "Corphish",
+    "attacks": [
+      {
+        "name": "Take Down",
+        "effects": [
+          { "type": "self_damage", "params": { "selfDamage": 10 } }
+        ]
+      }
+    ]
+  },
+  {
+    "cardName": "Luxio",
+    "attacks": [
+      {
+        "name": "Thunder Fang",
+        "effects": [
+          { "type": "coin_flip_bonus", "params": { "bonusDamage": 30 } },
+          { "type": "status_apply", "params": { "status": "paralyzed" } }
+        ]
+      }
+    ]
+  }
+]

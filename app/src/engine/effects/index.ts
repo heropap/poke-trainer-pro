@@ -3,12 +3,13 @@
  *
  * Exports all effect system components and auto-registers initial card effects.
  *
- * 5-Layer Priority Chain:
- *   Layer 1: ID-based hand-written effects (highest priority)
- *   Layer 2: Name-based hand-written effects
- *   Layer 3: Text-parser from ryuu-play metadata (ryuu card text is more standardized)
- *   Layer 4: Text-parser from UI Card data (_index.json)
- *   Layer 5: No effect (silent skip)
+ * 6-Layer Priority Chain:
+ *   Layer 1:   ID-based hand-written effects (highest priority)
+ *   Layer 1.5: JSON schema-compiled effects (visual editor / custom-effects.json)
+ *   Layer 2:   Name-based hand-written effects
+ *   Layer 3:   Text-parser from ryuu-play metadata (ryuu card text is more standardized)
+ *   Layer 4:   Text-parser from UI Card data (_index.json)
+ *   Layer 5:   No effect (silent skip)
  *
  * Usage:
  *   import { initializeEffects } from "@/engine/effects";
@@ -56,6 +57,20 @@ export { processBetweenTurns } from "./status-effects";
 // Re-export text parser
 export { parseCardEffects, autoRegisterTextEffects } from "./text-parser";
 
+// Re-export schema system
+export { compileSchema } from "./schema-compiler";
+export { loadSchemaEffects, loadCustomEffects, validateSchema } from "./schema-loader";
+export type { SchemaLoadResult } from "./schema-loader";
+export type {
+  EffectSchemaDefinition,
+  AttackPatternType,
+  TrainerPatternType,
+  AbilityPatternType,
+  AttackSchema,
+  AbilitySchema,
+  TrainerSchema,
+} from "./effect-schema";
+
 // Re-export ryuu metadata extractor
 export {
   extractAllRyuuMetadata,
@@ -81,6 +96,7 @@ import { metaAttackEffects } from "./cards/meta-attacks";
 import { expandedTrainerEffects } from "./cards/trainers-expanded";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
+import { loadCustomEffects } from "./schema-loader";
 import { Card } from "@/types/card";
 
 /** All built-in card effects (ID-based) */
@@ -90,12 +106,13 @@ const allEffects = [...trainerEffects, ...attackEffects];
  * Initialize the effect system by registering all built-in card effects.
  * Call this once at app startup.
  *
- * Follows the 5-layer priority chain:
- *   Layer 1: registerAll(allEffects) — ID-based hand-written
- *   Layer 2: registerAllByName(trainerNameEffects, ...) — Name-based hand-written
- *   Layer 3: autoRegisterFromRyuuMeta() — Text-parser on ryuu-play metadata
- *   Layer 4: autoRegisterTextEffects(cards) — Text-parser on UI card data
- *   Layer 5: Implicit — cards with no registered effect are silently skipped
+ * Follows the 6-layer priority chain:
+ *   Layer 1:   registerAll(allEffects) — ID-based hand-written
+ *   Layer 1.5: loadCustomEffects() — JSON schema-compiled (visual editor)
+ *   Layer 2:   registerAllByName(trainerNameEffects, ...) — Name-based hand-written
+ *   Layer 3:   autoRegisterFromRyuuMeta() — Text-parser on ryuu-play metadata
+ *   Layer 4:   autoRegisterTextEffects(cards) — Text-parser on UI card data
+ *   Layer 5:   Implicit — cards with no registered effect are silently skipped
  *
  * @param cards Optional array of Card data from _index.json — used for Layer 4.
  * @param options.skipRyuuMeta If true, skip Layer 3 (useful for testing)
@@ -106,6 +123,9 @@ export function initializeEffects(
 ): void {
   // Layer 1: ID-based hand-written effects
   registerAll(allEffects, "L1");
+
+  // Layer 1.5: JSON schema-compiled effects (visual editor / custom-effects.json)
+  loadCustomEffects();
 
   // Layer 2: Name-based hand-written effects
   registerAllByName(trainerNameEffects, "L2");

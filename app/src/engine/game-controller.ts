@@ -46,7 +46,7 @@ import { createEffectContext, pendingPrompts } from "./effects/effect-context";
 import { ABILITY_BLOCKED } from "./effects/markers";
 import { resolveAttack } from "./systems/attack-system"; // New pipeline
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
-import { basePipeline } from "./rules/base-rules";
+import { basePipeline, validateActionWithMiddleware } from "./rules/base-rules";
 import { ValidationResult } from "./interfaces/validation";
 
 // ───────────────────────────────────────────────
@@ -102,6 +102,11 @@ function validateAction(state: GameState, action: GameAction, playerIndex: 0 | 1
   }
 
   // 2. Base Pipeline
+  const middlewareResult = validateActionWithMiddleware(state, action, playerIndex);
+  if (middlewareResult && !middlewareResult.valid) {
+    return middlewareResult;
+  }
+
   return basePipeline(state, action, playerIndex);
 }
 
