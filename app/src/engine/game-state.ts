@@ -216,7 +216,7 @@ interface PromptBase {
 /** Select one or more cards from a zone */
 export interface SelectCardsPrompt extends PromptBase {
   type: "select_cards";
-  zone: "deck" | "discard" | "hand" | "bench" | "opponent_bench";
+  zone: "deck" | "discard" | "hand" | "bench" | "opponent_bench" | "own_field";
   min: number;
   max: number;
   filter?: {

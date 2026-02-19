@@ -956,9 +956,54 @@ export function createEffectContext(
       logEvent(state, playerIndex, "use_ability" as any, message);
     },
 
+    // ─── Direct Evolution (bypasses middleware) ───
+
+    evolvePokemonDirect(targetInstanceId: string, evolutionCard: GameCard): boolean {
+      const p = state.players[playerIndex];
+      // Find target on field (active or bench)
+      let target: GameCard | null = null;
+      if (p.active?.instanceId === targetInstanceId) {
+        target = p.active;
+      } else {
+        target = p.bench.cards.find(c => c.instanceId === targetInstanceId) ?? null;
+      }
+      if (!target) return false;
+
+      const previousName = target.card.name;
+
+      // Push current card onto evolution stack
+      target.evolutionStack = [
+        ...(target.evolutionStack || []),
+        { cardId: target.cardId, card: target.card },
+      ];
+
+      // Update card data to evolution
+      target.card = evolutionCard.card;
+      target.cardId = evolutionCard.cardId;
+      // Evolution removes all status conditions and markers
+      target.statusConditions = [];
+      target.markers = {};
+      // Mark flags
+      target.playedThisTurn = true;
+      target.evolvedThisTurn = true;
+
+      logEvent(state, playerIndex, "evolve_pokemon" as any,
+        `${previousName} 进化为 ${target.card.name}`,
+        { from: previousName, to: target.card.name }
+      );
+
+      return true;
+    },
+
     // ─── User Prompt ───
 
     promptUser(options): Promise<string[]> {
+      // Auto-resolve when no UI callback or prompt already active (prevent nesting)
+      if (!onPromptStateChange || state.prompt) {
+        const autoIds = (options.targets || []).slice(0, options.min);
+        return Promise.resolve(autoIds);
+      }
+
       const promptId = `prompt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
       state.prompt = {
@@ -973,14 +1018,19 @@ export function createEffectContext(
         targets: options.targets
       };
 
-      // Notify UI of prompt so it can render the selection modal immediately.
-      if (onPromptStateChange) {
-        onPromptStateChange({ ...state });
-      }
-
-      return new Promise<string[]>((resolve) => {
-        pendingPrompts.set(promptId, resolve);
+      // Set up the pending resolver BEFORE notifying the UI,
+      // so synchronous callbacks can resolve immediately.
+      const resultPromise = new Promise<string[]>((resolve) => {
+        pendingPrompts.set(promptId, (ids) => {
+          state.prompt = null;
+          resolve(ids);
+        });
       });
+
+      // Notify UI of prompt so it can render the selection modal immediately.
+      onPromptStateChange({ ...state });
+
+      return resultPromise;
     },
   };
 

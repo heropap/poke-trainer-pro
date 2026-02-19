@@ -134,6 +134,7 @@ export default function BattlePageClient() {
             case "discard": cards = aiPlayer.discard.cards; break;
             case "bench": cards = aiPlayer.bench.cards; break;
             case "opponent_bench": cards = oppPlayer.bench.cards; break;
+            case "own_field": cards = [...(aiPlayer.active ? [aiPlayer.active] : []), ...aiPlayer.bench.cards]; break;
           }
 
           // Filter by prompt.targets if provided (only pick from allowed targets)

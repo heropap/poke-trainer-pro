@@ -24,11 +24,12 @@ export function CardSelectionModal({
   const player = gameState.players[prompt.playerIndex];
   
   // Resolve source cards based on zone
-  const sourceZone = 
+  const sourceZone =
     prompt.zone === "deck" ? player.deck :
     prompt.zone === "discard" ? player.discard :
     prompt.zone === "hand" ? player.hand :
     prompt.zone === "opponent_bench" ? gameState.players[prompt.playerIndex === 0 ? 1 : 0].bench :
+    prompt.zone === "own_field" ? { cards: [...(player.active ? [player.active] : []), ...player.bench.cards] } :
     player.bench;
 
   // Filter cards based on prompt criteria

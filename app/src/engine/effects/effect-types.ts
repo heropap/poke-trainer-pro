@@ -215,6 +215,13 @@ export interface EffectContext {
   log(message: string): void;
 
   /**
+   * Directly evolve a Pokemon on the field, bypassing middleware validation.
+   * Used by Rare Candy and similar effects that skip evolution stages.
+   * Caller is responsible for chain validation.
+   */
+  evolvePokemonDirect?(targetInstanceId: string, evolutionCard: GameCard): boolean;
+
+  /**
    * Prompt the user to select cards or targets.
    * Returns a promise that resolves with the selected card IDs.
    */
@@ -222,7 +229,7 @@ export interface EffectContext {
     message: string;
     min: number;
     max: number;
-    zone?: "deck" | "discard" | "hand" | "bench" | "opponent_bench";
+    zone?: "deck" | "discard" | "hand" | "bench" | "opponent_bench" | "own_field";
     filter?: {
       supertype?: string;
       subtypes?: string[];

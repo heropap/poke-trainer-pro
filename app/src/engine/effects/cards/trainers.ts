@@ -8,6 +8,7 @@
  */
 
 import { CardEffectDef, EffectContext } from "../effect-types";
+import { GameState, GameCard } from "../../game-state";
 
 // ───────────────────────────────────────────────
 // Supporters
@@ -860,17 +861,150 @@ const energyRetrievalEffect: NamedEffect = {
   },
 };
 
-/** Rare Candy — Stub: needs engine evolution skip support */
+/**
+ * Collect all Stage 1 card info from the entire game state.
+ * Used to validate Rare Candy's evolution chain: Basic → (Stage 1 exists) → Stage 2
+ */
+function collectAllStage1Cards(state: GameState): Array<{ name: string; evolvesFrom: string }> {
+  const result: Array<{ name: string; evolvesFrom: string }> = [];
+  const seen = new Set<string>();
+
+  const addCard = (card: { name: string; subtypes?: string[]; evolvesFrom?: string }) => {
+    if (card.subtypes?.includes("Stage 1") && card.evolvesFrom && !seen.has(card.name)) {
+      seen.add(card.name);
+      result.push({ name: card.name, evolvesFrom: card.evolvesFrom });
+    }
+  };
+
+  for (const p of state.players) {
+    // Cards in hand, deck, discard
+    for (const zone of [p.hand, p.deck, p.discard]) {
+      for (const c of zone.cards) addCard(c.card);
+    }
+    // Cards on field (active + bench) including evolution stacks
+    const fieldCards = [p.active, ...p.bench.cards].filter(Boolean) as GameCard[];
+    for (const fc of fieldCards) {
+      addCard(fc.card);
+      for (const evo of (fc.evolutionStack || [])) {
+        addCard(evo.card);
+      }
+    }
+    // Cards in prizes
+    for (const c of p.prizes.cards) addCard(c.card);
+  }
+  return result;
+}
+
+/**
+ * Check if a Stage 2 card can evolve from a Basic via a Stage 1 intermediate.
+ * Returns true if any Stage 1 exists where: S1.name === stage2.evolvesFrom AND S1.evolvesFrom === basic.name
+ */
+function canRareCandyEvolve(
+  basicName: string,
+  stage2Card: { evolvesFrom?: string },
+  stage1Cards: Array<{ name: string; evolvesFrom: string }>
+): boolean {
+  if (!stage2Card.evolvesFrom) return false;
+  return stage1Cards.some(
+    s1 => s1.name === stage2Card.evolvesFrom && s1.evolvesFrom === basicName
+  );
+}
+
+/** Rare Candy — Skip Stage 1, evolve Basic directly to Stage 2 */
 const rareCandyEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Rare Candy",
   trainer: {
-    canPlay: (_ctx) => {
-      // Stub — requires engine-level evolution skip support
-      return false;
+    canPlay: (ctx) => {
+      // Cannot use on first turn
+      if (ctx.state.isFirstTurn) return false;
+
+      // Need at least 1 Stage 2 Pokemon in hand
+      const stage2InHand = ctx.player.hand.cards.filter(
+        c => c.card.supertype === "Pokémon" && c.card.subtypes?.includes("Stage 2")
+      );
+      if (stage2InHand.length === 0) return false;
+
+      // Collect all Stage 1 cards from entire game for chain validation
+      const stage1Cards = collectAllStage1Cards(ctx.state);
+
+      // Need at least 1 valid Basic target on field (not played this turn)
+      const fieldPokemon = [ctx.player.active, ...ctx.player.bench.cards].filter(Boolean) as GameCard[];
+      const hasValidTarget = fieldPokemon.some(pokemon => {
+        if (pokemon.playedThisTurn) return false;
+        if (!pokemon.card.subtypes?.includes("Basic")) return false;
+        // Check if any Stage 2 in hand can evolve from this Basic
+        return stage2InHand.some(s2 => canRareCandyEvolve(pokemon.card.name, s2.card, stage1Cards));
+      });
+
+      return hasValidTarget;
     },
-    onPlay: (_ctx) => {
-      // Stub — would allow Stage 2 evolution from Basic skipping Stage 1
+    onPlay: async (ctx) => {
+      const stage1Cards = collectAllStage1Cards(ctx.state);
+
+      // Collect valid Basic targets
+      const fieldPokemon = [ctx.player.active, ...ctx.player.bench.cards].filter(Boolean) as GameCard[];
+      const stage2InHand = ctx.player.hand.cards.filter(
+        c => c.card.supertype === "Pokémon" && c.card.subtypes?.includes("Stage 2")
+      );
+      const validBasics = fieldPokemon.filter(pokemon => {
+        if (pokemon.playedThisTurn) return false;
+        if (!pokemon.card.subtypes?.includes("Basic")) return false;
+        return stage2InHand.some(s2 => canRareCandyEvolve(pokemon.card.name, s2.card, stage1Cards));
+      });
+
+      if (validBasics.length === 0) return;
+
+      // Step A: Select target Basic Pokemon
+      const basicSelection = await ctx.promptUser({
+        message: "Rare Candy: 选择要进化的基础宝可梦",
+        min: 1,
+        max: 1,
+        zone: "own_field",
+        targets: validBasics.map(c => c.instanceId),
+      });
+
+      if (!basicSelection || basicSelection.length === 0) return;
+
+      const targetBasic = fieldPokemon.find(c => c.instanceId === basicSelection[0]);
+      if (!targetBasic) return;
+
+      // Step B: Filter Stage 2 cards that can evolve from the selected Basic
+      const matchingStage2 = stage2InHand.filter(
+        s2 => canRareCandyEvolve(targetBasic.card.name, s2.card, stage1Cards)
+      );
+
+      if (matchingStage2.length === 0) return;
+
+      // If only 1 matching Stage 2, auto-select
+      let selectedStage2: GameCard;
+      if (matchingStage2.length === 1) {
+        selectedStage2 = matchingStage2[0];
+      } else {
+        const stage2Selection = await ctx.promptUser({
+          message: "Rare Candy: 选择要进化成的二阶宝可梦",
+          min: 1,
+          max: 1,
+          zone: "hand",
+          targets: matchingStage2.map(c => c.instanceId),
+        });
+
+        if (!stage2Selection || stage2Selection.length === 0) return;
+        const found = matchingStage2.find(c => c.instanceId === stage2Selection[0]);
+        if (!found) return;
+        selectedStage2 = found;
+      }
+
+      // Remove Stage 2 card from hand
+      const handIdx = ctx.player.hand.cards.findIndex(c => c.instanceId === selectedStage2.instanceId);
+      if (handIdx === -1) return;
+      ctx.player.hand.cards.splice(handIdx, 1);
+
+      // Perform direct evolution (bypasses middleware)
+      const previousName = targetBasic.card.name;
+      ctx.evolvePokemonDirect!(targetBasic.instanceId, selectedStage2);
+
+      ctx.log(`Rare Candy: 将 ${previousName} 直接进化为 ${selectedStage2.card.name}`);
     },
   },
 };
