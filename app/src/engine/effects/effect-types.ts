@@ -60,13 +60,48 @@ export interface EffectContext {
 
   /**
    * Search deck for cards matching a filter, return up to count.
-   * Allows the caller to decide what to do with them.
+   * Auto-selects first N matches (no user choice). Use promptSearchDeck for interactive selection.
    */
   searchDeck(
     filter: (card: GameCard) => boolean,
     count: number,
     who?: "player" | "opponent"
   ): GameCard[];
+
+  /**
+   * Interactive deck search: shows matching cards to the user and lets them choose.
+   * Falls back to auto-select (like searchDeck) when no UI is available or matches ≤ count.
+   * Optional in interface for test mock compatibility — always present on real EffectContext.
+   */
+  promptSearchDeck?(
+    filter: (card: GameCard) => boolean,
+    count: number,
+    message: string,
+    who?: "player" | "opponent"
+  ): Promise<GameCard[]>;
+
+  /**
+   * Interactive discard pile search: shows matching cards and lets the user choose.
+   * Falls back to auto-select (like searchDiscard) when no UI is available.
+   */
+  promptSearchDiscard?(
+    filter: (card: GameCard) => boolean,
+    count: number,
+    message: string,
+    who?: "player" | "opponent"
+  ): Promise<GameCard[]>;
+
+  /**
+   * Interactive bench selection for switching own active Pokemon.
+   * Falls back to auto-select bench[0] when only 1 bench Pokemon or no UI.
+   */
+  promptSwitchOwnActive?(message?: string): Promise<boolean>;
+
+  /**
+   * Interactive bench selection for switching opponent's active Pokemon.
+   * Falls back to auto-select bench[0] when only 1 bench Pokemon or no UI.
+   */
+  promptSwitchOpponentActive?(message?: string): Promise<boolean>;
 
   /** Put a card from search results into hand */
   addToHand(card: GameCard, who?: "player" | "opponent"): void;
@@ -249,7 +284,7 @@ export interface AbilityEffect {
   /** Check if the ability can be activated (for activated abilities) */
   canActivate?: (ctx: EffectContext) => boolean;
   /** Execute the ability (for activated abilities) */
-  onActivate?: (ctx: EffectContext) => void;
+  onActivate?: (ctx: EffectContext) => void | Promise<void>;
   /** Modify outgoing or incoming damage (passive) */
   modifyDamage?: (
     ctx: EffectContext,

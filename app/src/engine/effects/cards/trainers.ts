@@ -105,12 +105,13 @@ function createNestBall(cardId: string): CardEffectDef {
         // Need bench space and a Basic in deck
         return ctx.player.bench.cards.length < 5;
       },
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
+      onPlay: async (ctx) => {
+        const found = await ctx.promptSearchDeck!(
           (c) =>
             c.card.supertype === "Pokémon" &&
             c.card.subtypes.includes("Basic"),
           1,
+          "Nest Ball: 选择一只基础宝可梦放到备战区",
           "player"
         );
 
@@ -283,18 +284,20 @@ const arvenEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Arven",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       // Search for 1 Item
-      const item = ctx.searchDeck(
+      const item = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Item") && !c.card.subtypes.includes("Pokémon Tool"),
-        1
+        1,
+        "Arven: 选择一张物品卡加入手牌"
       );
       for (const c of item) ctx.addToHand(c);
 
       // Search for 1 Tool
-      const tool = ctx.searchDeck(
+      const tool = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Pokémon Tool"),
-        1
+        1,
+        "Arven: 选择一张宝可梦工具加入手牌"
       );
       for (const c of tool) ctx.addToHand(c);
 
@@ -365,10 +368,11 @@ const tulipEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Tulip",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDiscard(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Pokémon",
-        2
+        2,
+        "Tulip: 选择最多2只弃牌堆的宝可梦加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
       if (found.length > 0) {
@@ -466,10 +470,11 @@ const ultraBallEffect: NamedEffect = {
       // Prompt user to choose 2 cards to discard
       await ctx.promptDiscardFromHand(2, "player");
 
-      // Search for any Pokemon
-      const found = ctx.searchDeck(
+      // Search for any Pokemon — interactive selection
+      const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Pokémon",
-        1
+        1,
+        "Ultra Ball: 选择一只宝可梦加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
       ctx.shuffleDeck("player");
@@ -489,10 +494,8 @@ const switchEffect: NamedEffect = {
     canPlay: (ctx) => {
       return ctx.player.active !== null && ctx.player.bench.cards.length > 0;
     },
-    onPlay: (ctx) => {
-      if (ctx.player.bench.cards.length > 0) {
-        ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
-      }
+    onPlay: async (ctx) => {
+      await ctx.promptSwitchOwnActive!("Switch: 选择备战区宝可梦切换到战斗区");
     },
   },
 };
@@ -502,10 +505,11 @@ const nightStretcherEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Night Stretcher",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDiscard(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Pokémon",
-        1
+        1,
+        "Night Stretcher: 选择一只弃牌堆的宝可梦加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
     },
@@ -520,18 +524,19 @@ const buddyPoffinEffect: NamedEffect = {
     canPlay: (ctx) => {
       return ctx.player.bench.cards.length < 5;
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const benchSpace = 5 - ctx.player.bench.cards.length;
       const searchCount = Math.min(2, benchSpace);
 
-      const found = ctx.searchDeck(
+      const found = await ctx.promptSearchDeck!(
         (c) => {
           if (c.card.supertype !== "Pokémon") return false;
           if (!c.card.subtypes.includes("Basic")) return false;
           const hp = parseInt(c.card.hp || "0", 10);
           return hp > 0 && hp <= 70;
         },
-        searchCount
+        searchCount,
+        "Buddy-Buddy Poffin: 选择基础宝可梦 (70HP以下) 放到备战区"
       );
 
       for (const pokemon of found) {
@@ -550,11 +555,12 @@ const superRodEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Super Rod",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       // Pick up to 3 Pokemon/Energy from discard
-      const found = ctx.searchDiscard(
+      const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Pokémon" || c.card.supertype === "Energy",
-        3
+        3,
+        "Super Rod: 选择最多3张宝可梦/能量洗入牌组"
       );
       if (found.length > 0) {
         ctx.shuffleIntoDeck(found, "player");
@@ -572,10 +578,10 @@ const pokemonCatcherEffect: NamedEffect = {
     canPlay: (ctx) => {
       return ctx.opponent.bench.cards.length > 0 && ctx.opponent.active !== null;
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const heads = ctx.flipCoin();
       if (heads && ctx.opponent.bench.cards.length > 0) {
-        ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+        await ctx.promptSwitchOpponentActive!("Pokémon Catcher: 选择对手备战区宝可梦切换到战斗区");
       } else {
         ctx.log("Pokémon Catcher: 反面，没有效果");
       }
@@ -596,9 +602,9 @@ const counterCatcherEffect: NamedEffect = {
         ctx.opponent.active !== null
       );
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       if (ctx.opponent.bench.cards.length > 0) {
-        ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+        await ctx.promptSwitchOpponentActive!("Counter Catcher: 选择对手备战区宝可梦切换到战斗区");
       }
     },
   },
@@ -609,18 +615,58 @@ const greatBallEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Great Ball",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const revealed = ctx.revealTopCards(7, "player");
 
-      // Find a Pokemon among revealed
-      const pokemonIdx = revealed.findIndex(c => c.card.supertype === "Pokémon");
+      // Find all Pokemon among revealed
+      const pokemonCards = revealed.filter(c => c.card.supertype === "Pokémon");
 
-      if (pokemonIdx !== -1) {
-        const pokemon = revealed.splice(pokemonIdx, 1)[0];
+      if (pokemonCards.length === 0) {
+        ctx.log("Great Ball: 没有找到宝可梦");
+        if (revealed.length > 0) ctx.putOnTopOfDeck(revealed, "player");
+        return;
+      }
+
+      if (pokemonCards.length === 1) {
+        // Only one Pokemon: auto-select
+        const pokemon = pokemonCards[0];
+        const idx = revealed.indexOf(pokemon);
+        if (idx !== -1) revealed.splice(idx, 1);
         ctx.addToHand(pokemon, "player");
         ctx.log(`Great Ball: 找到了 ${pokemon.card.name}!`);
       } else {
-        ctx.log("Great Ball: 没有找到宝可梦");
+        // Multiple Pokemon: let user choose (put all revealed temporarily into hand for selection)
+        const pokemonIds = pokemonCards.map(c => c.instanceId);
+        // Temporarily put Pokemon into hand for selection via promptUser
+        for (const p of pokemonCards) {
+          const idx = revealed.indexOf(p);
+          if (idx !== -1) revealed.splice(idx, 1);
+          ctx.player.hand.cards.push(p);
+        }
+
+        const selected = await ctx.promptUser({
+          message: "Great Ball: 选择一只宝可梦加入手牌",
+          min: 0,
+          max: 1,
+          zone: "hand",
+          targets: pokemonIds,
+        });
+
+        // Remove unselected Pokemon from hand and put them back with non-Pokemon cards
+        for (const p of pokemonCards) {
+          if (!selected.includes(p.instanceId)) {
+            const idx = ctx.player.hand.cards.indexOf(p);
+            if (idx !== -1) {
+              ctx.player.hand.cards.splice(idx, 1);
+              revealed.push(p);
+            }
+          }
+        }
+
+        if (selected.length > 0) {
+          const chosen = pokemonCards.find(p => p.instanceId === selected[0]);
+          if (chosen) ctx.log(`Great Ball: 找到了 ${chosen.card.name}!`);
+        }
       }
 
       // Put rest back on top in any order
@@ -636,12 +682,13 @@ const pokeBallEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Poké Ball",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const heads = ctx.flipCoin();
       if (heads) {
-        const found = ctx.searchDeck(
+        const found = await ctx.promptSearchDeck!(
           (c) => c.card.supertype === "Pokémon",
-          1
+          1,
+          "Poké Ball: 选择一只宝可梦加入手牌"
         );
         for (const c of found) ctx.addToHand(c);
         ctx.shuffleDeck("player");
@@ -660,10 +707,11 @@ const energySearchEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Energy Search",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDeck(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
-        1
+        1,
+        "Energy Search: 选择一张基础能量加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
       ctx.shuffleDeck("player");
@@ -718,9 +766,10 @@ const earthenVesselEffect: NamedEffect = {
     },
     onPlay: async (ctx) => {
       await ctx.promptDiscardFromHand(1, "player");
-      const found = ctx.searchDeck(
+      const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
-        2
+        2,
+        "Earthen Vessel: 选择最多2张基础能量加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
       ctx.shuffleDeck("player");
@@ -781,10 +830,11 @@ const palPadEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Pal Pad",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDiscard(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Supporter"),
-        2
+        2,
+        "Pal Pad: 选择最多2张支持者洗入牌组"
       );
       if (found.length > 0) {
         ctx.shuffleIntoDeck(found, "player");
@@ -799,10 +849,11 @@ const energyRetrievalEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Energy Retrieval",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDiscard(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
-        2
+        2,
+        "Energy Retrieval: 选择最多2张基础能量加入手牌"
       );
       for (const c of found) ctx.addToHand(c);
     },
@@ -893,9 +944,9 @@ const bossOrdersNameEffect: NamedEffect = {
   cardName: "Boss's Orders",
   trainer: {
     canPlay: (ctx) => ctx.opponent.bench.cards.length > 0 && ctx.opponent.active !== null,
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       if (ctx.opponent.bench.cards.length > 0) {
-        ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+        await ctx.promptSwitchOpponentActive!("Boss's Orders: 选择对手备战区宝可梦切换到战斗区");
       }
     },
   },
@@ -931,10 +982,11 @@ const nestBallNameEffect: NamedEffect = {
   cardName: "Nest Ball",
   trainer: {
     canPlay: (ctx) => ctx.player.bench.cards.length < 5,
-    onPlay: (ctx) => {
-      const found = ctx.searchDeck(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic"),
-        1
+        1,
+        "Nest Ball: 选择一只基础宝可梦放到备战区"
       );
       if (found.length > 0) {
         found[0].playedThisTurn = true;

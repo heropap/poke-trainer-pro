@@ -163,7 +163,7 @@ export function processAction(
         result = handleConcede(state, playerIndex);
         break;
       case "use_ability":
-        result = handleUseAbility(state, playerIndex, action);
+        result = await handleUseAbility(state, playerIndex, action);
         break;
       case "manual_override": {
         if (!action.overrideType) {
@@ -498,11 +498,11 @@ function handleConcede(
   };
 }
 
-function handleUseAbility(
+async function handleUseAbility(
   state: GameState,
   playerIndex: 0 | 1,
   action: GameAction
-): ActionResult {
+): Promise<ActionResult> {
   if (!action.cardId || !action.abilityName) {
     return { success: false, error: "缺少卡牌 ID 或特性名称", newState: { ...state } };
   }
@@ -567,7 +567,7 @@ function handleUseAbility(
   );
 
   if (abilityEffect.onActivate) {
-    abilityEffect.onActivate(ctx);
+    await abilityEffect.onActivate(ctx);
   }
 
   sourceCard.abilityUsedThisTurn = true;

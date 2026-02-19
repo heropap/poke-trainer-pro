@@ -23,7 +23,7 @@
 import { Card, CardAttack, CardAbility } from "@/types/card";
 import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect, AbilityEffect } from "./effect-types";
 import { registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
-import { StatusCondition } from "../game-state";
+import { StatusCondition, GameCard } from "../game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
 
 // ═══════════════════════════════════════════
@@ -1077,17 +1077,16 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
-      onActivate: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => {
-            if (c.card.supertype !== "Energy") return false;
-            if (!c.card.subtypes.includes("Basic")) return false;
-            if (energyType && !c.card.types?.includes(energyType)) return false;
-            return true;
-          },
-          1,
-          "player"
-        );
+      onActivate: async (ctx) => {
+        const filter = (c: GameCard) => {
+          if (c.card.supertype !== "Energy") return false;
+          if (!c.card.subtypes.includes("Basic")) return false;
+          if (energyType && !c.card.types?.includes(energyType)) return false;
+          return true;
+        };
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, 1, `${ability.name}: 选择一张基础能量`, "player")
+          : ctx.searchDeck(filter, 1, "player");
         if (found.length > 0) {
           // Attach to active if exists, otherwise first bench
           const target = ctx.source.damageCounters >= 0 ? ctx.source : ctx.player.active;
@@ -1139,12 +1138,11 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
-      onActivate: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic"),
-          count,
-          "player"
-        );
+      onActivate: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic");
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, count, `${ability.name}: 选择基础宝可梦放到备战区`, "player")
+          : ctx.searchDeck(filter, count, "player");
         for (const p of found) {
           if (ctx.player.bench.cards.length < 5) {
             p.playedThisTurn = true;
@@ -1183,9 +1181,13 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
-      onActivate: (ctx) => {
+      onActivate: async (ctx) => {
         if (ctx.player.bench.cards.length > 0) {
-          ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
+          if (ctx.promptSwitchOwnActive) {
+            await ctx.promptSwitchOwnActive(`${ability.name}: 选择备战区宝可梦切换到战斗区`);
+          } else {
+            ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
+          }
           ctx.log(`${ability.name}: 与备战区宝可梦交换`);
         }
       },
@@ -1288,12 +1290,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
     const searchCount = searchBasicMatch[1] ? parseInt(searchBasicMatch[1], 10) : 1;
     return {
       canPlay: (ctx) => ctx.player.bench.cards.length < 5,
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Pokémon" && (c.card.subtypes?.includes("Basic") ?? false),
-          searchCount,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Pokémon" && (c.card.subtypes?.includes("Basic") ?? false);
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, searchCount, `${card.name}: 选择基础宝可梦放到备战区`, "player")
+          : ctx.searchDeck(filter, searchCount, "player");
         for (const pokemon of found) {
           if (ctx.player.bench.cards.length < 5) {
             pokemon.playedThisTurn = true;
@@ -1314,12 +1315,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (searchPokemonMatch) {
     const searchCount = searchPokemonMatch[1] ? parseInt(searchPokemonMatch[1], 10) : 1;
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Pokémon",
-          searchCount,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Pokémon";
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, searchCount, `${card.name}: 选择宝可梦加入手牌`, "player")
+          : ctx.searchDeck(filter, searchCount, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.shuffleDeck("player");
         ctx.log(`${card.name}: 从牌组搜索了 ${found.length} 张宝可梦到手牌`);
@@ -1336,13 +1336,12 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (searchEvolutionMatch) {
     const toHand = /put it into your hand/i.test(allText);
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Pokémon" &&
-            (c.card.subtypes?.includes("Stage 1") || c.card.subtypes?.includes("Stage 2") || false),
-          1,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Pokémon" &&
+          (c.card.subtypes?.includes("Stage 1") || c.card.subtypes?.includes("Stage 2") || false);
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, 1, `${card.name}: 选择进化卡`, "player")
+          : ctx.searchDeck(filter, 1, "player");
         if (found.length > 0) {
           if (toHand) {
             ctx.addToHand(found[0], "player");
@@ -1365,12 +1364,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (searchSupporterMatch) {
     const searchCount = searchSupporterMatch[1] ? parseInt(searchSupporterMatch[1], 10) : 1;
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Trainer" && (c.card.subtypes?.includes("Supporter") ?? false),
-          searchCount,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Trainer" && (c.card.subtypes?.includes("Supporter") ?? false);
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, searchCount, `${card.name}: 选择支持者卡加入手牌`, "player")
+          : ctx.searchDeck(filter, searchCount, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.shuffleDeck("player");
         ctx.log(`${card.name}: 从牌组搜索了 ${found.length} 张支持者到手牌`);
@@ -1386,8 +1384,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (searchAnyMatch) {
     const searchCount = searchAnyMatch[1] ? parseInt(searchAnyMatch[1], 10) : 1;
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(() => true, searchCount, "player");
+      onPlay: async (ctx) => {
+        const filter = () => true;
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, searchCount, `${card.name}: 选择卡牌加入手牌`, "player")
+          : ctx.searchDeck(filter, searchCount, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.shuffleDeck("player");
         ctx.log(`${card.name}: 从牌组搜索了 ${found.length} 张牌到手牌`);
@@ -1403,9 +1404,13 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (switchMatch) {
     return {
       canPlay: (ctx) => ctx.player.bench.cards.length > 0,
-      onPlay: (ctx) => {
+      onPlay: async (ctx) => {
         if (ctx.player.bench.cards.length > 0) {
-          ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
+          if (ctx.promptSwitchOwnActive) {
+            await ctx.promptSwitchOwnActive(`${card.name}: 选择要换上的备战区宝可梦`);
+          } else {
+            ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
+          }
           ctx.log(`${card.name}: 换上了备战区宝可梦`);
         }
       },
@@ -1420,9 +1425,13 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (switchOppTrainerMatch) {
     return {
       canPlay: (ctx) => ctx.opponent.bench.cards.length > 0,
-      onPlay: (ctx) => {
+      onPlay: async (ctx) => {
         if (ctx.opponent.bench.cards.length > 0) {
-          ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+          if (ctx.promptSwitchOpponentActive) {
+            await ctx.promptSwitchOpponentActive(`${card.name}: 选择要拖出的对手备战区宝可梦`);
+          } else {
+            ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+          }
           ctx.log(`${card.name}: 拖出了对手的备战区宝可梦`);
         }
       },
@@ -1492,12 +1501,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
   if (searchEnergyMatch) {
     const searchCount = searchEnergyMatch[1] ? parseInt(searchEnergyMatch[1], 10) : 1;
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDeck(
-          (c) => c.card.supertype === "Energy",
-          searchCount,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Energy";
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(filter, searchCount, `${card.name}: 选择能量卡加入手牌`, "player")
+          : ctx.searchDeck(filter, searchCount, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.shuffleDeck("player");
         ctx.log(`${card.name}: 从牌组搜索了 ${found.length} 张能量卡到手牌`);
@@ -1515,12 +1523,11 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
     const countStr = energyDiscardToHandMatch[1];
     const count = (countStr === "a" || countStr === "an") ? 1 : parseInt(countStr, 10);
     return {
-      onPlay: (ctx) => {
-        const found = ctx.searchDiscard(
-          (c) => c.card.supertype === "Energy",
-          count,
-          "player"
-        );
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => c.card.supertype === "Energy";
+        const found = ctx.promptSearchDiscard
+          ? await ctx.promptSearchDiscard(filter, count, `${card.name}: 选择能量卡取回手牌`, "player")
+          : ctx.searchDiscard(filter, count, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.log(`${card.name}: 从弃牌堆取回了 ${found.length} 张能量到手牌`);
       },
@@ -1563,8 +1570,8 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
     const count = (countStr === "a" || countStr === "an") ? 1 : parseInt(countStr, 10);
     const typeStr = (recoverFromDiscardMatch[2] || "card").toLowerCase();
     return {
-      onPlay: (ctx) => {
-        const filter = (c: import("../game-state").GameCard) => {
+      onPlay: async (ctx) => {
+        const filter = (c: GameCard) => {
           if (typeStr.includes("pok") && typeStr.includes("energy")) {
             return c.card.supertype === "Pokémon" || c.card.supertype === "Energy";
           }
@@ -1572,7 +1579,9 @@ function parseTrainerEffect(card: Card): TrainerEffect | null {
           if (typeStr.includes("trainer")) return c.card.supertype === "Trainer";
           return true;
         };
-        const found = ctx.searchDiscard(filter, count, "player");
+        const found = ctx.promptSearchDiscard
+          ? await ctx.promptSearchDiscard(filter, count, `${card.name}: 选择要取回的卡牌`, "player")
+          : ctx.searchDiscard(filter, count, "player");
         for (const c of found) ctx.addToHand(c, "player");
         ctx.log(`${card.name}: 从弃牌堆取回了 ${found.length} 张牌到手牌`);
       },

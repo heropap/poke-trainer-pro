@@ -208,7 +208,7 @@ const serena: NamedEffect = {
     onPlay: async (ctx) => {
       // Simplified: if opponent has bench, switch; otherwise draw
       if (ctx.opponent.bench.cards.length > 0) {
-        ctx.switchOpponentActive(ctx.opponent.bench.cards[0].instanceId);
+        await ctx.promptSwitchOpponentActive!("Serena: 选择对手备战区宝可梦切换到战斗区");
       } else {
         // Discard up to 3, draw until 5
         const toDiscard = Math.min(3, ctx.player.hand.cards.length);
@@ -225,8 +225,8 @@ const adventurersDiscovery: NamedEffect = {
   cardId: "name:Adventurer's Discovery",
   cardName: "Adventurer's Discovery",
   trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDeck(
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDeck!(
         (c) => {
           if (c.card.supertype !== "Pokémon") return false;
           const subtypes = c.card.subtypes || [];
@@ -239,6 +239,7 @@ const adventurersDiscovery: NamedEffect = {
           );
         },
         3,
+        "Adventurer's Discovery: 选择最多3只V/ex宝可梦加入手牌",
         "player"
       );
       for (const card of found) {
@@ -297,15 +298,16 @@ const tmEvolution: NamedEffect = {
   cardId: "name:Technical Machine: Evolution",
   cardName: "Technical Machine: Evolution",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       // Search deck for an evolution of your active Pokemon
       if (!ctx.player.active) return;
       const activeName = ctx.player.active.card.name;
-      const found = ctx.searchDeck(
+      const found = await ctx.promptSearchDeck!(
         (c) =>
           c.card.supertype === "Pokémon" &&
           c.card.evolvesFrom === activeName,
         1,
+        "TM: Evolution — 选择一只进化卡",
         "player"
       );
       if (found.length > 0) {
@@ -328,9 +330,10 @@ const technoRadar: NamedEffect = {
     canPlay: (ctx) => ctx.player.hand.cards.length >= 2,
     onPlay: async (ctx) => {
       await ctx.promptDiscardFromHand(2, "player");
-      const found = ctx.searchDeck(
+      const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Pokémon",
         2,
+        "Techno Radar: 选择最多2只宝可梦加入手牌",
         "player"
       );
       for (const card of found) {

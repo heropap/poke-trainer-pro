@@ -285,6 +285,264 @@ export function createEffectContext(
       return found;
     },
 
+    // ─── Interactive Prompt Methods ───
+
+    async promptSearchDeck(
+      filter: (card: GameCard) => boolean,
+      count: number,
+      message: string,
+      who: "player" | "opponent" = "player"
+    ): Promise<GameCard[]> {
+      const pIdx = who === "player" ? playerIndex : opponentIndex;
+      const p = state.players[pIdx];
+
+      // Find all matching cards in deck
+      const matching = p.deck.cards.filter(filter);
+
+      // Auto-select fallback: no UI, no matches, matches ≤ count, or nested prompt
+      if (!onPromptStateChange || matching.length === 0 || matching.length <= count || state.prompt) {
+        const autoSelect = matching.slice(0, count);
+        for (const card of autoSelect) {
+          const idx = p.deck.cards.indexOf(card);
+          if (idx !== -1) p.deck.cards.splice(idx, 1);
+        }
+        if (autoSelect.length > 0) {
+          logEvent(state, playerIndex, "search_deck" as any,
+            `从牌组中搜索到了 ${autoSelect.length} 张牌`,
+            { count: autoSelect.length }
+          );
+        }
+        return autoSelect;
+      }
+
+      // Interactive: show prompt
+      const promptId = `search-deck-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: pIdx as 0 | 1,
+        zone: "deck",
+        min: 0,
+        max: count,
+        message,
+        targets: matching.map(c => c.instanceId),
+      };
+
+      let resolvePrompt!: (ids: string[]) => void;
+      const selectedIdsPromise = new Promise<string[]>((resolve) => {
+        resolvePrompt = resolve;
+      });
+      pendingPrompts.set(promptId, resolvePrompt);
+
+      // Notify UI
+      onPromptStateChange({ ...state });
+
+      // Safety timeout: auto-select after 30 seconds
+      const timeoutId = setTimeout(() => {
+        if (pendingPrompts.has(promptId)) {
+          pendingPrompts.delete(promptId);
+          resolvePrompt(matching.slice(0, count).map(c => c.instanceId));
+        }
+      }, 30000);
+
+      const selectedIds = await selectedIdsPromise;
+      clearTimeout(timeoutId);
+      state.prompt = null;
+
+      // Remove selected cards from deck
+      const result: GameCard[] = [];
+      for (const id of selectedIds) {
+        const idx = p.deck.cards.findIndex(c => c.instanceId === id);
+        if (idx !== -1) {
+          result.push(p.deck.cards.splice(idx, 1)[0]);
+        }
+      }
+
+      if (result.length > 0) {
+        logEvent(state, playerIndex, "search_deck" as any,
+          `从牌组中搜索到了 ${result.length} 张牌`,
+          { count: result.length }
+        );
+      }
+
+      return result;
+    },
+
+    async promptSearchDiscard(
+      filter: (card: GameCard) => boolean,
+      count: number,
+      message: string,
+      who: "player" | "opponent" = "player"
+    ): Promise<GameCard[]> {
+      const pIdx = who === "player" ? playerIndex : opponentIndex;
+      const p = state.players[pIdx];
+
+      // Find all matching cards in discard
+      const matching = p.discard.cards.filter(filter);
+
+      // Auto-select fallback
+      if (!onPromptStateChange || matching.length === 0 || matching.length <= count || state.prompt) {
+        const autoSelect = matching.slice(0, count);
+        for (const card of autoSelect) {
+          const idx = p.discard.cards.indexOf(card);
+          if (idx !== -1) p.discard.cards.splice(idx, 1);
+        }
+        if (autoSelect.length > 0) {
+          logEvent(state, playerIndex, "search_deck" as any,
+            `从弃牌堆中取回了 ${autoSelect.length} 张牌`,
+            { count: autoSelect.length }
+          );
+        }
+        return autoSelect;
+      }
+
+      // Interactive: show prompt
+      const promptId = `search-discard-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: pIdx as 0 | 1,
+        zone: "discard",
+        min: 0,
+        max: count,
+        message,
+        targets: matching.map(c => c.instanceId),
+      };
+
+      let resolvePrompt!: (ids: string[]) => void;
+      const selectedIdsPromise = new Promise<string[]>((resolve) => {
+        resolvePrompt = resolve;
+      });
+      pendingPrompts.set(promptId, resolvePrompt);
+
+      onPromptStateChange({ ...state });
+
+      const timeoutId = setTimeout(() => {
+        if (pendingPrompts.has(promptId)) {
+          pendingPrompts.delete(promptId);
+          resolvePrompt(matching.slice(0, count).map(c => c.instanceId));
+        }
+      }, 30000);
+
+      const selectedIds = await selectedIdsPromise;
+      clearTimeout(timeoutId);
+      state.prompt = null;
+
+      // Remove selected cards from discard
+      const result: GameCard[] = [];
+      for (const id of selectedIds) {
+        const idx = p.discard.cards.findIndex(c => c.instanceId === id);
+        if (idx !== -1) {
+          result.push(p.discard.cards.splice(idx, 1)[0]);
+        }
+      }
+
+      if (result.length > 0) {
+        logEvent(state, playerIndex, "search_deck" as any,
+          `从弃牌堆中取回了 ${result.length} 张牌`,
+          { count: result.length }
+        );
+      }
+
+      return result;
+    },
+
+    async promptSwitchOwnActive(message?: string): Promise<boolean> {
+      const p = state.players[playerIndex];
+
+      if (!p.active || p.bench.cards.length === 0) return false;
+
+      // Auto-select if only 1 bench Pokemon or no UI
+      if (p.bench.cards.length === 1 || !onPromptStateChange || state.prompt) {
+        return ctx.switchOwnActive(p.bench.cards[0].instanceId);
+      }
+
+      // Interactive: prompt user to pick bench Pokemon
+      const promptId = `switch-own-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: playerIndex,
+        zone: "bench",
+        min: 1,
+        max: 1,
+        message: message || "选择一只备战区宝可梦切换到战斗区",
+        targets: p.bench.cards.map(c => c.instanceId),
+      };
+
+      let resolvePrompt!: (ids: string[]) => void;
+      const selectedIdsPromise = new Promise<string[]>((resolve) => {
+        resolvePrompt = resolve;
+      });
+      pendingPrompts.set(promptId, resolvePrompt);
+
+      onPromptStateChange({ ...state });
+
+      const timeoutId = setTimeout(() => {
+        if (pendingPrompts.has(promptId)) {
+          pendingPrompts.delete(promptId);
+          resolvePrompt([p.bench.cards[0].instanceId]);
+        }
+      }, 30000);
+
+      const selectedIds = await selectedIdsPromise;
+      clearTimeout(timeoutId);
+      state.prompt = null;
+
+      if (selectedIds.length > 0) {
+        return ctx.switchOwnActive(selectedIds[0]);
+      }
+      return false;
+    },
+
+    async promptSwitchOpponentActive(message?: string): Promise<boolean> {
+      const opp = state.players[opponentIndex];
+
+      if (!opp.active || opp.bench.cards.length === 0) return false;
+
+      // Auto-select if only 1 bench Pokemon or no UI
+      if (opp.bench.cards.length === 1 || !onPromptStateChange || state.prompt) {
+        return ctx.switchOpponentActive(opp.bench.cards[0].instanceId);
+      }
+
+      // Interactive: prompt user to pick opponent bench Pokemon
+      const promptId = `switch-opp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      state.prompt = {
+        id: promptId,
+        type: "select_cards",
+        playerIndex: playerIndex,
+        zone: "opponent_bench",
+        min: 1,
+        max: 1,
+        message: message || "选择一只对手的备战宝可梦切换到战斗区",
+        targets: opp.bench.cards.map(c => c.instanceId),
+      };
+
+      let resolvePrompt!: (ids: string[]) => void;
+      const selectedIdsPromise = new Promise<string[]>((resolve) => {
+        resolvePrompt = resolve;
+      });
+      pendingPrompts.set(promptId, resolvePrompt);
+
+      onPromptStateChange({ ...state });
+
+      const timeoutId = setTimeout(() => {
+        if (pendingPrompts.has(promptId)) {
+          pendingPrompts.delete(promptId);
+          resolvePrompt([opp.bench.cards[0].instanceId]);
+        }
+      }, 30000);
+
+      const selectedIds = await selectedIdsPromise;
+      clearTimeout(timeoutId);
+      state.prompt = null;
+
+      if (selectedIds.length > 0) {
+        return ctx.switchOpponentActive(selectedIds[0]);
+      }
+      return false;
+    },
+
     addToHand(card: GameCard, who: "player" | "opponent" = "player"): void {
       const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
       p.hand.cards.push(card);

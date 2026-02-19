@@ -121,13 +121,28 @@ export default function BattlePageClient() {
       if (battleModeRef.current === "ai" && prompt.playerIndex === 1) {
         const resolve = pendingPrompts.get(prompt.id);
         if (resolve) {
-          // Auto-select: pick the last N cards from the relevant zone
           const aiPlayer = updatedState.players[1];
+          const oppPlayer = updatedState.players[0];
           const zone = prompt.type === "select_cards" ? prompt.zone : "hand";
-          const cards = zone === "hand" ? aiPlayer.hand.cards : [];
           const needed = prompt.type === "select_cards" ? prompt.min : 0;
+
+          // Get cards from the appropriate zone
+          let cards: typeof aiPlayer.hand.cards = [];
+          switch (zone) {
+            case "hand": cards = aiPlayer.hand.cards; break;
+            case "deck": cards = aiPlayer.deck.cards; break;
+            case "discard": cards = aiPlayer.discard.cards; break;
+            case "bench": cards = aiPlayer.bench.cards; break;
+            case "opponent_bench": cards = oppPlayer.bench.cards; break;
+          }
+
+          // Filter by prompt.targets if provided (only pick from allowed targets)
+          if (prompt.type === "select_cards" && prompt.targets && prompt.targets.length > 0) {
+            cards = cards.filter(c => prompt.type === "select_cards" && prompt.targets!.includes(c.instanceId));
+          }
+
           const autoIds: string[] = [];
-          for (let i = cards.length - 1; i >= 0 && autoIds.length < needed; i--) {
+          for (let i = 0; i < cards.length && autoIds.length < needed; i++) {
             autoIds.push(cards[i].instanceId);
           }
           pendingPrompts.delete(prompt.id);
