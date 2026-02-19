@@ -1381,3 +1381,66 @@ Notes:
   3. 新增 6 项测试 (prompt-state-change.test.ts)
 
   测试统计: 1020/1020 全部通过, TypeScript 0 错误
+
+=== Session 26G | 2026-02-19 ===
+Feature: 特性系统完善 — UI 按钮 + 被动特性集成 + 文本自动解析
+Status: completed
+Notes:
+  分两个 commit 实现了完整的 Pokemon TCG 特性/能力系统:
+
+  Commit 1 (eb57ae0): 特性系统核心
+  - ActiveSpot.tsx: 添加特性使用按钮（✨图标，青色，只显示 activated 类型）
+  - BenchSpot.tsx: 备战区菜单添加特性按钮
+  - BattleBoard.tsx: 连接 onUseAbility dispatch
+  - game-controller.ts: handleUseAbility 添加 ABILITY_BLOCKED 检查
+  - attack-system.ts: 集成被动特性（modifyDamage/modifyIncomingDamage）
+  - turn-actions.ts: 集成 modifyRetreatCost + on_enter 自动触发
+  - ai-player.ts: AI 优先级 4.5 使用 activated 特性
+  - game-state.ts: 新增 "ability" 事件类型
+  - ability-system.test.ts: 17 项新测试
+
+  Commit 2 (03ae5f1): 特性文本自动解析
+  - text-parser.ts: 新增 parseAbilityEffects() + parseOneAbility()
+  - 25 种正则模式覆盖 211/1020 (21%) 卡牌特性
+    - 被动: 减伤/增伤/无撤退/减撤退/防备战区伤害/对手减伤
+    - 激活: 抽牌/补牌/治愈/搜索能量/移动能量/搜索宝可梦/查看牌顶/换位/弃抽
+    - 进化: 搜索/抽牌/治愈/换对手/弃能量/附加能量/放置伤害/弃手牌
+  - 修复模式优先级 bug: on_evolve 必须先于 activated 检查
+  - ability-text-parser.test.ts: 17 项新测试
+
+  测试统计: 1066/1066 全部通过, TypeScript 0 错误
+
+=== Session 26 | 2026-02-19 ===
+Feature: 交互选择面板 — 卡牌搜索/切换操作弹出选择UI
+Status: completed
+Notes:
+  问题: Ultra Ball等训练师卡使用后直接自动选取第一个匹配项，不弹选择面板
+
+  解决方案: 新增4个prompt便捷方法 + 更新所有卡牌效果
+
+  Phase 1-3: 基础设施
+  - effect-types.ts: 新增 promptSearchDeck/promptSearchDiscard/promptSwitchOwnActive/promptSwitchOpponentActive 可选接口
+  - effect-types.ts: onActivate 支持 Promise<void> (async)
+  - effect-context.ts: 实现4个prompt方法，复用 pendingPrompts + onPromptStateChange 模式
+    自动降级: 无UI回调/匹配≤count/已有prompt/单备战区 → 同步自动选择
+    安全超时: 30秒未响应自动选择
+  - game-controller.ts: handleUseAbility 改为 async + await onActivate
+  - BattlePageClient.tsx: AI自动解析扩展到 deck/discard/bench/opponent_bench zone
+
+  Phase 4-5: 命名训练师卡更新 (20+ 张)
+  - trainers.ts: Ultra Ball/Switch/Night Stretcher/Buddy-Buddy Poffin/Super Rod/Pokemon Catcher/Counter Catcher/Great Ball/Poke Ball/Energy Search/Earthen Vessel/Nest Ball/Arven/Tulip/Pal Pad/Energy Retrieval/Boss's Orders
+  - trainers-expanded.ts: Serena/Adventurer's Discovery/Techno Radar/TM: Evolution
+  - 全部 onPlay 改为 async + await promptXxx
+
+  Phase 6: text-parser.ts 自动生成pattern更新 (13个)
+  - 特性: 搜索能量附加/搜索基础宝可梦/切换己方 → async + conditional prompt
+  - 训练师: 搜索基础宝可梦/任意宝可梦/进化卡/支持者/任意卡/切换己方/切换对手/搜索能量/弃牌堆能量/弃牌堆回收 → async + conditional prompt
+
+  Phase 7: 新增测试 interactive-selection.test.ts (18项)
+  - promptSearchDeck: 6项 (自动降级/匹配≤count/嵌套防护/空匹配/交互/target过滤)
+  - promptSearchDiscard: 3项
+  - promptSwitchOwnActive: 4项
+  - promptSwitchOpponentActive: 3项
+  - 集成: Ultra Ball双prompt/Switch交互
+
+  测试统计: 1084/1084 全部通过 (18新增), TypeScript 0 错误
