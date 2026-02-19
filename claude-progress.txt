@@ -1471,3 +1471,33 @@ Notes:
   - promptUser 清理: resolver 包装器中 state.prompt = null
 
   测试统计: 1101/1101 全部通过 (17新增 rare-candy.test.ts), TypeScript 0 错误
+
+=== Session 28 | 2026-02-19 ===
+Feature: Effect Schema 系统 — JSON 数据驱动卡牌效果定义 (可视化编辑器 Phase 1)
+Status: completed
+Notes:
+  背景: 评估了用户提出的"规则引擎重构+可视化编辑界面"方案
+  结论: 不重写引擎，在现有 5 层系统上增加 JSON schema 编辑层 (L1.5)
+  
+  核心变更:
+  1. effect-schema.ts: JSON schema 类型定义
+     - 31 种攻击模式 (AttackPatternType)
+     - 20 种训练师模式 (TrainerPatternType)  
+     - 24 种特性模式 (AbilityPatternType)
+     - 类型安全参数映射 + EffectSchemaDefinition 顶层结构
+  
+  2. schema-compiler.ts: compileSchema() 编译器
+     - JSON → CardEffectDef 完整编译
+     - 覆盖 text-parser 全部 ~75 种模式
+     - 支持多步骤组合 + async prompt
+     - 1:1 映射 EffectContext 40+ 原语方法
+  
+  3. 修复 base-rules.ts middleware: 新增 game_over 检查 (priority -1)
+     - 修复 2 个基线测试失败 (game_over 阶段错误信息不匹配)
+  
+  后续计划:
+  - Session 29: JSON 效果加载器 + Registry L1.5 层
+  - Session 30: Pattern Catalog (编辑器数据源)
+  - Session 31-34: 可视化编辑器 UI
+
+  测试统计: 1140/1140 全部通过 (39新增 effect-schema.test.ts), TypeScript 0 错误
