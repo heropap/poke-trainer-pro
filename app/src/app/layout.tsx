@@ -51,6 +51,9 @@ export default function RootLayout({
               <Link href="/stats" className="hover:text-zinc-900 dark:hover:text-zinc-100">
                 统计
               </Link>
+              <Link href="/tools/effect-editor" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+                编辑器
+              </Link>
             </div>
           </div>
         </nav>
