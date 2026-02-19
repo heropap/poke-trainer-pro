@@ -56,6 +56,7 @@ const EVENT_FORMAT: Record<GameEventType, { icon: string; color: string }> = {
   play_stadium: { icon: "🏟️", color: "text-emerald-400" },
   remove_stadium: { icon: "🏟️", color: "text-zinc-400" },
   manual_override: { icon: "🔧", color: "text-yellow-500" },
+  ability: { icon: "✨", color: "text-cyan-200" },
 };
 
 const DEFAULT_FORMAT = { icon: "📝", color: "text-zinc-400" };

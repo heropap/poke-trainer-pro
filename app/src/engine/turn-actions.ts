@@ -27,7 +27,7 @@ import { processBetweenTurns } from "./effects/status-effects";
 import { validateEvolution } from "./middleware/evolution.middleware";
 import { ActionEvent } from "./middleware/types";
 import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
-import { PREVENT_RETREAT_NEXT_TURN } from "./effects/markers";
+import { PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED } from "./effects/markers";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -261,6 +261,21 @@ export function canRetreat(
     if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
       const ctx = createEffectContext(state, state.currentPlayer, tool);
       retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
+    }
+  }
+
+  // Apply passive ability retreat cost modifiers from all Pokemon in play
+  const allInPlay: GameCard[] = [];
+  if (player.active) allInPlay.push(player.active);
+  allInPlay.push(...player.bench.cards);
+  for (const pokemon of allInPlay) {
+    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    const pokEffect = getEffect(pokemon.cardId, pokemon.card.name);
+    if (!pokEffect?.abilities) continue;
+    for (const ability of pokEffect.abilities) {
+      if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
+      const abilityCtx = createEffectContext(state, state.currentPlayer, pokemon);
+      retreatCost = ability.modifyRetreatCost(abilityCtx, retreatCost);
     }
   }
 
@@ -581,7 +596,41 @@ export function playBasicToBench(
     { cardName: card.card.name }
   );
 
+  // Trigger on_enter abilities
+  triggerOnEnterAbility(state, state.currentPlayer, card);
+
   return ok();
+}
+
+/**
+ * Trigger on_enter abilities for a Pokemon that just entered play.
+ * Checks the effect registry for abilities with type "on_enter" and
+ * calls their onEnter handler.
+ */
+function triggerOnEnterAbility(
+  state: GameState,
+  playerIndex: 0 | 1,
+  pokemon: GameCard
+): void {
+  if (pokemon.markers[ABILITY_BLOCKED] > 0) return;
+
+  const effect = getEffect(pokemon.cardId, pokemon.card.name);
+  if (!effect?.abilities) return;
+
+  for (const ability of effect.abilities) {
+    if (ability.type !== "on_enter" || !ability.onEnter) continue;
+
+    logEvent(
+      state,
+      playerIndex,
+      "use_ability",
+      `${pokemon.card.name} 的入场特性 ${ability.name} 触发了`,
+      { cardName: pokemon.card.name, abilityName: ability.name }
+    );
+
+    const ctx = createEffectContext(state, playerIndex, pokemon);
+    ability.onEnter(ctx);
+  }
 }
 
 // ───────────────────────────────────────────────

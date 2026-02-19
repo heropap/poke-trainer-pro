@@ -5,8 +5,8 @@ import { GameCard, GameState } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
 import { checkEnergyCost, canAttack } from "@/engine/game-actions";
-import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, PREVENT_RETREAT_NEXT_TURN } from "@/engine/effects/markers";
-import { getEffectSource } from "@/engine/effects/effect-registry";
+import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED } from "@/engine/effects/markers";
+import { getEffect, getEffectSource } from "@/engine/effects/effect-registry";
 
 /** Map energy type to a dot color for cost display */
 const COST_DOT_COLORS: Record<string, string> = {
@@ -31,6 +31,7 @@ interface ActiveSpotProps {
   onClick?: () => void;
   onAttack?: (attackName: string) => void;
   onRetreat?: () => void;
+  onUseAbility?: (cardInstanceId: string, abilityName: string) => void;
   canAttack?: boolean;
   isFirstTurn?: boolean;
   hasAttackedThisTurn?: boolean;
@@ -43,6 +44,25 @@ interface ActiveSpotProps {
   compact?: boolean;
   /** Whether this card is currently performing an attack animation */
   isAttacking?: boolean;
+}
+
+/**
+ * Determine why an ability is disabled and return a user-friendly reason.
+ */
+function getAbilityDisabledReason(
+  card: GameCard,
+  abilityName: string,
+  hasAttackedThisTurn: boolean,
+): string | null {
+  if (hasAttackedThisTurn) return "攻击后不能使用特性";
+  if (card.abilityUsedThisTurn) return "本回合已使用特性";
+  if (card.markers[ABILITY_BLOCKED] > 0) return "特性被封锁";
+  // Check if there's an effect registered for this ability
+  const effect = getEffect(card.cardId, card.card.name);
+  const abilityEffect = effect?.abilities?.find(a => a.name === abilityName);
+  if (!abilityEffect) return "效果尚未实现";
+  if (abilityEffect.type !== "activated") return "不是主动特性";
+  return null;
 }
 
 /**
@@ -91,6 +111,7 @@ export function ActiveSpot({
   onClick,
   onAttack,
   onRetreat,
+  onUseAbility,
   canAttack: canAttackProp = false,
   isFirstTurn = false,
   hasAttackedThisTurn = false,
@@ -233,6 +254,43 @@ export function ActiveSpot({
       {/* Action Buttons (Attack + Retreat) — right side on desktop, below on mobile */}
       {!isOpponent && card && canAttackProp && (
         <div className={`flex ${compact ? attackBtnClass : "w-[160px]"} flex-col gap-1`}>
+          {/* Ability Buttons */}
+          {card.card.abilities?.map((ability, i) => {
+            // Only show activated abilities (passive/on_enter are automatic)
+            const effect = getEffect(card.cardId, card.card.name);
+            const abilityEffect = effect?.abilities?.find(a => a.name === ability.name);
+            // Show button for activated abilities, or if no effect registered yet (show as disabled)
+            if (abilityEffect && abilityEffect.type !== "activated") return null;
+
+            const disabledReason = getAbilityDisabledReason(card, ability.name, hasAttackedThisTurn);
+            const isUsable = !disabledReason;
+
+            return (
+              <button
+                key={`ability-${i}`}
+                onClick={() => isUsable && onUseAbility?.(card.instanceId, ability.name)}
+                disabled={!isUsable}
+                className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
+                  isUsable
+                    ? "cursor-pointer bg-cyan-600 hover:bg-cyan-500"
+                    : "cursor-not-allowed bg-zinc-600 opacity-60"
+                }`}
+                title={disabledReason || `${ability.name}: ${ability.text}`}
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-cyan-200 text-[9px] shrink-0">✨</span>
+                  <span className="mx-1 flex-1 truncate text-left">{ability.name}</span>
+                  <span className="shrink-0 text-[9px] text-cyan-200">{ability.type === "Ability" ? "特性" : ability.type}</span>
+                </div>
+                {disabledReason && (
+                  <div className="mt-0.5 text-[8px] font-normal text-zinc-400 truncate">
+                    ⚠ {disabledReason}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+
           {/* Attack Buttons */}
           {card.card.attacks?.map((attack, i) => {
             const disabledReason = getAttackDisabledReason(card, attack.name, isFirstTurn, hasAttackedThisTurn);

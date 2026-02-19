@@ -20,6 +20,7 @@ import { GameState, GameCard, Player } from "./game-state";
 import { GameAction, ActionResult } from "./game-controller";
 import { canAttack, checkEnergyCostDetailed } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
+import { ABILITY_BLOCKED } from "./effects/markers";
 
 // ───────────────────────────────────────────────
 // AI Decision Result
@@ -109,6 +110,12 @@ export function computeAIAction(
   const evolution = findBestEvolution(state, playerIndex);
   if (evolution) {
     return evolution;
+  }
+
+  // ── Priority 4.5: Use activated abilities ──
+  const abilityAction = decideAbilityUse(state, playerIndex);
+  if (abilityAction) {
+    return abilityAction;
   }
 
   // ── Priority 5: Use Item cards ──
@@ -206,6 +213,10 @@ export function computeAITurnActions(
   // 2. Evolve where possible
   const evolutions = findAllEvolutions(state, playerIndex);
   actions.push(...evolutions);
+
+  // 2.5. Use all available abilities
+  const abilityActions = findAllAbilityActions(state, playerIndex);
+  actions.push(...abilityActions);
 
   // 3. Attach energy
   if (!player.energyAttachedThisTurn) {
@@ -510,6 +521,65 @@ function considerRetreat(
     },
     reason: `Retreat ${active.card.name} (HP: ${remainingHp}/${maxHp}) for ${bestBench.card.name} (HP: ${getRemainingHp(bestBench)}/${getHp(bestBench)})`,
   };
+}
+
+/**
+ * Decide whether to use an activated ability from any Pokemon in play.
+ * Only uses abilities that have registered effects and haven't been used this turn.
+ */
+function decideAbilityUse(
+  state: GameState,
+  playerIndex: 0 | 1
+): AIDecision | null {
+  const actions = findAllAbilityActions(state, playerIndex);
+  return actions.length > 0 ? actions[0] : null;
+}
+
+/**
+ * Find all usable activated abilities across all Pokemon in play.
+ */
+function findAllAbilityActions(
+  state: GameState,
+  playerIndex: 0 | 1
+): AIDecision[] {
+  const player = state.players[playerIndex];
+  const results: AIDecision[] = [];
+
+  // Collect all Pokemon in play
+  const inPlay: GameCard[] = [];
+  if (player.active) inPlay.push(player.active);
+  inPlay.push(...player.bench.cards);
+
+  for (const pokemon of inPlay) {
+    // Skip if already used ability this turn
+    if (pokemon.abilityUsedThisTurn) continue;
+    // Skip if ability is blocked
+    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    // Skip if no abilities
+    if (!pokemon.card.abilities) continue;
+
+    const effect = getEffect(pokemon.cardId, pokemon.card.name);
+    if (!effect?.abilities) continue;
+
+    for (const ability of effect.abilities) {
+      // Only use activated abilities (passive/on_enter are automatic)
+      if (ability.type !== "activated") continue;
+
+      // Check if it has an onActivate handler
+      if (!ability.onActivate) continue;
+
+      results.push({
+        action: {
+          type: "use_ability",
+          cardId: pokemon.instanceId,
+          abilityName: ability.name,
+        },
+        reason: `Use ability: ${pokemon.card.name}'s ${ability.name}`,
+      });
+    }
+  }
+
+  return results;
 }
 
 /**

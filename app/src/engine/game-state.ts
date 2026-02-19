@@ -199,7 +199,8 @@ export type GameEventType =
   | "heal"
   | "play_stadium"
   | "remove_stadium"
-  | "manual_override";
+  | "manual_override"
+  | "ability";
 
 // ───────────────────────────────────────────────
 // Game Prompt (for manual selection)

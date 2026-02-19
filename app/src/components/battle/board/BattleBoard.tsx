@@ -1002,6 +1002,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                 setTimeout(() => setAttackingPlayer(null), 400);
                 dispatchAction({ type: "attack", attackName });
               }}
+              onUseAbility={(cardInstanceId, abilityName) => {
+                dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
+              }}
               onRetreat={handleRetreat}
               isTargetable={activeIsTargetable}
               onTargetClick={() => {
@@ -1039,6 +1042,11 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                   isSelected={!!benchCard && selectedBenchId === benchCard.instanceId}
                   onBenchAction={(action) => benchCard && handleBenchAction(benchCard.instanceId, action)}
                   isMyTurn={isMyTurn}
+                  hasAttackedThisTurn={gameState.turnStatus.hasAttackedThisTurn}
+                  onUseAbility={(cardInstanceId, abilityName) => {
+                    dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
+                    setSelectedBenchId(null);
+                  }}
                   onCardContextMenu={handleCardContextMenu}
                   compact={isMobile}
                 />

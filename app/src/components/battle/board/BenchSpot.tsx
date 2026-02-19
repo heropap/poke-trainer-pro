@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GameCard } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
+import { getEffect } from "@/engine/effects/effect-registry";
+import { ABILITY_BLOCKED } from "@/engine/effects/markers";
 
 interface BenchSpotProps {
   card: GameCard | null;
@@ -24,6 +26,10 @@ interface BenchSpotProps {
   isMyTurn?: boolean;
   /** Whether the player is the opponent */
   isOpponent?: boolean;
+  /** Has attacked this turn (disables abilities) */
+  hasAttackedThisTurn?: boolean;
+  /** Callback when bench Pokemon uses an ability */
+  onUseAbility?: (cardInstanceId: string, abilityName: string) => void;
 }
 
 export function BenchSpot({
@@ -38,6 +44,8 @@ export function BenchSpot({
   onBenchAction,
   isMyTurn = false,
   isOpponent = false,
+  hasAttackedThisTurn = false,
+  onUseAbility,
 }: BenchSpotProps) {
   const containerClass = compact
     ? "h-[95px] w-[68px]"
@@ -131,7 +139,32 @@ export function BenchSpot({
             <div className="text-[9px] text-zinc-400 font-medium truncate max-w-[100px]">
               {card.card.name}
             </div>
-            <div className={`flex ${compact ? "flex-col" : "flex-row"} gap-1`}>
+            <div className={`flex ${compact ? "flex-col" : "flex-row"} gap-1 flex-wrap justify-center`}>
+              {/* Ability buttons for bench Pokemon */}
+              {card.card.abilities?.map((ability, i) => {
+                const effect = getEffect(card.cardId, card.card.name);
+                const abilityEffect = effect?.abilities?.find(a => a.name === ability.name);
+                if (abilityEffect && abilityEffect.type !== "activated") return null;
+                const isBlocked = card.markers[ABILITY_BLOCKED] > 0;
+                const isUsed = card.abilityUsedThisTurn;
+                const noEffect = !abilityEffect;
+                const isDisabled = isBlocked || isUsed || noEffect || hasAttackedThisTurn;
+                return (
+                  <button
+                    key={`ability-${i}`}
+                    onClick={() => !isDisabled && onUseAbility?.(card.instanceId, ability.name)}
+                    disabled={isDisabled}
+                    className={`rounded-md px-2 py-1 text-[10px] font-bold text-white transition-colors ${
+                      isDisabled
+                        ? "bg-zinc-600 opacity-60 cursor-not-allowed"
+                        : "bg-cyan-600 hover:bg-cyan-500 cursor-pointer"
+                    }`}
+                    title={isBlocked ? "特性被封锁" : isUsed ? "本回合已使用" : noEffect ? "效果未实现" : ability.text}
+                  >
+                    ✨{ability.name}
+                  </button>
+                );
+              })}
               <button
                 onClick={() => onBenchAction("attach_energy")}
                 className="rounded-md bg-yellow-600 px-2 py-1 text-[10px] font-bold text-white transition-colors hover:bg-yellow-500"

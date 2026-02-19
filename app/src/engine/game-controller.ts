@@ -43,6 +43,7 @@ import {
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext, pendingPrompts } from "./effects/effect-context";
+import { ABILITY_BLOCKED } from "./effects/markers";
 import { resolveAttack } from "./systems/attack-system"; // New pipeline
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 import { basePipeline } from "./rules/base-rules";
@@ -540,6 +541,11 @@ function handleUseAbility(
 
   if (abilityEffect.type !== "activated") {
     return { success: false, error: `${action.abilityName} 不是主动使用的特性`, newState: { ...state } };
+  }
+
+  // Check if ability is blocked by a marker (e.g., Garbodor's Garbotoxin)
+  if (sourceCard.markers[ABILITY_BLOCKED] > 0) {
+    return { success: false, error: `${sourceCard.card.name} 的特性被封锁了`, newState: { ...state } };
   }
 
   // Check if already used this turn (for once-per-turn abilities)
