@@ -1501,3 +1501,92 @@ Notes:
   - Session 31-34: 可视化编辑器 UI
 
   测试统计: 1140/1140 全部通过 (39新增 effect-schema.test.ts), TypeScript 0 错误
+
+=== Session 29 | 2026-02-19 ===
+Feature: JSON 效果加载器 + Registry L1.5 层
+Status: completed
+Notes:
+  1. 新建 schema-loader.ts:
+     - loadSchemaEffects(): 编译 + 注册 JSON 效果定义到 L1.5
+     - loadCustomEffects(): 从 custom-effects.json 加载
+     - validateSchema(): 验证不注册
+     - SchemaLoadResult 接口 (registered/skipped/errors)
+
+  2. 新建 custom-effects.json (5 张示例卡):
+     - Tangela (Poison Powder: 中毒)
+     - Shroodle (Poison Jab: 中毒)
+     - Tyrogue (Pow-Pow Punching: 3枚硬币×30)
+     - Corphish (Take Down: 自伤10)
+     - Luxio (Thunder Fang: 翻硬币+30 + 麻痹)
+
+  3. 修改 effect-registry.ts: EffectSourceLayer 新增 "L1.5"
+
+  4. 修改 index.ts:
+     - 更新 JSDoc: 5层→6层优先链
+     - initializeEffects() 在 L1 和 L2 之间插入 loadCustomEffects()
+     - 新增 schema 系统所有 re-exports
+
+  5. 集成 middleware 验证到 game-controller (来自 Session 28 未提交改动)
+
+  6. 18 新测试 schema-loader.test.ts (全部通过)
+
+  测试统计: 1158/1158 全部通过 (50 suites), TypeScript 0 错误
+
+=== Session 30 | 2026-02-19 ===
+Feature: Pattern Catalog 模式目录
+Status: completed
+Notes:
+  1. 新建 pattern-catalog.ts — 可视化编辑器的数据源:
+     - 31 攻击模式 (7 子类: status/coin/damage_mod/self_effect/opponent/card_draw/special)
+     - 20 训练师模式 (6 子类: draw/search/switch/heal/energy/disruption)
+     - 24 特性模式 (5 子类: passive_defense/passive_boost/passive_movement/on_evolve/activated)
+     - 每个模式: id, label(中+英), 分类, 子分类, 参数定义(类型/默认值/范围), 示例卡
+  2. API 函数: getPatternsByCategory, getPatternsBySubCategory, getPatternById, getSubCategoryLabels, getPatternCounts
+  3. 与 effect-schema 1:1 映射验证通过
+  4. 18 新测试 pattern-catalog.test.ts
+
+  测试统计: 1176/1176 全部通过 (51 suites), TypeScript 0 错误
+
+=== Sessions 31-34 | 2026-02-19 ===
+Feature: 可视化效果编辑器 (完整 UI)
+Status: completed
+Notes:
+  Session 31 — 卡牌选择 + 状态展示:
+  - 新建 /tools/effect-editor 路由 (page.tsx + EffectEditorClient.tsx)
+  - 新建 CardEffectStatus.tsx: 展示卡牌效果覆盖层级 (L1-L5)
+  - 每个攻击/特性/训练师效果的有/无状态标记
+  - 全局导航栏新增"编辑器"链接
+  - 卡牌搜索 (名字+类型筛选, 最多50结果)
+
+  Session 32 — 攻击效果构建器:
+  - 新建 AttackEffectBuilder.tsx
+  - 按子分类分组的模式下拉 (status/coin/damage_mod/self_effect/opponent/card_draw/special)
+  - 多步骤支持 (每个攻击可添加多个效果)
+  - 实时参数输入 (数字/选择/复选框)
+  - 翻硬币🪙 和 选择💬 指示器
+
+  Session 33 — 训练师 + 特性效果构建器:
+  - 新建 TrainerEffectBuilder.tsx: 训练师效果配置
+  - 新建 AbilityEffectBuilder.tsx: 特性效果配置 (单模式)
+  - 卡牌规则文本参考显示
+
+  Session 34 — 导出 + 集成:
+  - JSON 预览面板 (语法高亮)
+  - Schema 验证指示器 (有效/无效)
+  - "复制 JSON" 按钮 (clipboard API)
+  - "下载" 按钮 (.json 文件)
+  - 完整 EffectSchemaDefinition 往返
+
+  新文件:
+  - src/app/tools/effect-editor/page.tsx
+  - src/app/tools/effect-editor/EffectEditorClient.tsx
+  - src/components/tools/CardEffectStatus.tsx
+  - src/components/tools/AttackEffectBuilder.tsx
+  - src/components/tools/TrainerEffectBuilder.tsx
+  - src/components/tools/AbilityEffectBuilder.tsx
+
+  修改文件:
+  - src/app/layout.tsx (新增编辑器导航链接)
+  - src/engine/effects/index.ts (新增 pattern-catalog re-exports)
+
+  测试统计: 1176/1176 全部通过 (51 suites), TypeScript 0 错误
