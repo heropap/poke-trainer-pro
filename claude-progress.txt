@@ -1444,3 +1444,30 @@ Notes:
   - 集成: Ultra Ball双prompt/Switch交互
 
   测试统计: 1084/1084 全部通过 (18新增), TypeScript 0 错误
+
+=== Session 27 | 2026-02-19 ===
+Feature: Rare Candy 实现 — 跳阶进化 Basic→Stage2
+Status: completed
+Notes:
+  问题: Rare Candy 训练师卡是空 stub (canPlay 返回 false)，无法使用
+  
+  实现方案: 不修改 evolution middleware，Rare Candy 直接操作 state 完成进化
+  
+  核心变更:
+  1. effect-types.ts: 新增 evolvePokemonDirect? 可选方法 + "own_field" zone 类型
+  2. effect-context.ts: 实现 evolvePokemonDirect (直接操作 evolutionStack，绕过 middleware)
+  3. trainers.ts: Rare Candy 完整实现
+     - collectAllStage1Cards() 收集全局 Stage 1 卡用于反向链验证
+     - canRareCandyEvolve() 验证 Basic→Stage1→Stage2 进化链
+     - canPlay: 第一回合限制、手牌 Stage 2 检查、场上 Basic 链匹配
+     - onPlay: 两步 prompt (选 Basic → 选 Stage 2)，单匹配自动选择
+  4. game-state.ts: SelectCardsPrompt zone 新增 "own_field"
+  5. CardSelectionModal.tsx: 支持 "own_field" zone (active + bench 联合)
+  6. BattlePageClient.tsx: AI 处理 "own_field" zone
+  
+  关键修复:
+  - promptUser 同步回调时序: pendingPrompts.set() 必须在 onPromptStateChange() 之前
+  - promptUser 嵌套防护: state.prompt 非空时自动降级
+  - promptUser 清理: resolver 包装器中 state.prompt = null
+
+  测试统计: 1101/1101 全部通过 (17新增 rare-candy.test.ts), TypeScript 0 错误
