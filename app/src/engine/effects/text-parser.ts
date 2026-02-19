@@ -20,8 +20,8 @@
  *     recover from discard, opponent switch, discard stadium, discard opponent hand)
  */
 
-import { Card, CardAttack } from "@/types/card";
-import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect } from "./effect-types";
+import { Card, CardAttack, CardAbility } from "@/types/card";
+import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect, AbilityEffect } from "./effect-types";
 import { registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
 import { StatusCondition } from "../game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
@@ -37,8 +37,9 @@ import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
 export function parseCardEffects(card: Card): CardEffectDef | null {
   const attacks = parseAttackEffects(card);
   const trainer = parseTrainerEffect(card);
+  const abilities = parseAbilityEffects(card);
 
-  if (attacks.length === 0 && !trainer) {
+  if (attacks.length === 0 && !trainer && abilities.length === 0) {
     return null;
   }
 
@@ -49,6 +50,7 @@ export function parseCardEffects(card: Card): CardEffectDef | null {
 
   if (attacks.length > 0) def.attacks = attacks;
   if (trainer) def.trainer = trainer;
+  if (abilities.length > 0) def.abilities = abilities;
 
   return def;
 }
@@ -690,6 +692,527 @@ function parseOneAttack(attack: CardAttack): AttackEffect | null {
       onAttack: (ctx, damage) => {
         const hasStatus = (ctx.opponent.active?.statusConditions?.length ?? 0) > 0;
         return { damage: (damage || baseDmg) + (hasStatus ? bonusDmg : 0) };
+      },
+    };
+  }
+
+  return null;
+}
+
+// ═══════════════════════════════════════════
+// Ability Effect Parsing
+// ═══════════════════════════════════════════
+
+function parseAbilityEffects(card: Card): AbilityEffect[] {
+  if (!card.abilities || card.supertype !== "Pokémon") return [];
+
+  const effects: AbilityEffect[] = [];
+
+  for (const ability of card.abilities) {
+    const effect = parseOneAbility(ability);
+    if (effect) {
+      effects.push(effect);
+    }
+  }
+
+  return effects;
+}
+
+function parseOneAbility(ability: CardAbility): AbilityEffect | null {
+  const text = ability.text || "";
+  if (!text) return null;
+
+  // ──────────────────────────────────────
+  // PASSIVE ABILITIES (always-on effects)
+  // ──────────────────────────────────────
+
+  // ─── Pattern: Damage reduction (passive) ───
+  // "This Pokémon takes 30 less damage from attacks"
+  // "takes 20 less damage from attacks from your opponent's Pokémon"
+  const dmgReduceMatch = text.match(
+    /(?:this Pok[eé]mon|takes?) (\d+) less damage (?:from attacks?)/i
+  );
+  if (dmgReduceMatch) {
+    const reduction = parseInt(dmgReduceMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyIncomingDamage: (_ctx, damage) => Math.max(0, damage - reduction),
+    };
+  }
+
+  // ─── Pattern: Damage boost (passive, for this Pokemon) ───
+  // "attacks used by this Pokémon do 30 more damage"
+  const dmgBoostSelfMatch = text.match(
+    /attacks? used by this Pok[eé]mon (?:do|does|deal) (\d+) more damage/i
+  );
+  if (dmgBoostSelfMatch) {
+    const boost = parseInt(dmgBoostSelfMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyDamage: (_ctx, damage, isAttacker) => isAttacker ? damage + boost : damage,
+    };
+  }
+
+  // ─── Pattern: Damage boost (passive, for typed Pokemon) ───
+  // "Attacks used by your Fire Pokémon do 30 more damage"
+  // "Attacks used by your Fighting Pokémon do 30 more damage"
+  const dmgBoostTypedMatch = text.match(
+    /[Aa]ttacks? used by your (\w+) Pok[eé]mon (?:do|does|deal) (\d+) more damage/i
+  );
+  if (dmgBoostTypedMatch) {
+    const targetType = dmgBoostTypedMatch[1];
+    const boost = parseInt(dmgBoostTypedMatch[2], 10);
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyDamage: (ctx, damage, isAttacker) => {
+        if (!isAttacker) return damage;
+        // Only boost if the attacking Pokemon is the specified type
+        if (ctx.source.card.types?.includes(targetType)) {
+          return damage + boost;
+        }
+        return damage;
+      },
+    };
+  }
+
+  // ─── Pattern: No retreat cost (passive) ───
+  // "This Pokémon has no Retreat Cost." / "has no Retreat Cost"
+  // "If this Pokémon has no Energy attached, it has no Retreat Cost."
+  const noRetreatMatch = text.match(
+    /(?:this Pok[eé]mon )?has no Retreat Cost/i
+  );
+  if (noRetreatMatch) {
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyRetreatCost: (_ctx, _cost) => 0,
+    };
+  }
+
+  // ─── Pattern: Reduce retreat cost (passive) ───
+  // "This Pokémon's Retreat Cost is 1 less" / "Retreat Cost is Colorless less"
+  const reduceRetreatMatch = text.match(
+    /[Rr]etreat [Cc]ost is (\d+|Colorless) less/i
+  );
+  if (reduceRetreatMatch) {
+    const amount = reduceRetreatMatch[1] === "Colorless" ? 1 : parseInt(reduceRetreatMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyRetreatCost: (_ctx, cost) => Math.max(0, cost - amount),
+    };
+  }
+
+  // ─── Pattern: Opponent attacks do less damage (passive, active only) ───
+  // "attacks used by your opponent's Active Pokémon do 30 less damage"
+  const oppDmgReduceMatch = text.match(
+    /attacks? used by your opponent'?s?.*do (\d+) less damage/i
+  );
+  if (oppDmgReduceMatch) {
+    const reduction = parseInt(oppDmgReduceMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "passive",
+      modifyIncomingDamage: (_ctx, damage) => Math.max(0, damage - reduction),
+    };
+  }
+
+  // ─── Pattern: Prevent bench damage (passive) ───
+  // "Prevent all damage done to your Benched Pokémon by attacks"
+  const preventBenchMatch = text.match(
+    /[Pp]revent all damage done to your [Bb]enched Pok[eé]mon by attacks/i
+  );
+  if (preventBenchMatch) {
+    return {
+      name: ability.name,
+      type: "passive",
+      preventBenchDamage: true,
+    };
+  }
+
+  // ──────────────────────────────────────
+  // ON-EVOLVE / ON-ENTER (must be checked BEFORE generic activated patterns)
+  // ──────────────────────────────────────
+
+  // Check if this is an on-evolve ability (to route correctly)
+  const isOnEvolveAbility = /when you play this.*(?:from your hand )?to evolve/i.test(text);
+
+  if (isOnEvolveAbility) {
+    // ─── Pattern: On-evolve search deck for cards ───
+    const evolveSearchMatch = text.match(
+      /[Ss]earch your deck for (?:up to )?(\d+) cards?.*(?:put|add).*(?:into|to) your hand/i
+    );
+    if (evolveSearchMatch) {
+      const searchCount = parseInt(evolveSearchMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          const toDraw = Math.min(searchCount, ctx.player.deck.cards.length);
+          for (let i = 0; i < toDraw; i++) {
+            const card = ctx.player.deck.cards.shift();
+            if (card) ctx.player.hand.cards.push(card);
+          }
+          ctx.shuffleDeck("player");
+          ctx.log(`${ability.name}: 从牌组搜索了 ${toDraw} 张牌到手牌`);
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve draw cards ───
+    const evolveDrawMatch = text.match(/[Dd]raw (\d+) cards?/i);
+    if (evolveDrawMatch) {
+      const drawCount = parseInt(evolveDrawMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          ctx.drawCards(drawCount, "player");
+          ctx.log(`${ability.name}: 进化时抽了 ${drawCount} 张牌`);
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve heal ───
+    const evolveHealMatch = text.match(/[Hh]eal (\d+) damage/i);
+    if (evolveHealMatch) {
+      const healAmt = parseInt(evolveHealMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          ctx.heal(healAmt, ctx.source);
+          ctx.log(`${ability.name}: 进化时回复了 ${healAmt} 点伤害`);
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve switch opponent active ───
+    const evolveSwitchOppMatch = text.match(/switch.*opponent/i);
+    if (evolveSwitchOppMatch) {
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          if (ctx.opponent.bench.cards.length > 0) {
+            const rand = Math.floor(Math.random() * ctx.opponent.bench.cards.length);
+            ctx.switchOpponentActive(ctx.opponent.bench.cards[rand].instanceId);
+            ctx.log(`${ability.name}: 进化时替换了对手的战斗宝可梦`);
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve discard energy from opponent ───
+    const evolveDiscardEnergyMatch = text.match(/discard (?:an?|\d+) (?:\w+ )?[Ee]nergy from your opponent/i);
+    if (evolveDiscardEnergyMatch) {
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          if (ctx.opponent.active && ctx.opponent.active.attachedEnergy.length > 0) {
+            const energy = ctx.opponent.active.attachedEnergy.pop();
+            if (energy) {
+              ctx.opponent.discard.cards.push(energy);
+              ctx.log(`${ability.name}: 进化时丢弃了对手的 ${energy.card.name}`);
+            }
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve attach energy from discard ───
+    const evolveAttachFromDiscardMatch = text.match(/attach (?:up to )?(\d+).*[Ee]nergy.*(?:from your discard|from the discard)/i);
+    if (evolveAttachFromDiscardMatch) {
+      const count = parseInt(evolveAttachFromDiscardMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          let attached = 0;
+          const discard = ctx.player.discard.cards;
+          for (let i = discard.length - 1; i >= 0 && attached < count; i--) {
+            if (discard[i].card.supertype === "Energy") {
+              const energy = discard.splice(i, 1)[0];
+              ctx.source.attachedEnergy.push(energy);
+              attached++;
+              ctx.log(`${ability.name}: 从弃牌堆附加了 ${energy.card.name}`);
+            }
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve place damage counters ───
+    const evolveDamageMatch = text.match(/put (\d+) damage counters? on.*opponent/i);
+    if (evolveDamageMatch) {
+      const counters = parseInt(evolveDamageMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          if (ctx.opponent.active) {
+            ctx.opponent.active.damageCounters += counters;
+            ctx.log(`${ability.name}: 进化时对 ${ctx.opponent.active.card.name} 放置了 ${counters} 个伤害指示物`);
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve discard cards from opponent's hand ───
+    const evolveDiscardHandMatch = text.match(/opponent discards? (\d+) cards?/i);
+    if (evolveDiscardHandMatch) {
+      const count = parseInt(evolveDiscardHandMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          for (let i = 0; i < count && ctx.opponent.hand.cards.length > 0; i++) {
+            const randIdx = Math.floor(Math.random() * ctx.opponent.hand.cards.length);
+            const card = ctx.opponent.hand.cards.splice(randIdx, 1)[0];
+            ctx.opponent.discard.cards.push(card);
+          }
+          ctx.log(`${ability.name}: 进化时对手随机弃掉了 ${count} 张手牌`);
+        },
+      };
+    }
+
+    // Unrecognized on_evolve ability — don't fall through to activated patterns
+    return null;
+  }
+
+  // ──────────────────────────────────────
+  // ACTIVATED ABILITIES ("Once during your turn")
+  // ──────────────────────────────────────
+
+  // ─── Pattern: Draw cards (activated) ───
+  // "Once during your turn, you may use this Ability. Draw 2 cards."
+  // "Once during your turn, you may draw 3 cards."
+  const drawMatch = text.match(
+    /(?:Once during your turn|As often as you like).*(?:Draw|draw) (\d+) cards?/i
+  );
+  if (drawMatch) {
+    const drawCount = parseInt(drawMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        ctx.drawCards(drawCount, "player");
+        ctx.log(`${ability.name}: 抽了 ${drawCount} 张牌`);
+      },
+    };
+  }
+
+  // ─── Pattern: Draw until N cards in hand (activated or on_enter) ───
+  // "you may draw cards until you have 6 cards in your hand"
+  const drawUntilMatch = text.match(
+    /draw cards? until you have (\d+) cards? in your hand/i
+  );
+  if (drawUntilMatch) {
+    const targetHand = parseInt(drawUntilMatch[1], 10);
+    const isOnEvolve = /when you play this.*to evolve/i.test(text);
+    const isOnEnter = /when you (?:put|play) this.*(?:onto|to).*Bench/i.test(text);
+
+    if (isOnEvolve || isOnEnter) {
+      return {
+        name: ability.name,
+        type: "on_enter",
+        onEnter: (ctx) => {
+          const handSize = ctx.player.hand.cards.length;
+          const toDraw = Math.max(0, targetHand - handSize);
+          if (toDraw > 0) {
+            ctx.drawCards(toDraw, "player");
+            ctx.log(`${ability.name}: 抽牌直到手牌达到 ${targetHand} 张 (抽了 ${toDraw} 张)`);
+          }
+        },
+      };
+    }
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        const handSize = ctx.player.hand.cards.length;
+        const toDraw = Math.max(0, targetHand - handSize);
+        if (toDraw > 0) {
+          ctx.drawCards(toDraw, "player");
+          ctx.log(`${ability.name}: 抽牌直到手牌达到 ${targetHand} 张 (抽了 ${toDraw} 张)`);
+        }
+      },
+    };
+  }
+
+  // ─── Pattern: Heal from own Pokemon (activated) ───
+  // "Once during your turn ... Heal 30 damage from 1 of your Pokémon"
+  // "Heal 60 damage from 1 of your Pokémon."
+  const healMatch = text.match(
+    /(?:Once during your turn|As often as you like).*[Hh]eal (\d+) damage from (?:1 of )?your/i
+  );
+  if (healMatch) {
+    const healAmt = parseInt(healMatch[1], 10);
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        // Heal the most-damaged Pokemon
+        const all = ctx.getAllPokemon("player");
+        const damaged = all.filter(p => p.damageCounters > 0).sort((a, b) => b.damageCounters - a.damageCounters);
+        if (damaged.length > 0) {
+          ctx.heal(healAmt, damaged[0]);
+          ctx.log(`${ability.name}: 回复了 ${damaged[0].card.name} ${healAmt} 点伤害`);
+        }
+      },
+    };
+  }
+
+  // ─── Pattern: Search deck for basic energy + attach (activated) ───
+  // "Once during your turn ... Search your deck for a Basic ... Energy card and attach it to 1 of your Pokémon."
+  const searchEnergyMatch = text.match(
+    /(?:Once during your turn|As often as you like).*[Ss]earch your deck for (?:a|up to \d+) [Bb]asic (?:(\w+) )?[Ee]nergy card.*attach it to/i
+  );
+  if (searchEnergyMatch) {
+    const energyType = searchEnergyMatch[1] || null;
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        const found = ctx.searchDeck(
+          (c) => {
+            if (c.card.supertype !== "Energy") return false;
+            if (!c.card.subtypes.includes("Basic")) return false;
+            if (energyType && !c.card.types?.includes(energyType)) return false;
+            return true;
+          },
+          1,
+          "player"
+        );
+        if (found.length > 0) {
+          // Attach to active if exists, otherwise first bench
+          const target = ctx.source.damageCounters >= 0 ? ctx.source : ctx.player.active;
+          if (target) {
+            target.attachedEnergy.push(found[0]);
+            ctx.log(`${ability.name}: 从牌组搜索 ${found[0].card.name} 附加给 ${target.card.name}`);
+          }
+        }
+        ctx.shuffleDeck("player");
+      },
+    };
+  }
+
+  // ─── Pattern: Move energy (activated) ───
+  // "As often as you like ... Move a Basic ... Energy from 1 of your Pokémon to another"
+  const moveEnergyMatch = text.match(
+    /(?:Once during your turn|As often as you like).*[Mm]ove (?:a|1) [Bb]asic (?:(\w+) )?[Ee]nergy from (?:1 of )?your Pok[eé]mon to another/i
+  );
+  if (moveEnergyMatch) {
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        // Move energy from Pokemon with most energy to one with least
+        const all = ctx.getAllPokemon("player");
+        const withEnergy = all.filter(p => p.attachedEnergy.length > 0);
+        const withoutEnergy = all.filter(p => p.attachedEnergy.length === 0);
+
+        if (withEnergy.length > 0 && withoutEnergy.length > 0) {
+          const source = withEnergy.sort((a, b) => b.attachedEnergy.length - a.attachedEnergy.length)[0];
+          const target = withoutEnergy[0];
+          const energy = source.attachedEnergy[0];
+          if (energy) {
+            ctx.moveEnergy(source, target, energy.instanceId);
+            ctx.log(`${ability.name}: 将 ${energy.card.name} 从 ${source.card.name} 移到 ${target.card.name}`);
+          }
+        }
+      },
+    };
+  }
+
+  // ─── Pattern: Search deck for basic/any Pokemon (activated) ───
+  // "Once during your turn, you may ... Search your deck for a Basic Pokémon and put it onto your Bench"
+  const searchBasicMatch = text.match(
+    /(?:Once during your turn).*[Ss]earch your deck for (?:a|up to (\d+)) (?:Basic )?Pok[eé]mon.*(?:put|place).*(?:onto|on) your [Bb]ench/i
+  );
+  if (searchBasicMatch) {
+    const count = searchBasicMatch[1] ? parseInt(searchBasicMatch[1], 10) : 1;
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        const found = ctx.searchDeck(
+          (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic"),
+          count,
+          "player"
+        );
+        for (const p of found) {
+          if (ctx.player.bench.cards.length < 5) {
+            p.playedThisTurn = true;
+            ctx.player.bench.cards.push(p);
+            ctx.log(`${ability.name}: 从牌组搜索 ${p.card.name} 放到备战区`);
+          }
+        }
+        ctx.shuffleDeck("player");
+      },
+    };
+  }
+
+  // ─── Pattern: Look at top card of deck (activated) ───
+  // "Once during your turn, you may look at the top card of your deck"
+  const lookTopMatch = text.match(
+    /(?:Once during your turn).*look at the top (?:(\d+) )?cards? of your deck/i
+  );
+  if (lookTopMatch) {
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        const count = lookTopMatch[1] ? parseInt(lookTopMatch[1], 10) : 1;
+        const top = ctx.player.deck.cards.slice(0, count);
+        ctx.log(`${ability.name}: 查看了牌组顶部 ${count} 张牌`);
+      },
+    };
+  }
+
+  // ─── Pattern: Switch own active (activated) ───
+  // "Once during your turn ... switch this Pokémon with 1 of your Benched Pokémon"
+  const switchSelfMatch = text.match(
+    /(?:Once during your turn).*switch.*(?:this Pok[eé]mon|your [Aa]ctive).*(?:with|and).*[Bb]ench/i
+  );
+  if (switchSelfMatch) {
+    return {
+      name: ability.name,
+      type: "activated",
+      onActivate: (ctx) => {
+        if (ctx.player.bench.cards.length > 0) {
+          ctx.switchOwnActive(ctx.player.bench.cards[0].instanceId);
+          ctx.log(`${ability.name}: 与备战区宝可梦交换`);
+        }
+      },
+    };
+  }
+
+  // ─── Pattern: Discard card to draw (activated) ───
+  // "Once during your turn ... discard a card from your hand. If you do, draw a card."
+  // "Once during your turn ... discard 1 card from your hand ... draw 2 cards"
+  const discardDrawMatch = text.match(
+    /(?:Once during your turn).*discard (?:a|(\d+)) cards? from your hand.*draw (\d+) cards?/i
+  );
+  if (discardDrawMatch) {
+    const discardCount = discardDrawMatch[1] ? parseInt(discardDrawMatch[1], 10) : 1;
+    const drawCount = parseInt(discardDrawMatch[2], 10);
+    return {
+      name: ability.name,
+      type: "activated",
+      canActivate: (ctx) => ctx.player.hand.cards.length >= discardCount,
+      onActivate: (ctx) => {
+        // Discard first N cards from hand
+        for (let i = 0; i < discardCount && ctx.player.hand.cards.length > 0; i++) {
+          const card = ctx.player.hand.cards.pop();
+          if (card) ctx.player.discard.cards.push(card);
+        }
+        ctx.drawCards(drawCount, "player");
+        ctx.log(`${ability.name}: 弃 ${discardCount} 张，抽 ${drawCount} 张`);
       },
     };
   }

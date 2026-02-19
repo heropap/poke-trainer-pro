@@ -101,7 +101,7 @@ function makeEnergyCard(type: string = "Fire"): GameCard {
 }
 
 function setupGame(): GameState {
-  const state = createGameState();
+  const state = createGameState("TestPlayer", "TestOpponent");
   state.phase = "main";
   state.currentPlayer = 0;
   state.turn = 2;
