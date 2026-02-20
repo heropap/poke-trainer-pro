@@ -27,6 +27,10 @@ out/
 ryuu-play/
 tcgone-engine-contrib/
 
+# === 生成的数据文件（可通过 npm run generate-rules 重新生成）===
+app/src/data/card-rules/generated-rules.json
+app/src/data/card-rules/stats.json
+
 # === 系统文件 ===
 .DS_Store
 Thumbs.db

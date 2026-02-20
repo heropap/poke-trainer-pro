@@ -225,24 +225,40 @@ export function loadRuleEffectsFromJson(
 
 /**
  * Load CTA rules from the bundled card-rules directory.
- * Looks for JSON files in @/data/card-rules/*.json
+ * Loads both hand-written rules (index.json) and generated rules (generated-rules.json).
+ * Hand-written rules are loaded first and take priority at L1.5.
  */
 export function loadBundledRules(options?: RuleLoadOptions): RuleLoadResult {
+  const combined: RuleLoadResult = {
+    registered: 0, skipped: 0,
+    validationErrors: [], compilationErrors: [], loadedCardIds: [],
+  };
+
+  // 1. Load hand-written exemplar rules (highest priority)
   try {
-    // Try to load from bundled rules directory
     const data = require("@/data/card-rules/index.json") as CardRuleDef[];
-    if (!Array.isArray(data) || data.length === 0) {
-      return {
-        registered: 0, skipped: 0,
-        validationErrors: [], compilationErrors: [], loadedCardIds: [],
-      };
+    if (Array.isArray(data) && data.length > 0) {
+      const r = loadRuleEffects(data, options);
+      combined.registered += r.registered;
+      combined.skipped += r.skipped;
+      combined.validationErrors.push(...r.validationErrors);
+      combined.compilationErrors.push(...r.compilationErrors);
+      combined.loadedCardIds.push(...r.loadedCardIds);
     }
-    return loadRuleEffects(data, options);
-  } catch {
-    // Directory doesn't exist yet — not an error
-    return {
-      registered: 0, skipped: 0,
-      validationErrors: [], compilationErrors: [], loadedCardIds: [],
-    };
-  }
+  } catch { /* not an error */ }
+
+  // 2. Load auto-generated rules (fills gaps not covered by hand-written)
+  try {
+    const data = require("@/data/card-rules/generated-rules.json") as CardRuleDef[];
+    if (Array.isArray(data) && data.length > 0) {
+      const r = loadRuleEffects(data, options);
+      combined.registered += r.registered;
+      combined.skipped += r.skipped;
+      combined.validationErrors.push(...r.validationErrors);
+      combined.compilationErrors.push(...r.compilationErrors);
+      combined.loadedCardIds.push(...r.loadedCardIds);
+    }
+  } catch { /* not an error */ }
+
+  return combined;
 }

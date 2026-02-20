@@ -5,6 +5,7 @@
  * - Prompt builder for generating structured prompts
  * - Batch processor for bulk card processing
  * - Card filtering for finding cards needing rules
+ * - Offline rule generator for deterministic pattern-matching
  */
 
 export {
@@ -26,3 +27,10 @@ export type {
   BatchProgress,
   BatchResult,
 } from "./batch-processor";
+
+export {
+  generateRule,
+  generateRules,
+  getGenerationStats,
+} from "./offline-rule-generator";
+export type { GenerationStats } from "./offline-rule-generator";
