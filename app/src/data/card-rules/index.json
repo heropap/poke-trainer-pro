@@ -1,0 +1,248 @@
+[
+  {
+    "cardId": "me1-24",
+    "cardName": "Pyroar",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Scorching Breath",
+        "baseDamage": 120,
+        "steps": [
+          { "action": "deal_damage", "value": 120 }
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Intimidating Fang",
+        "type": "passive",
+        "condition": { "check": "is_in_active_spot" },
+        "modifiers": [
+          {
+            "type": { "modify": "incoming_damage", "amount": -30 },
+            "condition": { "check": "is_in_active_spot" }
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Intimidating Fang: As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 30 less damage."
+    }
+  },
+  {
+    "cardId": "me2-13",
+    "cardName": "Mega Charizard X ex",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Inferno X",
+        "baseDamage": 0,
+        "steps": [
+          { "action": "deal_damage", "value": { "per": "energy_on_self", "multiply": 90 } },
+          { "action": "discard_energy", "count": "all", "energy_type": "Fire" }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Inferno X: Discard any amount of Fire Energy from among your Pokémon, and this attack does 90 damage for each card you discarded in this way."
+    }
+  },
+  {
+    "cardId": "me2pt5-57",
+    "cardName": "Pikachu ex",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Topaz Bolt",
+        "baseDamage": 300,
+        "steps": [
+          { "action": "deal_damage", "value": 300 },
+          { "action": "discard_energy", "count": 3 }
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Resolute Heart",
+        "type": "passive",
+        "modifiers": [
+          {
+            "type": { "modify": "incoming_damage", "amount": 0 }
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Topaz Bolt: Discard 3 Energy from this Pokémon. / Resolute Heart: If this Pokémon has full HP and would be Knocked Out by damage from an attack, it is not Knocked Out, and its remaining HP becomes 10."
+    }
+  },
+  {
+    "cardId": "sv1-189",
+    "cardName": "Professor's Research (Professor Sada)",
+    "version": 1,
+    "trainer": {
+      "subtype": "Supporter",
+      "steps": [
+        { "action": "discard_hand" },
+        { "action": "draw_cards", "count": 7 }
+      ]
+    },
+    "meta": {
+      "originalText": "Discard your hand and draw 7 cards."
+    }
+  },
+  {
+    "cardId": "me1-130",
+    "cardName": "Switch",
+    "version": 1,
+    "trainer": {
+      "subtype": "Item",
+      "canPlay": [
+        { "check": "has_pokemon_on_bench", "who": "player" }
+      ],
+      "steps": [
+        { "action": "switch_pokemon", "who": "player", "choice": "player" }
+      ]
+    },
+    "meta": {
+      "originalText": "Switch your Active Pokémon with 1 of your Benched Pokémon."
+    }
+  },
+  {
+    "cardId": "me1-60",
+    "cardName": "Mega Gardevoir ex",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Overflowing Wishes",
+        "baseDamage": 0,
+        "steps": [
+          {
+            "action": "for_each",
+            "targets": { "zone": "all_own_bench" },
+            "body": [
+              {
+                "action": "attach_energy",
+                "source": "deck",
+                "filter": { "supertype": "Energy", "types": ["Psychic"], "isBasicEnergy": true },
+                "count": 1,
+                "target": { "zone": "own_bench", "choose": 1 }
+              }
+            ]
+          },
+          { "action": "shuffle_deck" }
+        ]
+      },
+      {
+        "name": "Mega Symphonia",
+        "baseDamage": 0,
+        "steps": [
+          {
+            "action": "deal_damage",
+            "value": { "per": "energy_on_all_in_play", "multiply": 50 }
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Overflowing Wishes: For each of your Benched Pokémon, search your deck for a Basic Psychic Energy and attach it. / Mega Symphonia: 50× for each Psychic Energy attached to all of your Pokémon."
+    }
+  },
+  {
+    "cardId": "me2pt5-53",
+    "cardName": "Frosmoth",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Cold Cyclone",
+        "baseDamage": 90,
+        "steps": [
+          { "action": "deal_damage", "value": 90 }
+        ]
+      }
+    ],
+    "abilities": [
+      {
+        "name": "Alluring Wings",
+        "type": "activated",
+        "oncePerTurn": true,
+        "canActivate": [
+          { "check": "is_in_active_spot" }
+        ],
+        "steps": [
+          { "action": "draw_cards", "count": 1, "who": "player" },
+          { "action": "draw_cards", "count": 1, "who": "opponent" }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Alluring Wings: Once during your turn, if this Pokémon is in the Active Spot, each player draws a card."
+    }
+  },
+  {
+    "cardId": "me1-4",
+    "cardName": "Oddish",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Absorb",
+        "baseDamage": 10,
+        "steps": [
+          { "action": "deal_damage", "value": 10 },
+          { "action": "heal", "value": 10, "target": { "zone": "self_active" } }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Absorb: 10 damage. Heal 10 damage from this Pokémon."
+    }
+  },
+  {
+    "cardId": "me1-26",
+    "cardName": "Ponyta",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Flare",
+        "baseDamage": 20,
+        "steps": [
+          { "action": "deal_damage", "value": 20 }
+        ]
+      },
+      {
+        "name": "Stomp",
+        "baseDamage": 20,
+        "steps": [
+          { "action": "deal_damage", "value": 20 },
+          {
+            "action": "flip_coin",
+            "on_heads": [
+              { "action": "deal_damage", "value": 50 }
+            ]
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Flare: 20 / Stomp: 20+ Flip a coin. If heads, this attack does 30 more damage."
+    }
+  },
+  {
+    "cardId": "me1-95",
+    "cardName": "Chansey",
+    "version": 1,
+    "attacks": [
+      {
+        "name": "Double-Edge",
+        "baseDamage": 80,
+        "steps": [
+          { "action": "deal_damage", "value": 80 },
+          { "action": "self_damage", "value": 80 }
+        ]
+      }
+    ],
+    "meta": {
+      "originalText": "Double-Edge: 80 damage. This Pokémon also does 80 damage to itself."
+    }
+  }
+]
