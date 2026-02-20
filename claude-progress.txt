@@ -1590,3 +1590,76 @@ Notes:
   - src/engine/effects/index.ts (新增 pattern-catalog re-exports)
 
   测试统计: 1176/1176 全部通过 (51 suites), TypeScript 0 错误
+
+=== Session 35 | 2026-02-20 ===
+Feature: CTA Rule Engine — 完整的声明式卡牌规则系统 (Phase 1 + Phase 2)
+Status: completed
+Notes:
+  Phase 1a — CTA 类型定义:
+  - rule-schema.ts: 53 个原子 ActionStep 类型, TargetSelector, DynamicValue, Condition, Modifier
+  - card-rule-def.ts: CardRuleDef 顶层接口（攻击/能力/训练师）
+  - rule-schema-zod.ts: 递归 Zod 校验 schema
+
+  Phase 1b — Rule Executor (异步解释器):
+  - rule-executor.ts: 53 个 action handler, 支持 await prompt
+  - executeAttackSteps() / executeSteps() 两种路径
+
+  Phase 1c — Modifier Pipeline (被动能力):
+  - modifier-pipeline.ts: 伤害/撤退/状态修饰器栈
+  - applyOutgoingDamage/applyIncomingDamage/applyRetreatCost
+
+  Phase 1d — Event Hooks (reactive trigger):
+  - event-hooks.ts: Observer 模式, 14 种触发事件
+  - register/unregister/emit, 优先级排序, once-hooks
+
+  Phase 1e — Rule Compiler (CTA JSON → CardEffectDef):
+  - rule-compiler.ts: 攻击(sync)/能力(async)/训练师/工具编译
+  - 输出与现有 Schema Compiler 相同的 CardEffectDef 类型
+
+  Phase 1f — Rule Validator (Zod + 语义):
+  - rule-validator.ts: 结构校验 + 卡牌数据库交叉验证
+  - 攻击名匹配/能力名匹配/Marker 一致性检查
+
+  Phase 1g — Rule Loader (L1.5 注册):
+  - rule-loader.ts: validate → compile → register 管道
+  - 加载 hand-written + generated rules
+
+  Phase 1h — 10 张示范卡 + 33 个测试:
+  - index.json: Pyroar/Charizard X/Pikachu ex/Professor's Research/Switch 等 10 张
+  - cta-rule-system.test.ts: 33 个测试全通过
+
+  Phase 2 — LLM Pipeline:
+  - prompt-builder.ts: 完整 CTA schema 参考 + 3-shot examples
+  - batch-processor.ts: 批量处理 + 重试 + 置信度阈值
+
+  测试统计: 1209/1209 全部通过 (52 suites)
+
+=== Session 36 | 2026-02-20 ===
+Feature: Offline Rule Generator — 批量规则生成 (94.4% 覆盖率)
+Status: completed
+Notes:
+  构建了离线确定性规则生成器 (offline-rule-generator.ts):
+  - 30+ 正则模式匹配卡牌效果文本
+  - 攻击模式: coin_flip/per_energy/per_bench/status/self_damage/discard_energy/heal/switch/bench_snipe 等
+  - 能力分类: activated(once per turn)/passive(modifiers)/triggered(evolve/play/KO)
+  - 训练师模式: supporter(discard-draw/shuffle-draw)/item(switch/search)/stadium/tool
+
+  生成结果:
+  - 4,935 条有效规则 / 5,225 张卡牌 (94.4%)
+  - 100% 宝可梦覆盖 (4,411/4,411)
+  - 69.4% 训练师覆盖 (524/755)
+  - 3,253 条高置信度 (≥0.8)
+  - 0 个验证失败
+  - 全量生成仅需 27ms
+
+  新文件:
+  - src/engine/llm/offline-rule-generator.ts (规则生成器, 30+ patterns)
+  - src/engine/llm/generate-all-rules.ts (批量生成 CLI)
+  - src/__tests__/offline-rule-generator.test.ts (43 个测试)
+
+  更新:
+  - rule-loader.ts: 加载 hand-written + generated rules
+  - .gitignore: 排除 generated-rules.json (可重新生成)
+  - package.json: 添加 generate-rules npm script
+
+  测试统计: 1252/1252 全部通过 (53 suites), 零回归
