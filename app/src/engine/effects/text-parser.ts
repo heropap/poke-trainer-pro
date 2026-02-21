@@ -715,6 +715,36 @@ function parseOneAttack(attack: CardAttack): AttackEffect | null {
     };
   }
 
+  // ─── Pattern: Recover from discard (as attack) ─── [NEW]
+  // "Put an Item card from your discard pile into your hand." (Rotom's Junk Hunt)
+  // "Put a Pokémon from your discard pile into your hand."
+  const attackRecoverFromDiscardMatch = text.match(
+    /[Pp]ut (?:up to )?(\d+|an?)\s+(\w[\w\s]*?)\s+cards?\s+from your discard pile into your hand/i
+  );
+  if (attackRecoverFromDiscardMatch) {
+    const countStr = attackRecoverFromDiscardMatch[1];
+    const count = (countStr === "a" || countStr === "an") ? 1 : parseInt(countStr, 10);
+    const typeStr = attackRecoverFromDiscardMatch[2].toLowerCase();
+    return {
+      name: attack.name,
+      onAttack: (ctx, _damage) => {
+        const filter = (c: GameCard) => {
+          if (typeStr.includes("item")) return c.card.supertype === "Trainer" && c.card.subtypes.includes("Item");
+          if (typeStr.includes("pok")) return c.card.supertype === "Pokémon";
+          if (typeStr.includes("energy")) return c.card.supertype === "Energy";
+          if (typeStr.includes("trainer") || typeStr.includes("supporter")) return c.card.supertype === "Trainer";
+          return true; // "card" = any card
+        };
+        const found = ctx.searchDiscard(filter, count, "player");
+        for (const c of found) ctx.addToHand(c, "player");
+        if (found.length > 0) {
+          ctx.log(`${attack.name}: 从弃牌堆取回了 ${found.map(c => c.card.name).join(", ")} 到手牌`);
+        }
+        return { damage: 0 }; // These attacks typically do 0 damage
+      },
+    };
+  }
+
   // ─── Pattern: Conditional bonus vs special condition ─── [NEW]
   // "If your opponent's Active Pokémon is affected by a Special Condition, this attack does 120 more damage."
   const condStatusBonusMatch = text.match(

@@ -495,6 +495,80 @@ const herosCape: NamedEffect = {
   },
 };
 
+/** Rescue Carrier — Put up to 2 Pokémon with 90 HP or less from discard into hand */
+const rescueCarrier: NamedEffect = {
+  cardId: "name:Rescue Carrier",
+  cardName: "Rescue Carrier",
+  trainer: {
+    canPlay: (ctx) => {
+      // Must have at least 1 eligible Pokemon in discard
+      return ctx.player.discard.cards.some(
+        (c) =>
+          c.card.supertype === "Pokémon" &&
+          parseInt(c.card.hp || "0", 10) <= 90
+      );
+    },
+    onPlay: async (ctx) => {
+      const eligible = ctx.player.discard.cards.filter(
+        (c) =>
+          c.card.supertype === "Pokémon" &&
+          parseInt(c.card.hp || "0", 10) <= 90
+      );
+
+      if (eligible.length === 0) return;
+
+      const targets = eligible.map((c) => c.instanceId);
+      const selection = await ctx.promptUser({
+        message: "Rescue Carrier: 选择最多2只HP≤90的宝可梦从弃牌堆加入手牌",
+        min: 1,
+        max: Math.min(2, eligible.length),
+        zone: "discard",
+        filter: { supertype: "Pokémon" },
+        targets,
+      });
+
+      if (selection && selection.length > 0) {
+        for (const id of selection) {
+          const idx = ctx.player.discard.cards.findIndex(
+            (c) => c.instanceId === id
+          );
+          if (idx !== -1) {
+            const card = ctx.player.discard.cards.splice(idx, 1)[0];
+            ctx.addToHand(card, "player");
+          }
+        }
+        ctx.log(
+          `Rescue Carrier: 从弃牌堆取回了 ${selection.length} 只宝可梦`
+        );
+      }
+    },
+  },
+};
+
+/** Mysterious Trunk — Look at top 2 cards of deck, put 1 in hand and 1 on bottom */
+const mysteriousTrunk: NamedEffect = {
+  cardId: "name:Mysterious Trunk",
+  cardName: "Mysterious Trunk",
+  trainer: {
+    canPlay: (ctx) => ctx.player.deck.cards.length >= 1,
+    onPlay: (ctx) => {
+      const revealed = ctx.revealTopCards(2, "player");
+      if (revealed.length === 0) return;
+      if (revealed.length === 1) {
+        ctx.addToHand(revealed[0], "player");
+        ctx.log(`Mysterious Trunk: 将 ${revealed[0].card.name} 加入手牌`);
+        return;
+      }
+      // Put first card in hand, second on bottom of deck
+      ctx.addToHand(revealed[0], "player");
+      ctx.player.deck.cards.push(revealed[1]); // bottom of deck
+      ctx.log(
+        `Mysterious Trunk: 将 ${revealed[0].card.name} 加入手牌，${revealed[1].card.name} 放到牌组底部`
+      );
+    },
+  },
+};
+
 // ───────────────────────────────────────────────
 // Exports
 // ───────────────────────────────────────────────
@@ -512,13 +586,15 @@ export const expandedTrainerEffects: NamedEffect[] = [
   serena,
   adventurersDiscovery,
   giovannisCharisma,
-  // Items (8)
+  // Items (10)
   tmEvolution,
   technoRadar,
   cancelingCologne,
   lostVacuum,
   hisuianHeavyBall,
   primeCatcher,
+  rescueCarrier,
+  mysteriousTrunk,
   // Tools (5)
   maximumBelt,
   forestSealStone,
