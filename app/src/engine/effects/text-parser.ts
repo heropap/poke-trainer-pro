@@ -1001,28 +1001,58 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
       return {
         name: ability.name,
         type: "on_enter" as const,
-        onEnter: (ctx) => {
-          // Search deck for matching energy cards
-          const deck = ctx.player.deck.cards;
-          const matches: GameCard[] = [];
-          for (const c of deck) {
-            if (matches.length >= count) break;
-            if (c.card.supertype !== "Energy") continue;
+        onEnter: async (ctx) => {
+          const energyFilter = (c: GameCard) => {
+            if (c.card.supertype !== "Energy") return false;
             if (energyType && !c.card.name.includes(energyType) &&
-                !(c.card.types && c.card.types.includes(energyType))) continue;
-            matches.push(c);
+                !(c.card.types && c.card.types.includes(energyType))) return false;
+            return true;
+          };
+
+          // Step 1: Search deck for matching energy cards (interactive)
+          let foundEnergy: GameCard[];
+          if (ctx.promptSearchDeck) {
+            foundEnergy = await ctx.promptSearchDeck(
+              energyFilter,
+              count,
+              `${ability.name}: 从牌组选择最多${count}张${energyType || ""}能量卡`,
+              "player"
+            );
+          } else {
+            foundEnergy = ctx.searchDeck(energyFilter, count, "player");
           }
-          // Attach found energy to Pokemon (distribute across player's Pokemon)
+
+          if (foundEnergy.length === 0) {
+            ctx.log(`${ability.name}: 牌组中没有找到匹配的能量卡`);
+            ctx.shuffleDeck("player");
+            return;
+          }
+
+          // Step 2: Attach each energy to a target Pokemon (interactive per energy)
           const allTargets = ctx.getAllPokemon("player");
-          let targetIdx = 0;
-          for (const energy of matches) {
-            const idx = deck.indexOf(energy);
-            if (idx !== -1) {
-              deck.splice(idx, 1);
-              const target = allTargets[targetIdx % allTargets.length];
+          for (const energy of foundEnergy) {
+            if (allTargets.length === 1) {
+              // Only 1 Pokemon, auto-attach
+              allTargets[0].attachedEnergy.push(energy);
+              ctx.log(`${ability.name}: 将 ${energy.card.name} 附加到 ${allTargets[0].card.name}`);
+            } else if (ctx.promptUser) {
+              // Interactive: let player choose which Pokemon to attach to
+              const targetIds = allTargets.map(t => t.instanceId);
+              const selection = await ctx.promptUser({
+                message: `${ability.name}: 选择一只宝可梦来附加 ${energy.card.name}`,
+                min: 1,
+                max: 1,
+                zone: "own_field",
+                targets: targetIds,
+              });
+              const targetId = selection?.[0] || targetIds[0];
+              const target = allTargets.find(t => t.instanceId === targetId) || allTargets[0];
               target.attachedEnergy.push(energy);
-              ctx.log(`${ability.name}: 从牌组搜索了 ${energy.card.name} 附加到 ${target.card.name}`);
-              targetIdx++;
+              ctx.log(`${ability.name}: 将 ${energy.card.name} 附加到 ${target.card.name}`);
+            } else {
+              // Fallback: attach to self (the evolved Pokemon)
+              ctx.source.attachedEnergy.push(energy);
+              ctx.log(`${ability.name}: 将 ${energy.card.name} 附加到 ${ctx.source.card.name}`);
             }
           }
           // Shuffle deck

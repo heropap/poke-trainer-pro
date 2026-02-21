@@ -300,8 +300,8 @@ export interface AbilityEffect {
   ) => number;
   /** Modify retreat cost (passive) */
   modifyRetreatCost?: (ctx: EffectContext, currentCost: number) => number;
-  /** Called when this Pokemon enters play (on_enter) */
-  onEnter?: (ctx: EffectContext) => void;
+  /** Called when this Pokemon enters play (on_enter). Can be async for interactive prompts. */
+  onEnter?: (ctx: EffectContext) => void | Promise<void>;
   /** Modify incoming damage to this Pokemon (passive, defensive) */
   modifyIncomingDamage?: (ctx: EffectContext, damage: number) => number;
   /** Prevent all bench damage to this Pokemon (passive) */

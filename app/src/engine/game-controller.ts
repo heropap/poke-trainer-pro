@@ -25,6 +25,7 @@ import {
 import {
   attachEnergy as taAttachEnergy,
   evolvePokemon as taEvolvePokemon,
+  evolvePokemonAsync as taEvolvePokemonAsync,
   retreat as taRetreat,
   playSupporter as taPlaySupporter,
   playItem as taPlayItem,
@@ -156,7 +157,7 @@ export function processAction(
         result = handleEndTurn(state, playerIndex);
         break;
       case "evolve":
-        result = handleEvolve(state, playerIndex, action);
+        result = await handleEvolve(state, playerIndex, action);
         break;
       case "retreat":
         result = handleRetreat(state, playerIndex, action);
@@ -267,7 +268,7 @@ function handlePlayCard(
       // but handle gracefully if dispatched as "play_card"
       if (card.card.subtypes.includes("Stage 1") || card.card.subtypes.includes("Stage 2")) {
         if (action.targetId) {
-          const res = taEvolvePokemon(state, action.cardId, action.targetId);
+          const res = await taEvolvePokemonAsync(state, action.cardId, action.targetId);
           return { success: res.success, error: res.error, newState: { ...state } };
         }
         return { success: false, error: "进化卡需要指定目标宝可梦", newState: { ...state } };
@@ -413,16 +414,16 @@ function handleEndTurn(
   return { success: true, newState: { ...state } };
 }
 
-function handleEvolve(
+async function handleEvolve(
   state: GameState,
   playerIndex: 0 | 1,
   action: GameAction
-): ActionResult {
+): Promise<ActionResult> {
   if (!action.cardId || !action.targetId) {
     return { success: false, error: "缺少进化卡或目标 ID", newState: { ...state } };
   }
 
-  const res = taEvolvePokemon(state, action.cardId, action.targetId);
+  const res = await taEvolvePokemonAsync(state, action.cardId, action.targetId);
   return { success: res.success, error: res.error, newState: { ...state } };
 }
 

@@ -231,7 +231,54 @@ export function evolvePokemon(
   // Trigger on_enter abilities for the evolved Pokemon
   // This handles abilities like "When you play this Pokémon from your hand to evolve..."
   // (e.g., Charizard ex's Infernal Reign, Gardevoir ex's Psychic Embrace, etc.)
+  // Note: triggerOnEnterAbility is async but we fire-and-forget here to keep
+  // evolvePokemon synchronous for backward compatibility. The async prompt
+  // interactions will be handled via the state.prompt → UI callback mechanism.
   triggerOnEnterAbility(state, state.currentPlayer, target);
+
+  return ok();
+}
+
+/**
+ * Async version of evolvePokemon — awaits on_enter ability prompts.
+ * Used by game-controller.ts for interactive play.
+ */
+export async function evolvePokemonAsync(
+  state: GameState,
+  evolutionInstanceId: string,
+  targetInstanceId: string
+): Promise<ActionResult> {
+  const check = canEvolve(state, evolutionInstanceId, targetInstanceId);
+  if (!check.success) return check;
+
+  const player = getCurrentPlayer(state);
+  const evolutionCard = removeCard(player.hand, evolutionInstanceId)!;
+  const target = findTarget(player, targetInstanceId)!;
+
+  const previousName = target.card.name;
+
+  target.evolutionStack = [
+    ...(target.evolutionStack || []),
+    { cardId: target.cardId, card: target.card },
+  ];
+
+  target.card = evolutionCard.card;
+  target.cardId = evolutionCard.cardId;
+  target.statusConditions = [];
+  target.markers = {};
+  target.playedThisTurn = true;
+  target.evolvedThisTurn = true;
+
+  logEvent(
+    state,
+    state.currentPlayer,
+    "evolve_pokemon",
+    `${player.name} 将 ${previousName} 进化为 ${target.card.name}`,
+    { from: previousName, to: target.card.name }
+  );
+
+  // Await on_enter abilities for interactive prompt support
+  await triggerOnEnterAbility(state, state.currentPlayer, target);
 
   return ok();
 }
@@ -612,7 +659,7 @@ export function playBasicToBench(
     { cardName: card.card.name }
   );
 
-  // Trigger on_enter abilities
+  // Trigger on_enter abilities (fire-and-forget for sync compatibility)
   triggerOnEnterAbility(state, state.currentPlayer, card);
 
   return ok();
@@ -623,11 +670,11 @@ export function playBasicToBench(
  * Checks the effect registry for abilities with type "on_enter" and
  * calls their onEnter handler.
  */
-function triggerOnEnterAbility(
+async function triggerOnEnterAbility(
   state: GameState,
   playerIndex: 0 | 1,
   pokemon: GameCard
-): void {
+): Promise<void> {
   if (pokemon.markers[ABILITY_BLOCKED] > 0) return;
 
   const effect = getEffect(pokemon.cardId, pokemon.card.name);
@@ -645,7 +692,7 @@ function triggerOnEnterAbility(
     );
 
     const ctx = createEffectContext(state, playerIndex, pokemon);
-    ability.onEnter(ctx);
+    await ability.onEnter(ctx);
   }
 }
 
