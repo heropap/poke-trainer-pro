@@ -87,16 +87,57 @@ function getAttackDisabledReason(
 }
 
 /**
+ * Calculate effective retreat cost after tool, ability, and stadium modifiers.
+ */
+function getEffectiveRetreatCost(card: GameCard, gameState?: GameState, playerIndex?: 0 | 1): number {
+  let retreatCost = card.card.convertedRetreatCost ?? 0;
+
+  // Apply tool retreat cost modifiers (e.g. Air Balloon: -2)
+  for (const tool of card.attachedTools) {
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
+    if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
+      retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost({} as any, retreatCost);
+    }
+  }
+
+  // Apply passive ability retreat cost modifiers from all Pokemon in play
+  if (gameState && playerIndex !== undefined) {
+    const player = gameState.players[playerIndex];
+    const allInPlay: GameCard[] = [];
+    if (player.active) allInPlay.push(player.active);
+    allInPlay.push(...player.bench.cards);
+    for (const pokemon of allInPlay) {
+      if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+      const pokEffect = getEffect(pokemon.cardId, pokemon.card.name);
+      if (!pokEffect?.abilities) continue;
+      for (const ability of pokEffect.abilities) {
+        if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
+        retreatCost = ability.modifyRetreatCost({} as any, retreatCost);
+      }
+    }
+  }
+
+  // Apply Beach Court stadium effect
+  if (gameState?.stadium?.card.card.name === "Beach Court") {
+    if (card.card.subtypes.includes("Basic")) {
+      retreatCost -= 1;
+    }
+  }
+
+  return Math.max(0, retreatCost);
+}
+
+/**
  * Determine retreat disabled reason.
  */
-function getRetreatDisabledReason(card: GameCard, hasBench: boolean, retreatedThisTurn: boolean): string | null {
+function getRetreatDisabledReason(card: GameCard, hasBench: boolean, retreatedThisTurn: boolean, gameState?: GameState, playerIndex?: 0 | 1): string | null {
   if (!hasBench) return "备战区没有宝可梦";
   if (retreatedThisTurn) return "本回合已撤退";
   if (card.statusConditions.includes("paralyzed")) return "麻痹状态不能撤退";
   if (card.statusConditions.includes("asleep")) return "睡眠状态不能撤退";
   if (card.markers[PREVENT_RETREAT_NEXT_TURN] > 0) return "被效果锁定，不能撤退";
-  // Check energy sufficiency
-  const retreatCost = card.card.convertedRetreatCost ?? 0;
+  // Check energy sufficiency with effective cost (after tool/ability/stadium modifiers)
+  const retreatCost = getEffectiveRetreatCost(card, gameState, playerIndex);
   if (retreatCost > 0 && card.attachedEnergy.length < retreatCost) {
     return `能量不足 (需要 ${retreatCost}，当前 ${card.attachedEnergy.length})`;
   }
@@ -144,9 +185,9 @@ export function ActiveSpot({
   // Retreat state
   const retreatedThisTurn = gameState?.turnStatus?.retreated ?? false;
   const hasBench = gameState ? gameState.players[playerIndex ?? 0].bench.cards.length > 0 : false;
-  const retreatDisabledReason = card && !isOpponent ? getRetreatDisabledReason(card, hasBench, retreatedThisTurn) : null;
+  const retreatDisabledReason = card && !isOpponent ? getRetreatDisabledReason(card, hasBench, retreatedThisTurn, gameState, playerIndex) : null;
   const canRetreatNow = !isOpponent && card && canAttackProp && !hasAttackedThisTurn && !retreatDisabledReason;
-  const retreatCost = card?.card.convertedRetreatCost ?? 0;
+  const retreatCost = card ? getEffectiveRetreatCost(card, gameState, playerIndex) : 0;
 
   return (
     <div className={`flex ${compact ? "flex-col" : "flex-row"} items-center justify-center gap-2`}>

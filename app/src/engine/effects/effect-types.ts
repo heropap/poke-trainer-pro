@@ -229,7 +229,7 @@ export interface EffectContext {
     message: string;
     min: number;
     max: number;
-    zone?: "deck" | "discard" | "hand" | "bench" | "opponent_bench" | "own_field";
+    zone?: "deck" | "discard" | "hand" | "bench" | "opponent_bench" | "own_field" | "prizes";
     filter?: {
       supertype?: string;
       subtypes?: string[];

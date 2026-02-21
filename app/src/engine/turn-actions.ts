@@ -228,6 +228,11 @@ export function evolvePokemon(
     { from: previousName, to: target.card.name }
   );
 
+  // Trigger on_enter abilities for the evolved Pokemon
+  // This handles abilities like "When you play this Pokémon from your hand to evolve..."
+  // (e.g., Charizard ex's Infernal Reign, Gardevoir ex's Psychic Embrace, etc.)
+  triggerOnEnterAbility(state, state.currentPlayer, target);
+
   return ok();
 }
 

@@ -655,6 +655,41 @@ function parseOneAttack(attack: CardAttack): AttackEffect | null {
     };
   }
 
+  // ─── Pattern: Search deck for Basic Pokemon → bench (as attack) ─── [NEW]
+  // "Search your deck for up to 2 Basic Pokémon and put them onto your Bench."
+  // "Search your deck for a Basic Pokémon and put it onto your Bench."
+  // Matches: Pidgey's Call for Family, Emolga's Call for Family, etc.
+  const searchBenchMatch = text.match(
+    /[Ss]earch your deck for (?:a|up to (\d+)) [Bb]asic Pok[eé]mon.*(?:put (?:them|it) onto|place (?:them|it) on) your [Bb]ench/i
+  );
+  if (searchBenchMatch) {
+    const benchCount = searchBenchMatch[1] ? parseInt(searchBenchMatch[1], 10) : 1;
+    return {
+      name: attack.name,
+      onAttack: (ctx, _damage) => {
+        const filter = (c: GameCard) =>
+          c.card.supertype === "Pokémon" && (c.card.subtypes?.includes("Basic") ?? false);
+        const maxSearch = Math.min(benchCount, 5 - ctx.player.bench.cards.length);
+        if (maxSearch <= 0) {
+          ctx.log(`${attack.name}: 备战区已满`);
+          return { damage: 0 };
+        }
+        // Use synchronous searchDeck (auto-selects first N matches)
+        // Interactive selection happens via the prompt system at a higher level
+        const found = ctx.searchDeck(filter, maxSearch, "player");
+        for (const pokemon of found) {
+          if (ctx.player.bench.cards.length < 5) {
+            pokemon.playedThisTurn = true;
+            ctx.player.bench.cards.push(pokemon);
+            ctx.log(`${attack.name}: 从牌组搜索了 ${pokemon.card.name} 放到备战区`);
+          }
+        }
+        ctx.shuffleDeck("player");
+        return { damage: 0 }; // Call for Family does 0 damage
+      },
+    };
+  }
+
   // ─── Pattern: Search deck for evolution (as attack) ─── [NEW]
   // "Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it."
   const searchEvolveMatch = text.match(
@@ -920,6 +955,48 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
               ctx.log(`${ability.name}: 进化时丢弃了对手的 ${energy.card.name}`);
             }
           }
+        },
+      };
+    }
+
+    // ─── Pattern: On-evolve search deck for energy and attach ───
+    // "search your deck for up to 3 Basic Fire Energy cards and attach them to your Pokémon"
+    // Matches: Charizard ex Infernal Reign, similar on-evolve energy-from-deck abilities
+    const evolveSearchAttachMatch = text.match(
+      /[Ss]earch your deck for (?:up to )?(\d+) (?:[Bb]asic )?(?:(\w+) )?[Ee]nergy cards? and attach/i
+    );
+    if (evolveSearchAttachMatch) {
+      const count = parseInt(evolveSearchAttachMatch[1], 10);
+      const energyType = evolveSearchAttachMatch[2]; // e.g., "Fire", "Darkness", etc.
+      return {
+        name: ability.name,
+        type: "on_enter" as const,
+        onEnter: (ctx) => {
+          // Search deck for matching energy cards
+          const deck = ctx.player.deck.cards;
+          const matches: GameCard[] = [];
+          for (const c of deck) {
+            if (matches.length >= count) break;
+            if (c.card.supertype !== "Energy") continue;
+            if (energyType && !c.card.name.includes(energyType) &&
+                !(c.card.types && c.card.types.includes(energyType))) continue;
+            matches.push(c);
+          }
+          // Attach found energy to Pokemon (distribute across player's Pokemon)
+          const allTargets = ctx.getAllPokemon("player");
+          let targetIdx = 0;
+          for (const energy of matches) {
+            const idx = deck.indexOf(energy);
+            if (idx !== -1) {
+              deck.splice(idx, 1);
+              const target = allTargets[targetIdx % allTargets.length];
+              target.attachedEnergy.push(energy);
+              ctx.log(`${ability.name}: 从牌组搜索了 ${energy.card.name} 附加到 ${target.card.name}`);
+              targetIdx++;
+            }
+          }
+          // Shuffle deck
+          ctx.shuffleDeck("player");
         },
       };
     }

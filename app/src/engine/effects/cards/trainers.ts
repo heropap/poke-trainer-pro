@@ -464,8 +464,9 @@ const ultraBallEffect: NamedEffect = {
   cardName: "Ultra Ball",
   trainer: {
     canPlay: (ctx) => {
-      // Need at least 2 other hand cards to discard (ultra ball already removed from hand by engine)
-      return ctx.player.hand.cards.length >= 2;
+      // Need at least 2 OTHER hand cards to discard.
+      // At canPlay time, Ultra Ball is still in hand, so total must be >= 3.
+      return ctx.player.hand.cards.length >= 3;
     },
     onPlay: async (ctx) => {
       // Prompt user to choose 2 cards to discard

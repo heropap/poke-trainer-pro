@@ -381,17 +381,41 @@ const hisuianHeavyBall: NamedEffect = {
   cardId: "name:Hisuian Heavy Ball",
   cardName: "Hisuian Heavy Ball",
   trainer: {
-    onPlay: (ctx) => {
-      // Simplified: search prizes for a Basic Pokemon and put it in hand
-      const prizeIdx = ctx.player.prizes.cards.findIndex(
-        (c) =>
-          c.card.supertype === "Pokémon" &&
-          c.card.subtypes.includes("Basic")
+    canPlay: (ctx) => {
+      // Must have at least one Basic Pokemon in prizes
+      return ctx.player.prizes.cards.some(
+        (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic")
       );
-      if (prizeIdx !== -1) {
-        const prize = ctx.player.prizes.cards.splice(prizeIdx, 1)[0];
-        ctx.addToHand(prize, "player");
-        ctx.log(`Hisuian Heavy Ball: 从奖励卡中取回了 ${prize.card.name}`);
+    },
+    onPlay: async (ctx) => {
+      // Look at prizes and let user pick a Basic Pokemon
+      const basicPrizes = ctx.player.prizes.cards.filter(
+        (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic")
+      );
+      if (basicPrizes.length === 0) {
+        ctx.log("Hisuian Heavy Ball: 奖励卡中没有基础宝可梦");
+        return;
+      }
+      // Auto-select if only 1 match; otherwise prompt
+      let selected: typeof basicPrizes[0];
+      if (basicPrizes.length === 1) {
+        selected = basicPrizes[0];
+      } else {
+        const selection = await ctx.promptUser({
+          message: "Hisuian Heavy Ball: 选择一只奖励卡中的基础宝可梦加入手牌",
+          min: 1,
+          max: 1,
+          zone: "prizes",
+          targets: basicPrizes.map(c => c.instanceId),
+        });
+        if (!selection || selection.length === 0) return;
+        selected = basicPrizes.find(c => c.instanceId === selection[0]) || basicPrizes[0];
+      }
+      const idx = ctx.player.prizes.cards.indexOf(selected);
+      if (idx !== -1) {
+        ctx.player.prizes.cards.splice(idx, 1);
+        ctx.addToHand(selected, "player");
+        ctx.log(`Hisuian Heavy Ball: 从奖励卡中取回了 ${selected.card.name}`);
       }
     },
   },

@@ -27,7 +27,7 @@ import {
   canEvolve,
   canPlayStadium,
 } from "@/engine/turn-actions";
-import { hasEffect } from "@/engine/effects/effect-registry";
+import { hasEffect, getEffect } from "@/engine/effects/effect-registry";
 import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
@@ -235,6 +235,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   // Retreat bench selection state
   const [retreatSelecting, setRetreatSelecting] = React.useState(false);
 
+  // KO Promotion: detect when active is empty but bench has Pokemon
+  const promotionRequired = !me.active && me.bench.cards.length > 0;
+
   // Retreat energy selection state (after bench target is chosen)
   const [retreatEnergyPending, setRetreatEnergyPending] = React.useState<{ benchInstanceId: string } | null>(null);
 
@@ -409,10 +412,39 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     setActiveCard(null);
   }
 
+  // ─── Effective retreat cost (accounts for tools, abilities, stadiums) ───
+  function getEffectiveRetreatCost(card: GameCard): number {
+    let cost = card.card.convertedRetreatCost ?? 0;
+    // Apply tool modifiers (e.g., Air Balloon: -2)
+    for (const tool of card.attachedTools) {
+      const toolEffect = hasEffect(tool.cardId, tool.card.name) ? getEffect(tool.cardId, tool.card.name) : null;
+      if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
+        cost = toolEffect.tool.whileAttached.modifyRetreatCost({} as any, cost);
+      }
+    }
+    // Apply passive ability modifiers from all Pokemon in play
+    const allInPlay: GameCard[] = [];
+    if (me.active) allInPlay.push(me.active);
+    allInPlay.push(...me.bench.cards);
+    for (const pokemon of allInPlay) {
+      const pokEffect = hasEffect(pokemon.cardId, pokemon.card.name) ? getEffect(pokemon.cardId, pokemon.card.name) : null;
+      if (!pokEffect?.abilities) continue;
+      for (const ability of pokEffect.abilities) {
+        if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
+        cost = ability.modifyRetreatCost({} as any, cost);
+      }
+    }
+    // Apply Beach Court stadium effect
+    if (gameState.stadium?.card.card.name === "Beach Court" && card.card.subtypes.includes("Basic")) {
+      cost -= 1;
+    }
+    return Math.max(0, cost);
+  }
+
   // ─── Retreat handler ────────────────────────────
   function handleRetreat() {
     if (!isMyTurn || !me.active) return;
-    const retreatCost = me.active.card.convertedRetreatCost ?? 0;
+    const retreatCost = getEffectiveRetreatCost(me.active);
 
     if (me.bench.cards.length === 0) {
       showToast("备战区没有宝可梦可以替换", "error");
@@ -436,7 +468,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   function handleRetreatTargetClick(benchInstanceId: string) {
     if (!me.active) return;
-    const retreatCost = me.active.card.convertedRetreatCost ?? 0;
+    const retreatCost = getEffectiveRetreatCost(me.active);
 
     if (retreatCost === 0) {
       // Free retreat — dispatch directly
@@ -531,6 +563,11 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   // ─── Bench click handler ─────────────────────
   function handleBenchClick(benchCard: GameCard) {
+    // In promotion mode, clicking bench should trigger promotion (not open menu)
+    if (promotionRequired) {
+      dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
+      return;
+    }
     if (!isMyTurn) return;
     if (targeting || retreatSelecting || benchTargeting) return;
 
@@ -865,6 +902,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             </div>
           )}
 
+          {/* KO Promotion banner — active is empty, must choose bench Pokemon */}
+          {promotionRequired && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-red-600/20 backdrop-blur-[1px]">
+              <div className={`flex items-center gap-2 rounded-full bg-red-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
+                <span>⚡ 选择备战区宝可梦上战斗场</span>
+              </div>
+            </div>
+          )}
+
           {/* Bench targeting banner (pick from hand) */}
           {benchTargeting && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-600/20 backdrop-blur-[1px]">
@@ -1024,15 +1070,19 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                 ? benchTargetableIds.has(benchCard.instanceId)
                 : false;
               const isTargetableForRetreat = retreatSelecting && !!benchCard;
+              const isTargetableForPromotion = promotionRequired && !!benchCard;
 
               return (
                 <BenchSpot
                   key={i}
                   index={i}
                   card={benchCard}
-                  isTargetable={isTargetableForCard || isTargetableForRetreat}
+                  isTargetable={isTargetableForCard || isTargetableForRetreat || isTargetableForPromotion}
                   onTargetClick={() => {
-                    if (benchCard && retreatSelecting) {
+                    if (benchCard && promotionRequired) {
+                      // KO Promotion: dispatch promote action
+                      dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
+                    } else if (benchCard && retreatSelecting) {
                       handleRetreatTargetClick(benchCard.instanceId);
                     } else if (benchCard) {
                       handleTargetClick(benchCard.instanceId);
