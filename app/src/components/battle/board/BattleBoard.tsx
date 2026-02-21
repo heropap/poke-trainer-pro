@@ -28,6 +28,7 @@ import {
   canPlayStadium,
 } from "@/engine/turn-actions";
 import { hasEffect, getEffect } from "@/engine/effects/effect-registry";
+import { ABILITY_BLOCKED } from "@/engine/effects/markers";
 import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
@@ -427,6 +428,8 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     if (me.active) allInPlay.push(me.active);
     allInPlay.push(...me.bench.cards);
     for (const pokemon of allInPlay) {
+      // Skip if ability is blocked (e.g., by Garbodor's Garbotoxin)
+      if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
       const pokEffect = hasEffect(pokemon.cardId, pokemon.card.name) ? getEffect(pokemon.cardId, pokemon.card.name) : null;
       if (!pokEffect?.abilities) continue;
       for (const ability of pokEffect.abilities) {
@@ -1229,7 +1232,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         {retreatEnergyPending && me.active && (
           <EnergySelectionModal
             energyCards={me.active.attachedEnergy}
-            required={me.active.card.convertedRetreatCost ?? 0}
+            required={getEffectiveRetreatCost(me.active)}
             pokemonName={me.active.card.name}
             onConfirm={handleRetreatEnergyConfirm}
             onCancel={() => setRetreatEnergyPending(null)}

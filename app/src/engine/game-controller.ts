@@ -436,6 +436,11 @@ function handleRetreat(
     return { success: false, error: "缺少替换目标", newState: { ...state } };
   }
 
+  // PTCG Rule: Only one retreat per turn
+  if (state.turnStatus.retreated) {
+    return { success: false, error: "本回合已经撤退过了", newState: { ...state } };
+  }
+
   const energyToDiscard = action.energyToDiscard || [];
   const res = taRetreat(state, energyToDiscard, action.benchInstanceId);
   return { success: res.success, error: res.error, newState: { ...state } };
