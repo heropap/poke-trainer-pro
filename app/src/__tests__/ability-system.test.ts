@@ -625,6 +625,136 @@ describe("Ability edge cases", () => {
     expect(result.error).toContain("主阶段");
   });
 
+  it("备战区宝可梦可以使用 activated 特性", async () => {
+    const state = setupGame();
+    const benchMon = state.players[0].bench.cards[0];
+    benchMon.card.abilities = [
+      { name: "Energy Draw", text: "Once during your turn, draw 2 cards", type: "Ability" },
+    ];
+
+    let executed = false;
+    registerEffect({
+      cardId: benchMon.cardId,
+      abilities: [{
+        name: "Energy Draw",
+        type: "activated",
+        onActivate: () => { executed = true; },
+      }],
+    });
+
+    const result = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: benchMon.instanceId,
+      abilityName: "Energy Draw",
+    });
+
+    expect(result.success).toBe(true);
+    expect(executed).toBe(true);
+  });
+
+  it("备战区宝可梦通过名称匹配也能使用特性", async () => {
+    const state = setupGame();
+    const benchMon = state.players[0].bench.cards[0];
+    benchMon.card.abilities = [
+      { name: "Shady Move", text: "Once during your turn, move 1 damage counter", type: "Ability" },
+    ];
+
+    let executed = false;
+    // Register by NAME (not by ID) — tests name-based fallback lookup for bench
+    registerEffect({
+      cardId: "some-other-id",
+      cardName: benchMon.card.name,
+      abilities: [{
+        name: "Shady Move",
+        type: "activated",
+        onActivate: () => { executed = true; },
+      }],
+    } as any);
+    // Also need registerByName for name-based lookup
+    const { registerByName } = require("@/engine/effects/effect-registry");
+    registerByName({
+      cardId: "some-other-id",
+      cardName: benchMon.card.name,
+      abilities: [{
+        name: "Shady Move",
+        type: "activated",
+        onActivate: () => { executed = true; },
+      }],
+    });
+
+    const result = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: benchMon.instanceId,
+      abilityName: "Shady Move",
+    });
+
+    expect(result.success).toBe(true);
+    expect(executed).toBe(true);
+  });
+
+  it("备战区宝可梦的 activated 特性使用后标记 abilityUsedThisTurn", async () => {
+    const state = setupGame();
+    const benchMon = state.players[0].bench.cards[0];
+    benchMon.card.abilities = [
+      { name: "Trade", text: "Once during your turn", type: "Ability" },
+    ];
+
+    registerEffect({
+      cardId: benchMon.cardId,
+      abilities: [{
+        name: "Trade",
+        type: "activated",
+        onActivate: () => {},
+      }],
+    });
+
+    // First use should succeed
+    const result1 = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: benchMon.instanceId,
+      abilityName: "Trade",
+    });
+    expect(result1.success).toBe(true);
+    expect(benchMon.abilityUsedThisTurn).toBe(true);
+
+    // Second use should fail
+    const result2 = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: benchMon.instanceId,
+      abilityName: "Trade",
+    });
+    expect(result2.success).toBe(false);
+    expect(result2.error).toContain("已经使用");
+  });
+
+  it("AI 也能使用备战区宝可梦的特性", () => {
+    const state = setupGame();
+    state.currentPlayer = 1;
+    state.players[1].hand.cards = [];
+
+    // Give AI's active no ability, but bench has one
+    const aiBench = state.players[1].bench.cards[0];
+    aiBench.card.abilities = [
+      { name: "Bench Draw", text: "Once during your turn, draw", type: "Ability" },
+    ];
+
+    registerEffect({
+      cardId: aiBench.cardId,
+      cardName: aiBench.card.name,
+      abilities: [{
+        name: "Bench Draw",
+        type: "activated",
+        onActivate: () => {},
+      }],
+    });
+
+    const decision = computeAIAction(state, 1);
+    expect(decision).not.toBeNull();
+    expect(decision!.action.type).toBe("use_ability");
+    expect(decision!.action.cardId).toBe(aiBench.instanceId);
+    expect(decision!.action.abilityName).toBe("Bench Draw");
+  });
+
   it("PREVENT_ALL_DAMAGE 标记阻挡所有伤害", () => {
     const state = setupGame();
     const attacker = state.players[0].active!;
@@ -639,5 +769,288 @@ describe("Ability edge cases", () => {
 
     // All damage prevented
     expect(defender.damageCounters).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 7. Text-Parser Position-Aware Abilities
+// ═══════════════════════════════════════════════
+
+describe("Text-parser position-aware abilities", () => {
+  // We import parseCardEffects to test the text-parser's output
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { parseCardEffects } = require("@/engine/effects/text-parser");
+
+  it("Active-spot-only 特性: 在战斗区时可用", async () => {
+    const state = setupGame();
+    const active = state.players[0].active!;
+
+    // Parse a card with Active Spot ability text
+    const fakeCard = {
+      id: active.cardId,
+      name: active.card.name,
+      supertype: "Pokémon",
+      subtypes: ["Stage 2"],
+      hp: "330",
+      types: ["Grass"],
+      attacks: [],
+      abilities: [{
+        name: "Tranquil Flower",
+        text: "Once during your turn, if this Pokémon is in the Active Spot, you may heal 60 damage from 1 of your Pokémon.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("activated");
+    expect(effect!.abilities![0].canActivate).toBeDefined();
+
+    // Register the parsed abilities directly with the correct cardId
+    active.card.abilities = fakeCard.abilities;
+    registerEffect({
+      cardId: active.cardId,
+      abilities: effect!.abilities,
+    });
+
+    const result = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: active.instanceId,
+      abilityName: "Tranquil Flower",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("Active-spot-only 特性: 在备战区时不可用", async () => {
+    const state = setupGame();
+    const benchMon = state.players[0].bench.cards[0];
+
+    const fakeCard = {
+      id: benchMon.cardId,
+      name: benchMon.card.name,
+      supertype: "Pokémon",
+      subtypes: ["MEGA"],
+      hp: "230",
+      types: ["Colorless"],
+      attacks: [],
+      abilities: [{
+        name: "Run Errand",
+        text: "Once during your turn, if this Pokémon is in the Active Spot, you may use this Ability. Draw 2 cards.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities![0].canActivate).toBeDefined();
+
+    // Register the parsed abilities with the correct cardId
+    benchMon.card.abilities = fakeCard.abilities;
+    registerEffect({
+      cardId: benchMon.cardId,
+      abilities: effect!.abilities,
+    });
+
+    const result = await processAction(state, 0, {
+      type: "use_ability",
+      cardId: benchMon.instanceId,
+      abilityName: "Run Errand",
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toContain("无法使用");
+  });
+
+  it("Bench-only 特性: 备战区切换自身到战斗区", () => {
+    const fakeCard = {
+      id: "test-bench-switch",
+      name: "Meowscarada",
+      supertype: "Pokémon",
+      subtypes: ["Stage 2"],
+      hp: "140",
+      types: ["Grass"],
+      attacks: [],
+      abilities: [{
+        name: "Showtime",
+        text: "Once during your turn, if this Pokémon is on your Bench, you may switch it with your Active Pokémon.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("activated");
+    expect(effect!.abilities![0].canActivate).toBeDefined();
+    expect(effect!.abilities![0].onActivate).toBeDefined();
+  });
+
+  it("Bench-only 特性: 减少撤退费用 (passive)", () => {
+    const fakeCard = {
+      id: "test-bench-retreat",
+      name: "Toedscruel",
+      supertype: "Pokémon",
+      subtypes: ["Stage 1"],
+      hp: "120",
+      types: ["Grass"],
+      attacks: [],
+      abilities: [{
+        name: "Secret Forest Path",
+        text: "As long as this Pokémon is on your Bench, your Active Pokémon's Retreat Cost is ColorlessColorless less.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("passive");
+    expect(effect!.abilities![0].modifyRetreatCost).toBeDefined();
+
+    // Test: reduces by 2 (ColorlessColorless)
+    const mockCtx = {} as any;
+    expect(effect!.abilities![0].modifyRetreatCost!(mockCtx, 4)).toBe(2);
+    expect(effect!.abilities![0].modifyRetreatCost!(mockCtx, 1)).toBe(0);
+  });
+
+  it("Bench-only 特性: 切换对手战斗宝可梦", () => {
+    const fakeCard = {
+      id: "test-bench-switch-opp",
+      name: "Iron Bundle",
+      supertype: "Pokémon",
+      subtypes: ["Basic"],
+      hp: "120",
+      types: ["Water"],
+      attacks: [],
+      abilities: [{
+        name: "Hyper Blower",
+        text: "Once during your turn, if this Pokémon is on your Bench, you may switch out your opponent's Active Pokémon to the Bench.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("activated");
+    expect(effect!.abilities![0].canActivate).toBeDefined();
+    expect(effect!.abilities![0].onActivate).toBeDefined();
+  });
+
+  it("Bench-only 特性: 保护备战区宝可梦免受伤害 (passive)", () => {
+    const fakeCard = {
+      id: "test-bench-protect",
+      name: "Bidoof",
+      supertype: "Pokémon",
+      subtypes: ["Basic"],
+      hp: "60",
+      types: ["Colorless"],
+      attacks: [],
+      abilities: [{
+        name: "Carefree Countenance",
+        text: "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent's).",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("passive");
+    expect(effect!.abilities![0].modifyIncomingDamage).toBeDefined();
+
+    // Test: prevents all damage
+    const mockCtx = {} as any;
+    expect(effect!.abilities![0].modifyIncomingDamage!(mockCtx, 100)).toBe(0);
+  });
+
+  it("Bench-only 特性: 攻击力加成 (passive)", () => {
+    const fakeCard = {
+      id: "test-bench-boost",
+      name: "Radiant Hawlucha",
+      supertype: "Pokémon",
+      subtypes: ["Basic"],
+      hp: "90",
+      types: ["Fighting"],
+      attacks: [],
+      abilities: [{
+        name: "Big Match",
+        text: "As long as this Pokémon is on your Bench, your Pokémon's attacks do 30 more damage to your opponent's Active Pokémon VMAX.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities).toBeDefined();
+    expect(effect!.abilities!.length).toBe(1);
+    expect(effect!.abilities![0].type).toBe("passive");
+    expect(effect!.abilities![0].modifyDamage).toBeDefined();
+
+    // Test: +30 damage for attacker
+    const mockCtx = {} as any;
+    expect(effect!.abilities![0].modifyDamage!(mockCtx, 100, true)).toBe(130);
+    expect(effect!.abilities![0].modifyDamage!(mockCtx, 100, false)).toBe(100);
+  });
+
+  it("无位置限制的特性: 任何位置都可使用", () => {
+    // Abilities without position text should work from anywhere
+    const fakeCard = {
+      id: "test-any-position",
+      name: "Octillery",
+      supertype: "Pokémon",
+      subtypes: ["Stage 1"],
+      hp: "90",
+      types: ["Water"],
+      attacks: [],
+      abilities: [{
+        name: "Abyssal Hand",
+        text: "Once during your turn, you may draw cards until you have 5 cards in your hand.",
+        type: "Ability",
+      }],
+      weaknesses: [],
+      resistances: [],
+      retreatCost: [],
+      rules: [],
+    };
+
+    const effect = parseCardEffects(fakeCard);
+    expect(effect).not.toBeNull();
+    expect(effect!.abilities![0].type).toBe("activated");
+    // No position restriction → canActivate should be undefined
+    expect(effect!.abilities![0].canActivate).toBeUndefined();
   });
 });

@@ -1663,3 +1663,46 @@ Notes:
   - package.json: 添加 generate-rules npm script
 
   测试统计: 1252/1252 全部通过 (53 suites), 零回归
+
+=== Session 37 | 2026-02-21 ===
+Feature: 修复备战区特性无法使用 + 位置感知特性系统
+Status: completed
+Notes:
+  用户报告"有卡牌在备战区时特性没法使用的情况"。
+
+  根因分析:
+  1. 引擎后端 (game-controller.ts) 已正确支持备战区宝可梦使用特性
+  2. UI (BenchSpot.tsx) 也已有特性按钮，通过点击备战区弹出操作菜单
+  3. 真正问题: text-parser 对备战区特定特性覆盖率极低 (仅 2/28 = 7.1%)，
+     大多数备战区特性显示为"效果尚未实现"
+  4. 附加问题: 限定"战斗区才能使用"的特性缺少位置检查 (canActivate)，
+     导致可从备战区非法触发
+
+  修复内容:
+
+  A. 文本解析器增加位置感知 (text-parser.ts):
+     - 新增 requiresActiveSpot / requiresBench 位置检测
+     - 所有 activated 特性自动加 canActivate 位置检查
+     - "in the Active Spot" → 只在战斗区可用
+     - "on your Bench" → 只在备战区可用
+     - 无位置文本 → 任何位置可用 (canActivate = undefined)
+
+  B. 新增 8 种备战区特性模式:
+     - bench→switch self to active (Meowscarada/Decidueye ex/Mawile VSTAR)
+     - bench→switch opponent active (Iron Bundle)
+     - bench→reduce retreat cost (Toedscruel/Hisuian Sneasler)
+     - bench→prevent self damage (Bidoof/Meditite)
+     - bench→prevent all damage (Misty's Magikarp/Poltchageist)
+     - bench→damage boost (Radiant Hawlucha/Cubone)
+     - bench→shuffle self into deck (Pidgeot V)
+     - bench→attach energy from hand (Larry's Komala)
+
+  C. 测试新增 12 个 (ability-system.test.ts):
+     - 4 个备战区特性引擎级测试 (使用/名称匹配/once-per-turn/AI)
+     - 8 个位置感知解析器测试 (战斗区可用/备战区不可用/各种备战区模式)
+
+  效果:
+  - 备战区特性解析: 7.1% → 85.7% (2/28 → 24/28)
+  - 战斗区限定特性位置检查: 0/20 → 15/20 有 canActivate
+  - 总特性解析: 211 → 233 (+22)
+  - 测试: 1264/1264 全部通过 (53 suites), 零回归

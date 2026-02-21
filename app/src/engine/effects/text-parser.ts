@@ -21,7 +21,7 @@
  */
 
 import { Card, CardAttack, CardAbility } from "@/types/card";
-import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect, AbilityEffect } from "./effect-types";
+import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect, AbilityEffect, EffectContext } from "./effect-types";
 import { registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
 import { StatusCondition, GameCard } from "../game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
@@ -985,6 +985,180 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
   }
 
   // ──────────────────────────────────────
+  // POSITION DETECTION
+  // ──────────────────────────────────────
+  // Detect "if this Pokémon is in the Active Spot" or "if this Pokémon is on your Bench"
+  // to add appropriate canActivate position checks.
+
+  const requiresActiveSpot = /(?:this Pok[eé]mon is|as long as this Pok[eé]mon is) in the Active Spot/i.test(text);
+  const requiresBench = /(?:this Pok[eé]mon is|if this Pok[eé]mon is) on (?:your )?(?:the )?Bench/i.test(text);
+
+  /** Helper to create a position-checking canActivate function */
+  function makePositionCheck(): ((ctx: EffectContext) => boolean) | undefined {
+    if (requiresActiveSpot) {
+      return (ctx) => ctx.player.active?.instanceId === ctx.source.instanceId;
+    }
+    if (requiresBench) {
+      return (ctx) => ctx.player.bench.cards.some(c => c.instanceId === ctx.source.instanceId);
+    }
+    return undefined;
+  }
+
+  // ──────────────────────────────────────
+  // BENCH-SPECIFIC ACTIVATED ABILITIES
+  // (must be checked BEFORE generic activated patterns)
+  // ──────────────────────────────────────
+
+  if (requiresBench) {
+    // ─── Pattern: Bench → switch self to active ───
+    // "if this Pokémon is on your Bench, you may switch it with your Active Pokémon"
+    const benchSwitchSelfMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*(?:switch (?:it|this Pok[eé]mon) with your Active|switch it with your Active)/i
+    );
+    if (benchSwitchSelfMatch) {
+      return {
+        name: ability.name,
+        type: "activated",
+        canActivate: makePositionCheck(),
+        onActivate: async (ctx) => {
+          // Switch this bench Pokemon to active
+          const benchIdx = ctx.player.bench.cards.findIndex(c => c.instanceId === ctx.source.instanceId);
+          if (benchIdx !== -1) {
+            ctx.switchOwnActive(ctx.source.instanceId);
+            ctx.log(`${ability.name}: 从备战区切换到战斗区`);
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: Bench → switch opponent's active ───
+    // "if this Pokémon is on your Bench, you may switch out your opponent's Active Pokémon"
+    const benchSwitchOppMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*switch.*opponent'?s? Active Pok[eé]mon/i
+    );
+    if (benchSwitchOppMatch) {
+      return {
+        name: ability.name,
+        type: "activated",
+        canActivate: makePositionCheck(),
+        onActivate: async (ctx) => {
+          if (ctx.opponent.bench.cards.length > 0) {
+            if (ctx.promptSwitchOpponentActive) {
+              await ctx.promptSwitchOpponentActive(`${ability.name}: 选择对手的备战区宝可梦`);
+            } else {
+              const rand = Math.floor(Math.random() * ctx.opponent.bench.cards.length);
+              ctx.switchOpponentActive(ctx.opponent.bench.cards[rand].instanceId);
+            }
+            ctx.log(`${ability.name}: 替换了对手的战斗宝可梦`);
+          }
+        },
+      };
+    }
+
+    // ─── Pattern: Bench → reduce retreat cost (passive) ───
+    // "As long as this Pokémon is on your Bench, your Active Pokémon's Retreat Cost is CC less"
+    const benchReduceRetreatMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*Retreat Cost is (Colorless(?:Colorless)*|\d+) less/i
+    );
+    if (benchReduceRetreatMatch) {
+      const costStr = benchReduceRetreatMatch[1];
+      const amount = /^\d+$/.test(costStr) ? parseInt(costStr, 10) : (costStr.match(/Colorless/gi) || []).length;
+      return {
+        name: ability.name,
+        type: "passive",
+        modifyRetreatCost: (_ctx, cost) => Math.max(0, cost - amount),
+      };
+    }
+
+    // ─── Pattern: Bench → prevent damage to self (passive) ───
+    // "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon"
+    const benchPreventSelfDmgMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*prevent all damage done to this Pok[eé]mon/i
+    );
+    if (benchPreventSelfDmgMatch) {
+      return {
+        name: ability.name,
+        type: "passive",
+        modifyIncomingDamage: (_ctx, damage) => 0,
+      };
+    }
+
+    // ─── Pattern: Bench → prevent damage to benched Pokemon (passive) ───
+    // "prevent all damage from and effects of attacks from your opponent's Pokémon done to this Pokémon"
+    const benchPreventAllDmgMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*prevent all damage (?:from )?(?:and effects )?(?:of attacks)?/i
+    );
+    if (benchPreventAllDmgMatch) {
+      return {
+        name: ability.name,
+        type: "passive",
+        modifyIncomingDamage: (_ctx, damage) => 0,
+      };
+    }
+
+    // ─── Pattern: Bench → damage boost (passive) ───
+    // "As long as this Pokémon is on your Bench, ... do 30 more damage"
+    const benchBoostMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*(?:do|does|deal) (\d+) more damage/i
+    );
+    if (benchBoostMatch) {
+      const boost = parseInt(benchBoostMatch[1], 10);
+      return {
+        name: ability.name,
+        type: "passive",
+        modifyDamage: (_ctx, damage, isAttacker) => isAttacker ? damage + boost : damage,
+      };
+    }
+
+    // ─── Pattern: Bench → shuffle self into deck ───
+    // "if this Pokémon is on your Bench, you may shuffle it and all attached cards into your deck"
+    const benchShuffleMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*shuffle (?:it|this Pok[eé]mon) (?:and all attached cards )?into your deck/i
+    );
+    if (benchShuffleMatch) {
+      return {
+        name: ability.name,
+        type: "activated",
+        canActivate: makePositionCheck(),
+        onActivate: (ctx) => {
+          const collected = ctx.pickUpPokemon(ctx.source.instanceId, "player");
+          for (const card of collected) {
+            ctx.player.deck.cards.push(card);
+          }
+          ctx.shuffleDeck("player");
+          ctx.log(`${ability.name}: 将自身及附加卡洗入牌组`);
+        },
+      };
+    }
+
+    // ─── Pattern: Bench → attach energy from hand ───
+    // "if this Pokémon is on your Bench, you may attach an Energy card from your hand"
+    const benchAttachEnergyMatch = text.match(
+      /(?:on (?:your )?(?:the )?Bench).*attach (?:an? |1 )?[Ee]nergy card from your hand/i
+    );
+    if (benchAttachEnergyMatch) {
+      return {
+        name: ability.name,
+        type: "activated",
+        canActivate: (ctx) => {
+          const onBench = ctx.player.bench.cards.some(c => c.instanceId === ctx.source.instanceId);
+          const hasEnergy = ctx.player.hand.cards.some(c => c.card.supertype === "Energy");
+          return onBench && hasEnergy;
+        },
+        onActivate: (ctx) => {
+          // Find first energy in hand and attach to this Pokemon
+          const energyIdx = ctx.player.hand.cards.findIndex(c => c.card.supertype === "Energy");
+          if (energyIdx !== -1) {
+            const energy = ctx.player.hand.cards.splice(energyIdx, 1)[0];
+            ctx.source.attachedEnergy.push(energy);
+            ctx.log(`${ability.name}: 从手牌附加 ${energy.card.name}`);
+          }
+        },
+      };
+    }
+  }
+
+  // ──────────────────────────────────────
   // ACTIVATED ABILITIES ("Once during your turn")
   // ──────────────────────────────────────
 
@@ -999,6 +1173,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: (ctx) => {
         ctx.drawCards(drawCount, "player");
         ctx.log(`${ability.name}: 抽了 ${drawCount} 张牌`);
@@ -1033,6 +1208,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: (ctx) => {
         const handSize = ctx.player.hand.cards.length;
         const toDraw = Math.max(0, targetHand - handSize);
@@ -1055,6 +1231,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: (ctx) => {
         // Heal the most-damaged Pokemon
         const all = ctx.getAllPokemon("player");
@@ -1077,6 +1254,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: async (ctx) => {
         const filter = (c: GameCard) => {
           if (c.card.supertype !== "Energy") return false;
@@ -1109,6 +1287,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: (ctx) => {
         // Move energy from Pokemon with most energy to one with least
         const all = ctx.getAllPokemon("player");
@@ -1138,6 +1317,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: async (ctx) => {
         const filter = (c: GameCard) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic");
         const found = ctx.promptSearchDeck
@@ -1164,6 +1344,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: (ctx) => {
         const count = lookTopMatch[1] ? parseInt(lookTopMatch[1], 10) : 1;
         const top = ctx.player.deck.cards.slice(0, count);
@@ -1181,6 +1362,7 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
+      canActivate: makePositionCheck(),
       onActivate: async (ctx) => {
         if (ctx.player.bench.cards.length > 0) {
           if (ctx.promptSwitchOwnActive) {
@@ -1206,7 +1388,11 @@ function parseOneAbility(ability: CardAbility): AbilityEffect | null {
     return {
       name: ability.name,
       type: "activated",
-      canActivate: (ctx) => ctx.player.hand.cards.length >= discardCount,
+      canActivate: (ctx) => {
+        const posCheck = makePositionCheck();
+        if (posCheck && !posCheck(ctx)) return false;
+        return ctx.player.hand.cards.length >= discardCount;
+      },
       onActivate: (ctx) => {
         // Discard first N cards from hand
         for (let i = 0; i < discardCount && ctx.player.hand.cards.length > 0; i++) {
