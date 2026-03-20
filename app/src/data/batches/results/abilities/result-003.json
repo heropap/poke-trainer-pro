@@ -1,0 +1,1595 @@
+{
+  "batchId": "abilities-003",
+  "processedAt": "2026-03-20",
+  "processedBy": "claude-code-direct",
+  "results": [
+    {
+      "index": 100,
+      "pattern": "If this Pokémon has full HP, it takes {N} less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance).",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [
+          {
+            "type": "full_hp"
+          }
+        ],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_damage_incoming",
+            "value": "-N"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 101,
+      "pattern": "Once during your turn, if this Pokémon is on your Bench, you may switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.) If you do, discard this Pokémon and all attached cards.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [
+          {
+            "type": "on_bench"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "switch_pokemon",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": true,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 102,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may prevent all damage from and effects of attacks from your opponent's Pokémon done to this Pokémon until the end of your opponent's next turn.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "on_enter",
+        "triggers": [
+          "on_evolve"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "prevent_damage",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": true
+        }
+      }
+    },
+    {
+      "index": 103,
+      "pattern": "As long as this Pokémon is in the Active Spot, your opponent's Active Pokémon has no Abilities, except for Midnight Fluttering.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "prevent_ability"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 104,
+      "pattern": "Once during your turn, you may attach a Basic Fire Energy card, a Basic Fighting Energy card, or {N} of each from your hand to your Pokémon in any way you like.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "attach_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 105,
+      "pattern": "During Pokémon Checkup, put {N} damage counter on each Pokémon that has an Ability (both yours and your opponent's), except any Froslass.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "between_turns"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 106,
+      "pattern": "As long as this Pokémon is in the Active Spot, Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities, except for Future Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "prevent_ability"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 107,
+      "pattern": "If this Pokémon has any Darkness Energy attached and is damaged by an attack, flip a coin. If heads, prevent that damage.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_damage_received"
+        ],
+        "preconditions": [
+          {
+            "type": "has_energy_attached"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "flip_coin",
+            "params": {}
+          },
+          {
+            "action": "prevent_damage",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": true,
+          "hasPlayerChoice": false,
+          "hasRNG": true,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 108,
+      "pattern": "If this Pokémon has any Darkness Energy attached, it gets +{N} HP, and the attacks it uses do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [
+          {
+            "type": "has_energy_attached"
+          }
+        ],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_damage_outgoing",
+            "value": "+N"
+          },
+          {
+            "type": "modify_hp",
+            "value": "+N"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 109,
+      "pattern": "Once during your turn, if this Pokémon is in the Active Spot, you may look at the top {N} cards of your deck, reveal a Supporter card you find there, and put it into your hand. Shuffle the other cards back into your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [
+          {
+            "type": "in_active_spot"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "look_at_cards",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 110,
+      "pattern": "Once during your turn, you may put {N} damage counters on {N} of your opponent's Pokémon. If you use this Ability, this Pokémon is Knocked Out.",
+      "totalCount": 6,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "place_damage_counters",
+            "target": {
+              "targetType": "pokemon",
+              "owner": "opponent"
+            },
+            "params": {
+              "count": "N"
+            }
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 111,
+      "pattern": "If this Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon, and if you have any Pecharunt ex in play, your opponent takes {N} fewer Prize card.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_knockout"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 112,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may switch in {N} of your opponent's Benched Pokémon that has {N} HP or less remaining to the Active Spot.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "on_enter",
+        "triggers": [
+          "on_evolve"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "switch_pokemon",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 113,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may heal all damage from each of your Evolution Pokémon. If you healed any damage in this way, discard all Energy from those Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "on_enter",
+        "triggers": [
+          "on_evolve"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "heal",
+            "params": {}
+          },
+          {
+            "action": "discard_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": true,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 114,
+      "pattern": "All of your Pokémon that have Metal Energy attached have no Retreat Cost.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_retreat_cost",
+            "value": "zero"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 115,
+      "pattern": "Once during your turn, when you play this Pokémon from your hand to evolve {N} of your Pokémon, if you have any Tera Pokémon in play, you may search your deck for up to {N} Trainer cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 116,
+      "pattern": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard the top card of your opponent's deck.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "on_enter",
+        "triggers": [
+          "on_enter_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "discard_cards",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 117,
+      "pattern": "Prevent all damage from and effects of attacks from your opponent's Tera Pokémon done to this Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 118,
+      "pattern": "Once during your turn, you may attach up to {N} Basic Energy cards from your discard pile to your Lightning Pokémon in any way you like. If you use this Ability, this Pokémon is Knocked Out.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "accelerate_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 119,
+      "pattern": "Your Basic Pokémon in play have no Retreat Cost.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_retreat_cost",
+            "value": "zero"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 120,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may attach up to {N} Basic Metal Energy cards from your discard pile to your Metal Pokémon in any way you like.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "on_enter",
+        "triggers": [
+          "on_evolve"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "accelerate_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 121,
+      "pattern": "Once during your turn, if this Pokémon is in the Active Spot, you may make your opponent's Active Pokémon Burned.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [
+          {
+            "type": "in_active_spot"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "apply_status",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 122,
+      "pattern": "If this Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon V, your opponent can't take any Prize cards for it.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_knockout"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 123,
+      "pattern": "If this Pokémon has any Energy attached, it has no Retreat Cost.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [
+          {
+            "type": "has_energy_attached"
+          }
+        ],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_retreat_cost",
+            "value": "zero"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 124,
+      "pattern": "Prevent all effects of your opponent's Pokémon's Abilities done to each of your Pokémon that has any Psychic Energy attached, except any Enamorus V.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "prevent_ability"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 125,
+      "pattern": "This Pokémon's attacks cost Colorless less for each of your opponent's Single Strike, Rapid Strike, and Fusion Strike Pokémon in play.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_attack_cost",
+            "value": "-N"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 126,
+      "pattern": "Prevent all effects of attacks from your opponent's Pokémon done to this Pokémon. (Damage is not an effect.)",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "prevent_attack",
+            "scope": "effects_only"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 127,
+      "pattern": "As long as this Pokémon is on your Bench, prevent all damage done to this Pokémon by attacks (both yours and your opponent's).",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "immunity_bench"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 128,
+      "pattern": "During your turn, you may put up to {N} Colorless Pokémon that don't have a Rule Box from your discard pile onto your Bench. (Pokémon V, Pokémon-GX, etc. have Rule Boxes.) (You can't use more than {N} VSTAR Power in a game.)",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [
+          {
+            "type": "vstar_power_available"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "put_in_play",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        },
+        "note": "Usage limited per turn/game"
+      }
+    },
+    {
+      "index": 129,
+      "pattern": "Prevent all damage done to this Pokémon by attacks from your opponent's Pokémon that have Special Energy attached.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "prevent_damage_incoming",
+            "condition": "from_pokemon_with_special_energy"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 130,
+      "pattern": "Attacks used by your Pokémon do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_damage_outgoing",
+            "value": "+N",
+            "scope": "all_your_pokemon"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 131,
+      "pattern": "If you go first, this Pokémon can use attacks during your first turn.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 132,
+      "pattern": "Once during your turn, you may search your deck for up to {N} Evolution Metal Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 133,
+      "pattern": "Once during your turn, if this Pokémon has any Grass Energy attached, you may use this Ability. Heal {N} damage from {N} of your Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [
+          {
+            "type": "has_energy_attached"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "heal",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 134,
+      "pattern": "Once during your turn, when you play this Pokémon from your hand to evolve {N} of your Pokémon, you may use this Ability. Search your deck for a Shedinja and put it onto your Bench. Then, shuffle your deck.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "put_in_play",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 135,
+      "pattern": "Once during your turn, when this Pokémon moves from the Active Spot to your Bench, you may use this Ability. Attach up to {N} Basic Water Energy cards from your hand to this Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "attach_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 136,
+      "pattern": "If this Pokémon is Knocked Out by damage from an attack from your opponent's Pokémon ex, your opponent can't take any Prize cards for it.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_knockout"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 137,
+      "pattern": "Once during your turn, if you have Solrock in play, you may discard a Basic Fighting Energy card from your hand in order to use this Ability. Draw {N} cards. You can't use more than {N} Lunar Cycle Ability each turn.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "draw_cards",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {
+              "count": "N"
+            }
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        },
+        "note": "Usage limited per turn/game"
+      }
+    },
+    {
+      "index": 138,
+      "pattern": "Attacks used by your Fighting Pokémon do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_damage_outgoing",
+            "value": "+N",
+            "scope": "fighting_pokemon"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 139,
+      "pattern": "If your Active Darkness Pokémon is damaged by an attack from your opponent's Pokémon (even if your Active Darkness Pokémon is Knocked Out), place {N} damage counter on the Attacking Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_damage_received"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "place_damage_counters",
+            "target": {
+              "targetType": "pokemon",
+              "owner": "opponent"
+            },
+            "params": {
+              "count": "N"
+            }
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 140,
+      "pattern": "Once during your turn, you may use this Ability. Switch a card from your hand with the top card of your deck.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 141,
+      "pattern": "Once during your turn, if you have any Grass Mega Evolution Pokémon ex in play, you may use this Ability. Heal {N} damage from {N} of your Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "heal",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 142,
+      "pattern": "As often as you like during your turn, if you have any Fire Mega Evolution Pokémon ex in play, you may use this Ability. Attach a Basic Fire Energy card from your hand to {N} of your Benched Fire Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "attach_energy",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": true,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 143,
+      "pattern": "This Pokémon takes {N} less damage from attacks from your opponent's Fire or Water Pokémon (after applying Weakness and Resistance).",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "passive",
+        "triggers": [
+          "while_in_play"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          {
+            "type": "modify_damage_incoming",
+            "value": "-N",
+            "condition": "from_fire_or_water"
+          }
+        ],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 144,
+      "pattern": "As long as this Pokémon is in the Active Spot, whenever your opponent's Active Pokémon moves to the Bench during their turn, their new Active Pokémon is now Confused.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_retreat"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "apply_status",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": false,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 145,
+      "pattern": "Once during your turn, when you play this Pokémon from your hand to evolve {N} of your Pokémon, you may use this Ability. You may also use this Ability if this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon. Discard the top {N} cards of your opponent's deck.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "triggered",
+        "triggers": [
+          "on_knockout"
+        ],
+        "preconditions": [
+          {
+            "type": "in_active_spot"
+          }
+        ],
+        "costs": [],
+        "steps": [
+          {
+            "action": "discard_cards",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 146,
+      "pattern": "Once during your turn, you may use this Ability. Search your deck for a Basic Darkness Energy card and attach it to {N} of your Benched Darkness Pokémon. Then, shuffle your deck. If you attached Energy to a Pokémon in this way, place {N} damage counters on that Pokémon.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "attach_energy",
+            "params": {}
+          },
+          {
+            "action": "place_damage_counters",
+            "target": {
+              "targetType": "pokemon",
+              "owner": "self"
+            },
+            "params": {
+              "count": "N"
+            }
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": true,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 147,
+      "pattern": "Once during your turn, you may use this Ability. Search your deck for an Erika's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": false,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 148,
+      "pattern": "Once during your turn, you may use this Ability. Flip a coin. If heads, put an Energy attached to your opponent's Active Pokémon into their hand.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "flip_coin",
+            "params": {}
+          },
+          {
+            "action": "return_to_hand",
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": true,
+          "hasPlayerChoice": true,
+          "hasRNG": true,
+          "isSelfReferencing": false,
+          "affectsOpponent": true,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    },
+    {
+      "index": 149,
+      "pattern": "Once during your turn, if you played Canari from your hand this turn, you may use this Ability. Search your deck for up to {N} Basic Lightning Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
+      "totalCount": 2,
+      "analysis": {
+        "abilitySubType": "activated",
+        "triggers": [
+          "on_activate"
+        ],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          {
+            "action": "search_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          },
+          {
+            "action": "shuffle_deck",
+            "target": {
+              "targetType": "player",
+              "owner": "self"
+            },
+            "params": {}
+          }
+        ],
+        "modifiers": [],
+        "flags": {
+          "hasBranching": false,
+          "hasPlayerChoice": true,
+          "hasRNG": false,
+          "isSelfReferencing": true,
+          "affectsOpponent": false,
+          "affectsBench": false,
+          "hasDelayedEffect": false
+        }
+      }
+    }
+  ]
+}

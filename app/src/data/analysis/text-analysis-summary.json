@@ -1,0 +1,52 @@
+{
+  "totalCards": 5392,
+  "supertypeCounts": {
+    "Pokémon": 4534,
+    "Trainer": 799,
+    "Energy": 59
+  },
+  "subtypeCounts": {
+    "Basic": 2594,
+    "Stage 1": 1391,
+    "Stage 2": 463,
+    "MEGA": 76,
+    "ex": 728,
+    "Supporter": 457,
+    "Item": 204,
+    "Stadium": 67,
+    "Pokémon Tool": 88,
+    "Special": 27,
+    "Tera": 146,
+    "Future": 70,
+    "Ancient": 73,
+    "ACE SPEC": 33,
+    "V": 195,
+    "VSTAR": 76,
+    "VMAX": 42,
+    "Radiant": 12,
+    "Fusion Strike": 10,
+    "Single Strike": 15,
+    "Rapid Strike": 22,
+    "Eternamax": 1
+  },
+  "attacks": {
+    "total": 6860,
+    "withText": 4631,
+    "damageOnly": 2229,
+    "uniqueTexts": 1406,
+    "patternFamilies": 1095,
+    "patternFamiliesWithVariants": 141
+  },
+  "abilities": {
+    "total": 1087,
+    "uniqueTexts": 504,
+    "patternFamilies": 493,
+    "patternFamiliesWithVariants": 10
+  },
+  "trainers": {
+    "totalTexts": 1656,
+    "uniqueTexts": 398,
+    "patternFamilies": 395,
+    "patternFamiliesWithVariants": 3
+  }
+}

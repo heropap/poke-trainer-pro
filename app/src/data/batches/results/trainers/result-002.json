@@ -1,0 +1,885 @@
+{
+  "batchId": "trainers-002",
+  "processedAt": "2026-03-20",
+  "processedBy": "claude-code-direct",
+  "results": [
+    {
+      "index": 50,
+      "pattern": "Draw cards until you have {N} cards in your hand. If any of your Pokémon were Knocked Out during your opponent's last turn, draw cards until you have {N} cards in your hand instead.",
+      "totalCount": 4,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "if", "params": { "condition": "your_pokemon_knocked_out_last_turn" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}_alt" } }], "elseSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 51,
+      "pattern": "Search your deck for a Basic Fighting Energy card or a Basic Fighting Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": ["Basic Fighting Energy", "Basic Fighting Pokémon"], "count": 1 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 52,
+      "pattern": "Ask your opponent if each player may take a Prize card. If yes, each player takes a Prize card. If no, you draw {N} cards.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "confirm", "target": { "targetType": "player", "owner": "opponent" }, "params": { "question": "each_player_takes_prize" }, "branch": { "thenSteps": [{ "action": "choose_cards", "target": { "targetType": "card", "owner": "both", "zone": "prize" }, "params": { "count": 1, "destination": "hand" } }], "elseSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 53,
+      "pattern": "Search your deck for a Mega Evolution Pokémon ex, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Mega Evolution Pokémon ex", "count": 1 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 54,
+      "pattern": "Once during each player's turn, that player may discard an Energy card from their hand in order to draw cards until they have as many cards in their hand as they have Psychic Pokémon in play.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Stadium",
+        "triggers": ["while_in_stadium"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          { "type": "once_per_turn", "owner": "both", "cost": { "discard_from_hand": { "filter": "Energy", "count": 1 } }, "effect": { "action": "draw_cards", "params": { "until_hand_size": "psychic_pokemon_in_play_count" } } }
+        ],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 55,
+      "pattern": "During this turn, attacks used by your Fighting Pokémon do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "set_marker", "target": { "targetType": "player", "owner": "self" }, "params": { "marker": "fighting_add_damage", "value": "{N}", "markerExpiry": { "type": "end_of_turn", "owner": "self" } } }
+        ],
+        "modifiers": [{ "type": "add_damage", "value": "{N}", "condition": { "attackerIs": "Fighting", "owner": "self" }, "duration": "this_turn" }],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 56,
+      "pattern": "Heal all damage from {N} of your Mega Evolution Pokémon ex. If you healed any damage in this way, put all Energy attached to that Pokémon into your hand.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "filter": "Mega Evolution Pokémon ex", "count": 1 }, "params": {} },
+          { "action": "heal", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "amount": "all" } },
+          { "action": "if", "params": { "condition": "healed_any_damage" }, "branch": { "thenSteps": [{ "action": "return_to_hand", "target": { "targetType": "card", "owner": "self" }, "params": { "filter": "attached Energy", "count": "all" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 57,
+      "pattern": "The Retreat Cost of the Pokémon this card is attached to is ColorlessColorless less.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Tool",
+        "triggers": ["while_attached"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [{ "type": "reduce_retreat_cost", "value": 2 }],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 58,
+      "pattern": "Search your deck for a Basic Pokémon, a Stage {N} Pokémon, and a Stage {N} Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": ["Basic Pokémon", "Stage 1 Pokémon", "Stage 2 Pokémon"], "count": 3 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 59,
+      "pattern": "You can use this card only if you discard another card from your hand.  Search your deck for up to {N} Lightning Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [{ "type": "discard_from_hand", "count": 1 }],
+        "steps": [
+          { "action": "discard_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "hand", "count": 1 } },
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Lightning Pokémon", "count": "up_to_{N}" } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 60,
+      "pattern": "You can use this card only if you have any Tera Pokémon in play.  Choose up to {N} of your Benched Colorless Pokémon and attach a Basic Energy card from your discard pile to each of them.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "have_in_play", "filter": "Tera Pokémon" }],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "filter": "Colorless", "count": "up_to_{N}" }, "params": {} },
+          { "action": "for_each", "target": { "targetType": "chosen_pokemon" }, "params": {}, "steps": [{ "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "source": "discard", "filter": "Basic Energy", "count": 1 } }] }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 61,
+      "pattern": "Attach a Basic Energy card from your discard pile to {N} of your Benched N's Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "filter": "N's Pokémon", "count": 1 }, "params": {} },
+          { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "source": "discard", "filter": "Basic Energy", "count": 1 } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 62,
+      "pattern": "You can use this card only if any of your Team Rocket's Pokémon were Knocked Out during your opponent's last turn.  Each player shuffles their hand into their deck. Then, you draw {N} cards, and your opponent draws {N} cards.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "your_pokemon_knocked_out_last_turn", "filter": "Team Rocket's Pokémon" }],
+        "costs": [],
+        "steps": [
+          { "action": "shuffle_into_deck", "target": { "targetType": "player", "owner": "both" }, "params": { "source": "hand", "count": "all" } },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "opponent" }, "params": { "count": "{N}" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 63,
+      "pattern": "Search your deck for a Trainer card, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Trainer", "count": 1 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 64,
+      "pattern": "If you go first, you may use this card during your first turn.  Search your deck for up to {N} Basic Team Rocket's Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "can_use_first_turn_going_first" }],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Basic Team Rocket's Pokémon", "count": "up_to_{N}" } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 65,
+      "pattern": "Search your deck for a Supporter card that has \"Team Rocket\" in its name, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Supporter with 'Team Rocket' in name", "count": 1 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 66,
+      "pattern": "Pokémon Tools attached to each Pokémon (both yours and your opponent's) have no effect.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Stadium",
+        "triggers": ["while_in_stadium"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [{ "type": "prevent_ability", "scope": "all_pokemon_tools", "owner": "both" }],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 67,
+      "pattern": "Search your deck for an Evolution Pokémon and an Energy card, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": ["Evolution Pokémon", "Energy"], "count": 2 } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 68,
+      "pattern": "Search your deck for up to {N} Evolution Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Evolution Pokémon", "count": "up_to_{N}" } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 69,
+      "pattern": "Shuffle up to {N} Pokémon from your discard pile into your deck. If you shuffled any cards into your deck in this way, draw {N} cards.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "discard" }, "params": { "filter": "Pokémon", "count": "up_to_{N}" } },
+          { "action": "shuffle_into_deck", "target": { "targetType": "card", "owner": "self" }, "params": {} },
+          { "action": "if", "params": { "condition": "shuffled_any_cards" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 70,
+      "pattern": "Search your deck for a Basic Pokémon and put it onto your Bench. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Basic Pokémon", "count": 1 } },
+          { "action": "put_in_play", "target": { "targetType": "card", "owner": "self", "zone": "bench" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 71,
+      "pattern": "Put an Energy attached to your opponent's Active Pokémon on top of their deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "active", "filter": "Energy" }, "params": { "count": 1 } },
+          { "action": "put_on_deck_top", "target": { "targetType": "card", "owner": "opponent" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 72,
+      "pattern": "Search your deck for up to {N} in any combination of Ethan's Pokémon and Basic Fire Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": ["Ethan's Pokémon", "Basic Fire Energy"], "count": "up_to_{N}", "combination": true } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 73,
+      "pattern": "Once during each player's turn, that player may search their deck for a Basic Pokémon that doesn't have a Rule Box and put it onto their Bench. Then, that player shuffles their deck. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Stadium",
+        "triggers": ["while_in_stadium"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [{ "type": "once_per_turn", "owner": "both", "effect": { "action": "search_deck", "params": { "filter": "Basic Pokémon without Rule Box", "count": 1, "destination": "bench" } } }],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 74,
+      "pattern": "The attacks of the Pokémon this card is attached to do {N} more damage to your opponent's Active Pokémon V (before applying Weakness and Resistance).",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Tool",
+        "triggers": ["while_attached"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [{ "type": "add_damage", "value": "{N}", "condition": { "targetIs": "Pokémon V", "zone": "active", "owner": "opponent" } }],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 75,
+      "pattern": "Put a card from your hand on the bottom of your deck. If you do, draw cards until you have {N} cards in your hand. (If you have no other cards in your hand, you can't use this card.)",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "hand_size_gte", "value": 2 }],
+        "costs": [],
+        "steps": [
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "hand" }, "params": { "count": 1 } },
+          { "action": "put_on_deck_bottom", "target": { "targetType": "card", "owner": "self" }, "params": {} },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 76,
+      "pattern": "Draw cards until you have {N} cards in your hand. If none of your Pokémon have any Energy attached, draw cards until you have {N} cards in your hand instead.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "if", "params": { "condition": "no_pokemon_have_energy" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}_alt" } }], "elseSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 77,
+      "pattern": "Choose up to {N} of your Pokémon and heal {N} damage from each of them.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "up_to_{N}" }, "params": {} },
+          { "action": "for_each", "target": { "targetType": "chosen_pokemon" }, "params": {}, "steps": [{ "action": "heal", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "amount": "{N}" } }] }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 78,
+      "pattern": "Search your deck for up to {N} Basic Energy cards and attach them to {N} of your Pokémon. Then, shuffle your deck. During this turn, your Pokémon can't attack. (This includes Pokémon that come into play this turn.)",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Basic Energy", "count": "up_to_{N}" } },
+          { "action": "attach_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "prevent_attack", "target": { "targetType": "pokemon", "owner": "self", "zone": "all" }, "params": { "duration": "this_turn" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 79,
+      "pattern": "Your opponent reveals their hand, and you choose a card you find there and put it on the bottom of their deck. If you put a card on the bottom of your opponent's deck in this way, your opponent may draw a card.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "show_hand", "target": { "targetType": "player", "owner": "opponent" }, "params": {} },
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "hand" }, "params": { "count": 1, "chosenBy": "self" } },
+          { "action": "put_on_deck_bottom", "target": { "targetType": "card", "owner": "opponent" }, "params": {} },
+          { "action": "if", "params": { "condition": "put_card_on_bottom" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "opponent" }, "params": { "count": 1, "optional": true } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 80,
+      "pattern": "Move up to {N} Energy from {N} of your Pokémon to another of your Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": { "label": "source" } },
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": { "label": "destination" } },
+          { "action": "move_energy", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "from": "source", "to": "destination", "count": "up_to_{N}" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 81,
+      "pattern": "Your opponent reveals their hand, and you put a Basic Pokémon you find there onto your opponent's Bench. If you put a Pokémon onto their Bench in this way, switch in that Pokémon to the Active Spot.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "show_hand", "target": { "targetType": "player", "owner": "opponent" }, "params": {} },
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "hand" }, "params": { "filter": "Basic Pokémon", "count": 1, "chosenBy": "self" } },
+          { "action": "put_in_play", "target": { "targetType": "card", "owner": "opponent", "zone": "bench" }, "params": {} },
+          { "action": "if", "params": { "condition": "put_pokemon_on_bench" }, "branch": { "thenSteps": [{ "action": "switch_pokemon", "target": { "targetType": "pokemon", "owner": "opponent" }, "params": { "switchTo": "active" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 82,
+      "pattern": "Put an Energy attached to your opponent's Active Pokémon into their hand. If you do, attach an Energy card from your hand to your Active Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "opponent", "zone": "active", "filter": "Energy" }, "params": { "count": 1 } },
+          { "action": "if", "params": { "condition": "returned_energy" }, "branch": { "thenSteps": [{ "action": "attach_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "active" }, "params": { "source": "hand", "count": 1 } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 83,
+      "pattern": "You can use this card only if you discard another card from your hand.  Search your deck for up to {N} Basic Energy cards, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [{ "type": "discard_from_hand", "count": 1 }],
+        "steps": [
+          { "action": "discard_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "hand", "count": 1 } },
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Basic Energy", "count": "up_to_{N}" } },
+          { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 84,
+      "pattern": "You can use this card only if any of your Pokémon were Knocked Out during your opponent's last turn.    Attach a Basic Fire Energy card from your discard pile to {N} of your Pokémon. If you do, draw cards until you have {N} cards in your hand.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "your_pokemon_knocked_out_last_turn" }],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": {} },
+          { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "source": "discard", "filter": "Basic Fire Energy", "count": 1 } },
+          { "action": "if", "params": { "condition": "attached_energy" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "until_hand_size": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 85,
+      "pattern": "Shuffle your hand into your deck. Then, draw {N} cards. If you go second and it's your first turn, draw {N} cards instead.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "shuffle_into_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "hand", "count": "all" } },
+          { "action": "if", "params": { "condition": "go_second_first_turn" }, "branch": { "thenSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}_alt" } }], "elseSteps": [{ "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 86,
+      "pattern": "Look at the top {N} cards of your deck and put {N} of them into your hand. Shuffle the other cards and put them on the bottom of your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "look_at_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "deck_top", "count": "{N}" } },
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self" }, "params": { "count": "{N}" } },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self" }, "params": {} },
+          { "action": "put_on_deck_bottom", "target": { "targetType": "card", "owner": "self" }, "params": { "shuffle": true, "source": "remaining" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 87,
+      "pattern": "Put up to {N} in any combination of Psychic Pokémon and Basic Psychic Energy cards from your discard pile into your hand.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "discard" }, "params": { "filter": ["Psychic Pokémon", "Basic Psychic Energy"], "count": "up_to_{N}", "combination": true } },
+          { "action": "recover_from_discard", "target": { "targetType": "card", "owner": "self" }, "params": { "destination": "hand" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 88,
+      "pattern": "Your opponent reveals their hand, and you draw {N} cards for each Supporter card you find there.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "show_hand", "target": { "targetType": "player", "owner": "opponent" }, "params": {} },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}_per_supporter_in_opponent_hand" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 89,
+      "pattern": "Heal all damage from {N} of your Pokémon that has {N} HP or less remaining.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "filter": "remaining_hp_lte_{N}", "count": 1 }, "params": {} },
+          { "action": "heal", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "amount": "all" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 90,
+      "pattern": "Search your deck for {N} cards, shuffle your deck, then put those cards on top of it in any order.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} },
+          { "action": "put_on_deck_top", "target": { "targetType": "card", "owner": "self" }, "params": { "order": "player_choice" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 91,
+      "pattern": "Look at the top {N} cards of your deck and put {N} of them into your hand. Discard the other cards.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "look_at_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "deck_top", "count": "{N}" } },
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self" }, "params": { "count": "{N}" } },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self" }, "params": {} },
+          { "action": "discard_cards", "target": { "targetType": "card", "owner": "self" }, "params": { "source": "remaining" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 92,
+      "pattern": "You can use this card only if you discard another card from your hand.  Draw a card for each of your opponent's Benched Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [{ "type": "discard_from_hand", "count": 1 }],
+        "steps": [
+          { "action": "discard_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "hand", "count": 1 } },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "opponent_bench_count" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 93,
+      "pattern": "The Retreat Cost of the Pokémon this card is attached to is Colorless less. If that Pokémon's remaining HP is {N} or less, it has no Retreat Cost.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Tool",
+        "triggers": ["while_attached"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [],
+        "modifiers": [
+          { "type": "reduce_retreat_cost", "value": 1 },
+          { "type": "no_retreat_cost", "condition": { "remaining_hp_lte": "{N}" } }
+        ],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 94,
+      "pattern": "Search your deck for a card that has no Abilities and evolves from {N} of your Pokémon, and put it onto that Pokémon to evolve it. Then, shuffle your deck. You can use this card on a Pokémon you put down when you were setting up to play or on a Pokémon that was put into play this turn.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Item",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": {} },
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Evolution card without Abilities that evolves from chosen", "count": 1 } },
+          { "action": "evolve", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "ignoreFirstTurnRestriction": true, "ignorePlayedThisTurn": true, "requireNoAbilities": true } },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 95,
+      "pattern": "If you go first, you may use this card during your first turn.    Discard your hand and draw {N} cards.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "can_use_first_turn_going_first" }],
+        "costs": [],
+        "steps": [
+          { "action": "discard_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "source": "hand", "count": "all" } },
+          { "action": "draw_cards", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "{N}" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 96,
+      "pattern": "Put up to {N} in any combination of Pokémon that don't have a Rule Box and Basic Energy cards from your discard pile into your hand. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "discard" }, "params": { "filter": ["Pokémon without Rule Box", "Basic Energy"], "count": "up_to_{N}", "combination": true } },
+          { "action": "recover_from_discard", "target": { "targetType": "card", "owner": "self" }, "params": { "destination": "hand" } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 97,
+      "pattern": "Reveal up to {N} Pokémon in your hand and put them into your deck. If you do, search your deck for up to that many Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "reveal_cards", "target": { "targetType": "card", "owner": "self", "zone": "hand" }, "params": { "filter": "Pokémon", "count": "up_to_{N}" } },
+          { "action": "shuffle_into_deck", "target": { "targetType": "card", "owner": "self" }, "params": {} },
+          { "action": "if", "params": { "condition": "revealed_any" }, "branch": { "thenSteps": [{ "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "filter": "Pokémon", "count": "up_to_revealed_count" } }, { "action": "reveal_cards", "target": { "targetType": "player", "owner": "self" }, "params": {} }, { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} }, { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }] } }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 98,
+      "pattern": "You can use this card only when it is the last card in your hand.  Search your deck for up to {N} cards and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [{ "type": "last_card_in_hand" }],
+        "costs": [],
+        "steps": [
+          { "action": "search_deck", "target": { "targetType": "player", "owner": "self" }, "params": { "count": "up_to_{N}" } },
+          { "action": "return_to_hand", "target": { "targetType": "card", "owner": "self", "zone": "deck" }, "params": {} },
+          { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self" }, "params": {} }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false }
+      }
+    },
+    {
+      "index": 99,
+      "pattern": "Heal {N} damage from each of your Lightning Pokémon.",
+      "totalCount": 3,
+      "analysis": {
+        "trainerSubType": "Supporter",
+        "triggers": ["on_play"],
+        "preconditions": [],
+        "costs": [],
+        "steps": [
+          { "action": "for_each", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "filter": "Lightning" }, "params": {}, "steps": [{ "action": "heal", "target": { "targetType": "pokemon", "owner": "self" }, "params": { "amount": "{N}" } }] }
+        ],
+        "modifiers": [],
+        "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false }
+      }
+    }
+  ]
+}

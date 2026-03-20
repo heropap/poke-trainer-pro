@@ -1,0 +1,170 @@
+{
+  "totalCards": 5392,
+  "byType": {
+    "pokemon": 4534,
+    "trainer": 799,
+    "energy": 59
+  },
+  "attacksMapped": 6818,
+  "attacksTotal": 6853,
+  "attacksNoText": 2229,
+  "abilitiesMapped": 1078,
+  "abilitiesTotal": 1078,
+  "trainersMapped": 1646,
+  "trainersTotal": 1656,
+  "unmappedExamples": [
+    {
+      "cardId": "me1-80",
+      "type": "attack",
+      "text": "If your opponent's Pokémon is Knocked Out by damage from this attack, during your opponent's next tu"
+    },
+    {
+      "cardId": "me1-146",
+      "type": "attack",
+      "text": "If your opponent's Pokémon is Knocked Out by damage from this attack, during your opponent's next tu"
+    },
+    {
+      "cardId": "me2pt5-133",
+      "type": "attack",
+      "text": "This attack does 10 damage for each damage counter on all of your Benched Cynthia's Pokémon. This at"
+    },
+    {
+      "cardId": "me2pt5-188",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "me2pt5-194",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "me2pt5-197",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "me2pt5-203",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "me2pt5-210",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "me2pt5-244",
+      "type": "attack",
+      "text": "This attack does 10 damage for each damage counter on all of your Benched Cynthia's Pokémon. This at"
+    },
+    {
+      "cardId": "me2pt5-261",
+      "type": "trainer",
+      "text": "You may play only 1 Stadium card during your turn. Put it next to the Active Spot, and discard it if"
+    },
+    {
+      "cardId": "sv1-93",
+      "type": "attack",
+      "text": "During your opponent's next turn, the Defending Pokémon's attacks do 30 less damage (before applying"
+    },
+    {
+      "cardId": "sv1-154",
+      "type": "attack",
+      "text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémo"
+    },
+    {
+      "cardId": "sv10-129",
+      "type": "attack",
+      "text": "This attack does 10 damage for each damage counter on all of your Benched Cynthia's Pokémon. This at"
+    },
+    {
+      "cardId": "sv10-146",
+      "type": "attack",
+      "text": "During your opponent's next turn, if this Pokémon is damaged by an attack (even if this Pokémon is K"
+    },
+    {
+      "cardId": "sv10-201",
+      "type": "attack",
+      "text": "During your opponent's next turn, if this Pokémon is damaged by an attack (even if this Pokémon is K"
+    },
+    {
+      "cardId": "sv2-18",
+      "type": "attack",
+      "text": "Shuffle each player's Active Pokémon and all attached cards into their deck. (You choose a new Activ"
+    },
+    {
+      "cardId": "sv2-27",
+      "type": "attack",
+      "text": "This attack does 60 damage to 1 of your opponent's Benched Pokémon for each Prize card your opponent"
+    },
+    {
+      "cardId": "sv2-52",
+      "type": "attack",
+      "text": "Switch this Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pok"
+    },
+    {
+      "cardId": "sv2-143",
+      "type": "attack",
+      "text": "During your opponent's next turn, if this Pokémon is damaged by an attack (even if it is Knocked Out"
+    },
+    {
+      "cardId": "sv2-148",
+      "type": "attack",
+      "text": "If your opponent's Pokémon is Knocked Out by damage from this attack, during your opponent's next tu"
+    },
+    {
+      "cardId": "sv2-164",
+      "type": "attack",
+      "text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémo"
+    },
+    {
+      "cardId": "sv2-175",
+      "type": "trainer",
+      "text": "The Retreat Cost of each Basic non-Fighting Pokémon in play (both yours and your opponent's) is Colo"
+    },
+    {
+      "cardId": "sv2-179",
+      "type": "trainer",
+      "text": "Put a card from your hand on the bottom of your deck. If you do, draw cards until you have 5 cards i"
+    },
+    {
+      "cardId": "sv2-225",
+      "type": "attack",
+      "text": "Switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémo"
+    },
+    {
+      "cardId": "sv2-232",
+      "type": "attack",
+      "text": "This attack does 60 damage to 1 of your opponent's Benched Pokémon for each Prize card your opponent"
+    },
+    {
+      "cardId": "sv2-235",
+      "type": "attack",
+      "text": "Switch this Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pok"
+    },
+    {
+      "cardId": "sv2-250",
+      "type": "trainer",
+      "text": "Put a card from your hand on the bottom of your deck. If you do, draw cards until you have 5 cards i"
+    },
+    {
+      "cardId": "sv2-257",
+      "type": "attack",
+      "text": "This attack does 60 damage to 1 of your opponent's Benched Pokémon for each Prize card your opponent"
+    },
+    {
+      "cardId": "sv2-260",
+      "type": "attack",
+      "text": "Switch this Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pok"
+    },
+    {
+      "cardId": "sv2-266",
+      "type": "trainer",
+      "text": "Put a card from your hand on the bottom of your deck. If you do, draw cards until you have 5 cards i"
+    }
+  ],
+  "attackMappingRate": 99.5,
+  "abilityMappingRate": 100,
+  "trainerMappingRate": 99.4
+}

@@ -1,0 +1,21 @@
+{
+  "generated": "2026-03-20T03:46:10.677Z",
+  "batchSize": 50,
+  "categories": {
+    "attacks": {
+      "patternFamilies": 1095,
+      "batches": 22
+    },
+    "abilities": {
+      "patternFamilies": 493,
+      "batches": 10
+    },
+    "trainers": {
+      "patternFamilies": 395,
+      "batches": 8
+    }
+  },
+  "totalPatternFamilies": 1983,
+  "totalBatches": 40,
+  "resultDirectory": "/Users/walter/new P/new_pokemon/app/src/data/batches/results"
+}

@@ -1,0 +1,441 @@
+{
+  "batchId": "attacks-010",
+  "processedAt": "2026-03-20",
+  "processedBy": "claude-code-direct",
+  "results": [
+    {
+      "index": 450, "pattern": "Discard up to {N} Energy cards from your hand. This attack does {N} damage to {N} of your opponent's Pokémon for each Energy card you discarded in this way. (Don't apply Weakness and Resistance for Benched Pokémon.)", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "hand", "count": "up_to", "maxCount": 0, "filter": { "superType": ["Energy"] } }, "label": "discarded_energy" },
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "self", "zone": "hand", "count": 0 } },
+        { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": 0 } },
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": 0 }, "params": { "damage": 0 } }
+      ], "modifiers": [],
+      "dynamicDamage": { "calc": "formula", "expression": "discarded_energy_count * per" },
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "maxCount=3, per=60, target count=1. 弃手牌能量对指定宝可梦计伤." }
+    },
+    {
+      "index": 451, "pattern": "Reveal the top {N} cards of your deck. This attack does {N} damage for each Future card you find there. Then, discard those Future cards and shuffle the other cards back into your deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "reveal_cards", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": 0 }, "label": "revealed" },
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": 0, "filter": { "tag": "Future" } } },
+        { "action": "shuffle_into_deck", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": "remaining" } }
+      ], "modifiers": [],
+      "dynamicDamage": { "calc": "formula", "expression": "future_card_count * per" },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "reveal count=5, per=70. 翻牌库顶, Future卡弃掉计伤, 其余洗回." }
+    },
+    {
+      "index": 452, "pattern": "If your opponent's Active Pokémon is a Psychic Pokémon, this attack does {N} more damage.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "if", "branch": { "condition": { "type": "has_type", "energyType": "Psychic", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 } }, "thenSteps": [ { "action": "add_damage", "params": { "value": 0 } } ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "value 为占位符(30)." }
+    },
+    {
+      "index": 453, "pattern": "Look at the top {N} cards of your deck. You may put any number of Pokémon you find there onto your Bench. Shuffle the other cards back into your deck.", "totalCount": 4,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "look_at_cards", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": 0 } },
+        { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": "up_to", "filter": { "superType": ["Pokémon"] } }, "optional": true },
+        { "action": "put_in_play", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": 0 }, "params": { "destination": "bench" } },
+        { "action": "shuffle_into_deck", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": "remaining" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "count 为占位符(8). 看牌库顶, 宝可梦放备战区, 其余洗回." }
+    },
+    {
+      "index": 454, "pattern": "Attach a Basic Fighting Energy card from your discard pile to each of your Benched Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "for_each", "loop": { "type": "each_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": "all" }, "body": [
+          { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 1 }, "params": { "searchFilter": { "superType": ["Energy"], "subType": ["Basic"], "energyType": ["Fighting"] }, "source": "discard", "energyCount": 1 } }
+        ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 455, "pattern": "Discard the top card of your opponent's deck. If you played an Ancient Supporter card from your hand during this turn, discard {N} more cards in this way.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "deck_top", "count": 1 } },
+        { "action": "if", "branch": { "condition": { "type": "has_marker", "marker": "played_supporter_this_turn", "target": { "targetType": "player", "owner": "self", "zone": "any", "count": 1 }, "filter": { "tag": "Ancient", "subType": "Supporter" } }, "thenSteps": [
+          { "action": "discard_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "deck_top", "count": 0 } }
+        ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "count 为占位符(3). 打过远古支援卡=多弃." }
+    },
+    {
+      "index": 456, "pattern": "Your opponent's Active Pokémon is now Burned, Confused, and Poisoned.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "apply_status", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "status": "burned" } },
+        { "action": "apply_status", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "status": "confused" } },
+        { "action": "apply_status", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "status": "poisoned" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 457, "pattern": "This attack does {N} more damage for each Ancient card in your discard pile.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "discard_count", "owner": "self", "filter": { "tag": "Ancient" }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(10)." }
+    },
+    {
+      "index": 458, "pattern": "Discard up to {N} Metal Energy from this Pokémon. This attack does {N} damage for each card you discarded in this way.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "choose_cards", "target": { "targetType": "card", "owner": "self", "zone": "attached_energy", "count": "up_to", "maxCount": 0, "filter": { "energyType": ["Metal"] } }, "label": "discarded_metal" },
+        { "action": "discard_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 } }
+      ], "modifiers": [],
+      "dynamicDamage": { "calc": "formula", "expression": "discarded_metal_count * per" },
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "maxCount=2, per=120." }
+    },
+    {
+      "index": 459, "pattern": "During your next turn, this Pokémon's Meteor Mash attack does {N} more damage (before applying Weakness and Resistance).", "totalCount": 3,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "set_marker", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 }, "params": { "marker": "meteor_mash_boost", "value": 0, "markerExpiry": { "type": "start_of_next_turn", "owner": "self" } } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "value 为占位符(60)." }
+    },
+    {
+      "index": 460, "pattern": "This attack does {N} damage for each of your Ancient Pokémon in play.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "zone_count", "zone": "in_play", "owner": "self", "filter": { "tag": "Ancient" }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(30)." }
+    },
+    {
+      "index": 461, "pattern": "Search your deck for up to {N} Basic Energy cards and attach them to your Future Pokémon in any way you like. Then, shuffle your deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "search_deck", "target": { "targetType": "card", "owner": "self", "zone": "deck", "count": "up_to", "maxCount": 0 }, "params": { "searchFilter": { "superType": ["Energy"], "subType": ["Basic"] } } },
+        { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "all", "filter": { "tag": "Future" } }, "params": { "distribution": "any" } },
+        { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self", "zone": "deck", "count": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "maxCount 为占位符(2). 贴到 Future 宝可梦." }
+    },
+    {
+      "index": 462, "pattern": "Your opponent reveals their hand. Put up to {N} Basic Pokémon you find there onto your opponent's Bench.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "show_hand", "target": { "targetType": "player", "owner": "opponent", "zone": "hand", "count": 1 } },
+        { "action": "choose_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "hand", "count": "up_to", "maxCount": 0, "filter": { "superType": ["Pokémon"], "subType": ["Basic"] } } },
+        { "action": "put_in_play", "target": { "targetType": "card", "owner": "opponent", "zone": "hand", "count": 0 }, "params": { "destination": "bench", "owner": "opponent" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "maxCount 为占位符(2). 对手展示手牌, 基础宝可梦放对手备战区." }
+    },
+    {
+      "index": 463, "pattern": "You may put {N} Energy attached to your opponent's Active Pokémon into their hand.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "return_to_hand", "target": { "targetType": "card", "owner": "opponent", "zone": "attached_energy", "count": 0 }, "optional": true }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "count 为占位符(2)." }
+    },
+    {
+      "index": 464, "pattern": "This attack does {N} damage for each Special Energy card attached to this Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "attached_energy_count", "energyType": "Special", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(70)." }
+    },
+    {
+      "index": 465, "pattern": "If all of your Benched Pokémon have at least {N} damage counter on them, this attack does {N} more damage.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "if", "branch": { "condition": { "type": "has_damage", "comparison": "gte", "count": 0, "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": "all" }, "scope": "every" }, "thenSteps": [ { "action": "add_damage", "params": { "value": 0 } } ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "count=1, value=120. 全部备战区宝可梦都受伤=加伤." }
+    },
+    {
+      "index": 466, "pattern": "Discard all Energy from this Pokémon. At the end of your opponent's next turn, the Defending Pokémon will be Knocked Out.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [ { "type": "discard_energy", "energyType": "any", "amount": -1 } ], "steps": [
+        { "action": "set_marker", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "marker": "doom_counter", "markerExpiry": { "type": "end_of_turn", "owner": "opponent" } } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "弃全能量 + 倒计时击倒." }
+    },
+    {
+      "index": 467, "pattern": "This attack does {N} damage for each Fire Energy attached to all of your opponent's Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "attached_energy_count", "energyType": "Fire", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": "all" }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(60). 按对手全体火能量数计伤." }
+    },
+    {
+      "index": 468, "pattern": "Attach a Basic Grass Energy card from your hand to {N} of your Benched Pokémon. If you do, heal all damage from that Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 0 } },
+        { "action": "attach_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 0 }, "params": { "energyType": "Grass", "subType": "Basic", "source": "hand", "energyCount": 1 } },
+        { "action": "full_heal", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "count=1. 贴草能量并全回复." }
+    },
+    {
+      "index": 469, "pattern": "Put up to {N} Pokémon from your discard pile into your hand.", "totalCount": 3,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "recover_from_discard", "target": { "targetType": "card", "owner": "self", "zone": "discard", "count": "up_to", "maxCount": 0, "filter": { "superType": ["Pokémon"] } }, "params": { "destination": "hand" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "maxCount 为占位符(2)." }
+    },
+    {
+      "index": 470, "pattern": "Discard the top card of each player's deck. This attack does {N} more damage for each Energy card discarded in this way.", "totalCount": 3,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "self", "zone": "deck_top", "count": 1 }, "label": "self_discard" },
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "deck_top", "count": 1 }, "label": "opp_discard" }
+      ], "modifiers": [],
+      "dynamicDamage": { "calc": "formula", "expression": "discarded_energy_count * per" },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(140). 双方牌库顶各弃1张, 按能量卡数加伤." }
+    },
+    {
+      "index": 471, "pattern": "At the end of your opponent's next turn, put {N} damage counters on the Defending Pokémon.", "totalCount": 3,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "set_marker", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "marker": "delayed_damage_counters", "value": 0, "markerExpiry": { "type": "end_of_turn", "owner": "opponent" } } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "value 为占位符(9). 延迟放伤害标记." }
+    },
+    {
+      "index": 472, "pattern": "Discard all Energy from this Pokémon. This attack does {N} damage to {N} of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)", "totalCount": 5,
+      "analysis": { "preconditions": [], "costs": [ { "type": "discard_energy", "energyType": "any", "amount": -1 } ], "steps": [
+        { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": 0 } },
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": 0 }, "params": { "damage": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "damage=120, count=1." }
+    },
+    {
+      "index": 473, "pattern": "Your opponent reveals their hand. Discard a card you find there.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "show_hand", "target": { "targetType": "player", "owner": "opponent", "zone": "hand", "count": 1 } },
+        { "action": "choose_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "hand", "count": 1 } },
+        { "action": "discard_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "hand", "count": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 474, "pattern": "Shuffle {N} of your Benched Pokémon and all attached cards into your deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "choose_pokemon", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 0 } },
+        { "action": "shuffle_into_deck", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 0 }, "params": { "includeAttached": true } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "count 为占位符(1)." }
+    },
+    {
+      "index": 475, "pattern": "If any of your Pokémon in play are the same type as any of your opponent's Pokémon in play, this attack does {N} more damage.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "if", "branch": { "condition": { "type": "has_type", "comparison": "shared_type", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "all" }, "against": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": "all" } }, "thenSteps": [ { "action": "add_damage", "params": { "value": 0 } } ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "value 为占位符(120). 双方有同类型宝可梦=加伤." }
+    },
+    {
+      "index": 476, "pattern": "You can use this attack only if you go second, and only during your first turn. Your opponent can't play any Supporter cards from their hand during their next turn.", "totalCount": 2,
+      "analysis": { "preconditions": [ { "type": "and", "conditions": [ { "type": "is_first_turn" }, { "type": "not", "condition": { "type": "is_first_turn", "goFirst": true } } ] } ], "costs": [], "steps": [
+        { "action": "prevent_supporter_usage", "target": { "targetType": "player", "owner": "opponent", "zone": "hand", "count": 1 }, "params": { "expiry": { "type": "end_of_turn", "owner": "opponent" } } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "后手第一回合限定. 封锁对手支援卡." }
+    },
+    {
+      "index": 477, "pattern": "Attach a Basic Energy card from your hand to {N} of your Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "attach_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": 1 }, "params": { "subType": "Basic", "source": "hand", "energyCount": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 478, "pattern": "Discard this Pokémon and all attached cards.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "discard_cards", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 }, "params": { "includeAttached": true } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 479, "pattern": "You may turn {N} of your face-down Prize cards face up. If you do, this attack does {N} more damage. (That Prize card remains face up for the rest of the game.)", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "confirm", "optional": true, "branch": {
+          "condition": { "type": "zone_has_cards", "zone": "prizes", "owner": "self", "count": 1, "comparison": "gte" },
+          "thenSteps": [
+            { "action": "reveal_cards", "target": { "targetType": "card", "owner": "self", "zone": "prizes", "count": 0 }, "params": { "permanent": true } },
+            { "action": "add_damage", "params": { "value": 0 } }
+          ]
+        } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "count=1, value=80. 翻开奖品卡换加伤." }
+    },
+    {
+      "index": 480, "pattern": "Look at the top card of your opponent's deck. You may have your opponent shuffle their deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "look_at_cards", "target": { "targetType": "card", "owner": "opponent", "zone": "deck_top", "count": 1 } },
+        { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "opponent", "zone": "deck", "count": 1 }, "optional": true }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 481, "pattern": "You may do {N} more damage. If you do, during your next turn, this Pokémon can't attack.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "confirm", "optional": true, "branch": {
+          "condition": { "type": "and", "conditions": [] },
+          "thenSteps": [
+            { "action": "add_damage", "params": { "value": 0 } },
+            { "action": "set_marker", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 }, "params": { "marker": "cant_attack", "markerExpiry": { "type": "start_of_next_turn", "owner": "self" } } }
+          ]
+        } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "value 为占位符(100). 可选加伤换下回合不能攻击." }
+    },
+    {
+      "index": 482, "pattern": "Attach a Basic Energy card from your discard pile to {N} of your Benched Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "bench", "count": 1 }, "params": { "searchFilter": { "superType": ["Energy"], "subType": ["Basic"] }, "source": "discard", "energyCount": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 483, "pattern": "Search your deck for up to {N} Basic Grass Energy cards and up to {N} Basic Lightning Energy cards and attach them to your Pokémon in any way you like. Then, shuffle your deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "search_deck", "target": { "targetType": "card", "owner": "self", "zone": "deck", "count": "up_to", "maxCount": 0 }, "params": { "searchFilter": { "or": [ { "superType": ["Energy"], "subType": ["Basic"], "energyType": ["Grass"], "maxCount": 0 }, { "superType": ["Energy"], "subType": ["Basic"], "energyType": ["Lightning"], "maxCount": 0 } ] } } },
+        { "action": "accelerate_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "all" }, "params": { "distribution": "any" } },
+        { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self", "zone": "deck", "count": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "各类型 maxCount=2. 草+雷能量自由分配." }
+    },
+    {
+      "index": 484, "pattern": "This attack does {N} damage for each of your Drifloon and Drifblim in play. This attack also does {N} damage to each of your Drifloon and Drifblim. (Don't apply Weakness and Resistance for Benched Pokémon.)", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "all", "filter": { "nameContains": ["Drifloon", "Drifblim"] } }, "params": { "damage": 0 } }
+      ], "modifiers": [],
+      "dynamicDamage": { "calc": "zone_count", "zone": "in_play", "owner": "self", "filter": { "nameContains": ["Drifloon", "Drifblim"] }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "per=50, self_damage=30. 按同族数计伤, 同时自伤同族." }
+    },
+    {
+      "index": 485, "pattern": "If you don't have the same number of cards in your hand as your opponent, this attack does nothing.", "totalCount": 2,
+      "analysis": { "preconditions": [ { "type": "zone_has_cards", "zone": "hand", "owner": "self", "comparison": "eq", "relativeTo": "opponent" } ], "costs": [], "steps": [], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "前置条件: 双方手牌数须相同." }
+    },
+    {
+      "index": 486, "pattern": "Put damage counters on your opponent's Active Pokémon until its remaining HP is {N}.", "totalCount": 3,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "until_hp": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "until_hp 为占位符(50)." }
+    },
+    {
+      "index": 487, "pattern": "This attack's damage isn't affected by Weakness or Resistance.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "ignore_weakness" },
+        { "action": "ignore_resistance" }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 488, "pattern": "If you go first, you can use this attack during your first turn. Search your deck for a card that evolves from this Pokémon and put it onto this Pokémon to evolve it. Then, shuffle your deck.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "search_deck", "target": { "targetType": "card", "owner": "self", "zone": "deck", "count": 1 }, "params": { "searchFilter": { "superType": ["Pokémon"], "evolves_from": "this" } } },
+        { "action": "evolve", "target": { "targetType": "pokemon", "owner": "self", "zone": "active", "count": 1 } },
+        { "action": "shuffle_deck", "target": { "targetType": "player", "owner": "self", "zone": "deck", "count": 1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": true, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "先手第一回合也可使用. 搜索进化卡进化自身." }
+    },
+    {
+      "index": 489, "pattern": "Discard all Special Energy from all of your opponent's Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "discard_energy", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": "all" }, "params": { "energyType": "Special", "energyCount": -1 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 490, "pattern": "This attack does {N} more damage for each Energy card in your discard pile.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "discard_count", "owner": "self", "filter": { "superType": ["Energy"] }, "per": 0 },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(20)." }
+    },
+    {
+      "index": 491, "pattern": "If your opponent's Active Pokémon is a Dragon Pokémon, it is now Paralyzed.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "if", "branch": { "condition": { "type": "has_type", "energyType": "Dragon", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 } }, "thenSteps": [
+          { "action": "apply_status", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "status": "paralyzed" } }
+        ] } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": true, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 492, "pattern": "This attack does {N} less damage for each Colorless in your opponent's Active Pokémon's Retreat Cost.", "totalCount": 4,
+      "analysis": { "preconditions": [], "costs": [], "steps": [], "modifiers": [],
+      "dynamicDamage": { "calc": "formula", "expression": "base_damage - (retreat_cost * per)" },
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "per 为占位符(50). 对手撤退费用越高伤害越低." }
+    },
+    {
+      "index": 493, "pattern": "Put {N} damage counters on each of your opponent's Pokémon.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": "all" }, "params": { "counters": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "counters 为占位符(2)." }
+    },
+    {
+      "index": 494, "pattern": "Attach up to {N} Basic Psychic Energy cards from your hand to your Pokémon in any way you like.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "attach_energy", "target": { "targetType": "pokemon", "owner": "self", "zone": "in_play", "count": "all" }, "params": { "energyType": "Psychic", "subType": "Basic", "source": "hand", "energyCount": 0, "distribution": "any" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "energyCount 为占位符(2)." }
+    },
+    {
+      "index": 495, "pattern": "If you don't have Uxie and Azelf on your Bench, this attack does nothing.", "totalCount": 2,
+      "analysis": { "preconditions": [ { "type": "and", "conditions": [
+        { "type": "bench_has_pokemon", "owner": "self", "filter": { "name": "Uxie" } },
+        { "type": "bench_has_pokemon", "owner": "self", "filter": { "name": "Azelf" } }
+      ] } ], "costs": [], "steps": [], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false },
+      "note": "前置条件: 备战区须同时有 Uxie 和 Azelf." }
+    },
+    {
+      "index": 496, "pattern": "Put a Trainer card from your discard pile into your hand.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "recover_from_discard", "target": { "targetType": "card", "owner": "self", "zone": "discard", "count": 1, "filter": { "superType": ["Trainer"] } }, "params": { "destination": "hand" } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": true, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": false, "affectsBench": false, "hasDelayedEffect": false } }
+    },
+    {
+      "index": 497, "pattern": "Put damage counters on each of your opponent's Benched Pokémon until its remaining HP is {N}.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "bench", "count": "all" }, "params": { "until_hp": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "until_hp 为占位符(100). 对手全部备战区放标记直到剩N HP." }
+    },
+    {
+      "index": 498, "pattern": "During your next turn, the Defending Pokémon takes {N} more damage from attacks (after applying Weakness and Resistance).", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "set_marker", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "active", "count": 1 }, "params": { "marker": "takes_more_damage", "value": 0, "markerExpiry": { "type": "end_of_turn", "owner": "self" } } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": false, "hasDelayedEffect": true },
+      "note": "value 为占位符(50). 下回合对手受到更多伤害." }
+    },
+    {
+      "index": 499, "pattern": "This attack does {N} damage to each of your opponent's Pokémon ex and Pokémon V. This attack's damage isn't affected by Weakness or Resistance.", "totalCount": 2,
+      "analysis": { "preconditions": [], "costs": [], "steps": [
+        { "action": "place_damage_counters", "target": { "targetType": "pokemon", "owner": "opponent", "zone": "in_play", "count": "all", "filter": { "or": [ { "tag": "ex" }, { "tag": "V" } ] } }, "params": { "damage": 0 } }
+      ], "modifiers": [],
+      "flags": { "hasBranching": false, "hasPlayerChoice": false, "hasRNG": false, "isSelfReferencing": false, "affectsOpponent": true, "affectsBench": true, "hasDelayedEffect": false },
+      "note": "damage 为占位符(100). 无视弱点抵抗, 仅对 ex/V." }
+    }
+  ]
+}

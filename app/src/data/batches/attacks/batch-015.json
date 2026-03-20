@@ -1,0 +1,617 @@
+{
+  "batchId": "attacks-015",
+  "category": "attacks",
+  "totalInCategory": 1095,
+  "batchIndex": 14,
+  "batchTotal": 22,
+  "itemCount": 50,
+  "items": [
+    {
+      "index": 700,
+      "pattern": "Attach a Basic Lightning Energy card from your discard pile to this Pokémon.",
+      "representativeText": "Attach a Basic Lightning Energy card from your discard pile to this Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-74"
+      ],
+      "variants": [
+        "Attach a Basic Lightning Energy card from your discard pile to this Pokémon."
+      ]
+    },
+    {
+      "index": 701,
+      "pattern": "You may move any amount of Psychic Energy from your Pokémon to your other Pokémon in any way you like.",
+      "representativeText": "You may move any amount of Psychic Energy from your Pokémon to your other Pokémon in any way you like.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-82"
+      ],
+      "variants": [
+        "You may move any amount of Psychic Energy from your Pokémon to your other Pokémon in any way you like."
+      ]
+    },
+    {
+      "index": 702,
+      "pattern": "This attack does {N} damage for each Psychic Energy attached to this Pokémon.",
+      "representativeText": "This attack does 30 damage for each Psychic Energy attached to this Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-89"
+      ],
+      "variants": [
+        "This attack does 30 damage for each Psychic Energy attached to this Pokémon."
+      ]
+    },
+    {
+      "index": 703,
+      "pattern": "Put damage counters on your opponent's Active Pokémon until its remaining HP is {N}. If you placed any damage counters in this way, this attack also does {N} damage to this Pokémon.",
+      "representativeText": "Put damage counters on your opponent's Active Pokémon until its remaining HP is 10. If you placed any damage counters in this way, this attack also does 120 damage to this Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-95"
+      ],
+      "variants": [
+        "Put damage counters on your opponent's Active Pokémon until its remaining HP is 10. If you placed any damage counters in this way, this attack also does 120 damage to this Pokémon."
+      ]
+    },
+    {
+      "index": 704,
+      "pattern": "Put up to {N} in any combination of Item cards and Pokémon Tool cards from your discard pile into your hand.",
+      "representativeText": "Put up to 2 in any combination of Item cards and Pokémon Tool cards from your discard pile into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-98"
+      ],
+      "variants": [
+        "Put up to 2 in any combination of Item cards and Pokémon Tool cards from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 705,
+      "pattern": "If your opponent has exactly {N} or {N} Prize cards remaining, this attack does {N} more damage.",
+      "representativeText": "If your opponent has exactly 2 or 4 Prize cards remaining, this attack does 120 more damage.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-101"
+      ],
+      "variants": [
+        "If your opponent has exactly 2 or 4 Prize cards remaining, this attack does 120 more damage."
+      ]
+    },
+    {
+      "index": 706,
+      "pattern": "Put up to {N} Basic Metal Energy cards from your discard pile into your hand.",
+      "representativeText": "Put up to 2 Basic Metal Energy cards from your discard pile into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-107"
+      ],
+      "variants": [
+        "Put up to 2 Basic Metal Energy cards from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 707,
+      "pattern": "For each Fighting Energy attached to this Pokémon, discard the top card of your opponent's deck.",
+      "representativeText": "For each Fighting Energy attached to this Pokémon, discard the top card of your opponent's deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-109"
+      ],
+      "variants": [
+        "For each Fighting Energy attached to this Pokémon, discard the top card of your opponent's deck."
+      ]
+    },
+    {
+      "index": 708,
+      "pattern": "During your next turn, this Pokémon can't use Slashing Steel.",
+      "representativeText": "During your next turn, this Pokémon can't use Slashing Steel.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-142"
+      ],
+      "variants": [
+        "During your next turn, this Pokémon can't use Slashing Steel."
+      ]
+    },
+    {
+      "index": 709,
+      "pattern": "Draw cards until you have the same number of cards in your hand as your opponent.",
+      "representativeText": "Draw cards until you have the same number of cards in your hand as your opponent.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-144"
+      ],
+      "variants": [
+        "Draw cards until you have the same number of cards in your hand as your opponent."
+      ]
+    },
+    {
+      "index": 710,
+      "pattern": "Flip {N} coins. If {N} of them is heads, this attack does {N} more damage. If {N} of them are heads, this attack does {N} more damage. If all of them are heads, this attack does {N} more damage.",
+      "representativeText": "Flip 3 coins. If 1 of them is heads, this attack does 20 more damage. If 2 of them are heads, this attack does 60 more damage. If all of them are heads, this attack does 120 more damage.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3-149",
+        "sv8-149"
+      ],
+      "variants": [
+        "Flip 3 coins. If 1 of them is heads, this attack does 20 more damage. If 2 of them are heads, this attack does 60 more damage. If all of them are heads, this attack does 120 more damage.",
+        "Flip 3 coins. If 1 of them is heads, this attack does 20 more damage. If 2 of them are heads, this attack does 50 more damage. If all of them are heads, this attack does 80 more damage."
+      ]
+    },
+    {
+      "index": 711,
+      "pattern": "Flip a coin. If heads, this attack does {N} more damage. If tails, during your next turn, this Pokémon can't attack.",
+      "representativeText": "Flip a coin. If heads, this attack does 140 more damage. If tails, during your next turn, this Pokémon can't attack.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-159"
+      ],
+      "variants": [
+        "Flip a coin. If heads, this attack does 140 more damage. If tails, during your next turn, this Pokémon can't attack."
+      ]
+    },
+    {
+      "index": 712,
+      "pattern": "Your opponent's Active Pokémon is now Asleep. During Pokémon Checkup, your opponent flips {N} coins instead of {N}. If either of them is tails, that Pokémon is still Asleep.",
+      "representativeText": "Your opponent's Active Pokémon is now Asleep. During Pokémon Checkup, your opponent flips 2 coins instead of 1. If either of them is tails, that Pokémon is still Asleep.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-160"
+      ],
+      "variants": [
+        "Your opponent's Active Pokémon is now Asleep. During Pokémon Checkup, your opponent flips 2 coins instead of 1. If either of them is tails, that Pokémon is still Asleep."
+      ]
+    },
+    {
+      "index": 713,
+      "pattern": "Attach an Energy card from your hand to {N} of your Pokémon.",
+      "representativeText": "Attach an Energy card from your hand to 1 of your Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-166"
+      ],
+      "variants": [
+        "Attach an Energy card from your hand to 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 714,
+      "pattern": "Look at the top {N} cards of your deck. You may put those cards into your hand. If you don't, discard those cards and draw {N} cards.",
+      "representativeText": "Look at the top 3 cards of your deck. You may put those cards into your hand. If you don't, discard those cards and draw 3 cards.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-179"
+      ],
+      "variants": [
+        "Look at the top 3 cards of your deck. You may put those cards into your hand. If you don't, discard those cards and draw 3 cards."
+      ]
+    },
+    {
+      "index": 715,
+      "pattern": "During your next turn, this Pokémon can't use Slip 'n' Roll.",
+      "representativeText": "During your next turn, this Pokémon can't use Slip 'n' Roll.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-179"
+      ],
+      "variants": [
+        "During your next turn, this Pokémon can't use Slip 'n' Roll."
+      ]
+    },
+    {
+      "index": 716,
+      "pattern": "Flip a coin. If tails, this Pokémon also does {N} damage to itself.",
+      "representativeText": "Flip a coin. If tails, this Pokémon also does 60 damage to itself.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-183"
+      ],
+      "variants": [
+        "Flip a coin. If tails, this Pokémon also does 60 damage to itself."
+      ]
+    },
+    {
+      "index": 717,
+      "pattern": "If Flamigo is on your Bench, this attack also does {N} damage to {N} of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "representativeText": "If Flamigo is on your Bench, this attack also does 60 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3-185"
+      ],
+      "variants": [
+        "If Flamigo is on your Bench, this attack also does 60 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)"
+      ]
+    },
+    {
+      "index": 718,
+      "pattern": "Choose {N} of your opponent's Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck, and then shuffle this Pokémon and all attached cards into your deck. If your opponent has no Benched Pokémon, this attack does nothing.",
+      "representativeText": "Choose 1 of your opponent's Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck, and then shuffle this Pokémon and all attached cards into your deck. If your opponent has no Benched Pokémon, this attack does nothing.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-12"
+      ],
+      "variants": [
+        "Choose 1 of your opponent's Benched Pokémon. Shuffle that Pokémon and all attached cards into their deck, and then shuffle this Pokémon and all attached cards into your deck. If your opponent has no Benched Pokémon, this attack does nothing."
+      ]
+    },
+    {
+      "index": 719,
+      "pattern": "If you have no cards in your hand, this attack does {N} more damage, and your opponent's Active Pokémon is now Paralyzed and Poisoned.",
+      "representativeText": "If you have no cards in your hand, this attack does 120 more damage, and your opponent's Active Pokémon is now Paralyzed and Poisoned.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-15"
+      ],
+      "variants": [
+        "If you have no cards in your hand, this attack does 120 more damage, and your opponent's Active Pokémon is now Paralyzed and Poisoned."
+      ]
+    },
+    {
+      "index": 720,
+      "pattern": "Search your deck for up to {N} Clefairy and put them onto your Bench. Then, shuffle your deck.",
+      "representativeText": "Search your deck for up to 3 Clefairy and put them onto your Bench. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-35"
+      ],
+      "variants": [
+        "Search your deck for up to 3 Clefairy and put them onto your Bench. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 721,
+      "pattern": "Flip {N} coins. Search your deck for a number of Grass Pokémon up to the number of heads and put them onto your Bench. Then, shuffle your deck.",
+      "representativeText": "Flip 2 coins. Search your deck for a number of Grass Pokémon up to the number of heads and put them onto your Bench. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-47"
+      ],
+      "variants": [
+        "Flip 2 coins. Search your deck for a number of Grass Pokémon up to the number of heads and put them onto your Bench. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 722,
+      "pattern": "Your opponent's Active Pokémon is now Confused. During your opponent's next turn, they can't play any Item cards from their hand.",
+      "representativeText": "Your opponent's Active Pokémon is now Confused. During your opponent's next turn, they can't play any Item cards from their hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-49"
+      ],
+      "variants": [
+        "Your opponent's Active Pokémon is now Confused. During your opponent's next turn, they can't play any Item cards from their hand."
+      ]
+    },
+    {
+      "index": 723,
+      "pattern": "Flip a coin. If tails, this Pokémon also does {N} damage to itself. If heads, this attack does {N} more damage.",
+      "representativeText": "Flip a coin. If tails, this Pokémon also does 20 damage to itself. If heads, this attack does 20 more damage.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-56",
+        "swsh10-36"
+      ],
+      "variants": [
+        "Flip a coin. If tails, this Pokémon also does 20 damage to itself. If heads, this attack does 20 more damage.",
+        "Flip a coin. If tails, this Pokémon also does 60 damage to itself. If heads, this attack does 60 more damage."
+      ]
+    },
+    {
+      "index": 724,
+      "pattern": "If this Pokémon isn't Confused, this attack does nothing.",
+      "representativeText": "If this Pokémon isn't Confused, this attack does nothing.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-57"
+      ],
+      "variants": [
+        "If this Pokémon isn't Confused, this attack does nothing."
+      ]
+    },
+    {
+      "index": 725,
+      "pattern": "Discard a Water Energy from your opponent's Active Pokémon.",
+      "representativeText": "Discard a Water Energy from your opponent's Active Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-58"
+      ],
+      "variants": [
+        "Discard a Water Energy from your opponent's Active Pokémon."
+      ]
+    },
+    {
+      "index": 726,
+      "pattern": "Attach up to {N} Basic Fire Energy cards from your discard pile to this Pokémon.",
+      "representativeText": "Attach up to 2 Basic Fire Energy cards from your discard pile to this Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-59"
+      ],
+      "variants": [
+        "Attach up to 2 Basic Fire Energy cards from your discard pile to this Pokémon."
+      ]
+    },
+    {
+      "index": 727,
+      "pattern": "Flip a coin until you get tails. This attack does {N} damage for each heads. If the first flip is tails, your opponent's Active Pokémon is now Confused.",
+      "representativeText": "Flip a coin until you get tails. This attack does 90 damage for each heads. If the first flip is tails, your opponent's Active Pokémon is now Confused.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-73"
+      ],
+      "variants": [
+        "Flip a coin until you get tails. This attack does 90 damage for each heads. If the first flip is tails, your opponent's Active Pokémon is now Confused."
+      ]
+    },
+    {
+      "index": 728,
+      "pattern": "During your opponent's next turn, the Defending Pokémon's Retreat Cost is Colorless more.",
+      "representativeText": "During your opponent's next turn, the Defending Pokémon's Retreat Cost is Colorless more.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-88"
+      ],
+      "variants": [
+        "During your opponent's next turn, the Defending Pokémon's Retreat Cost is Colorless more."
+      ]
+    },
+    {
+      "index": 729,
+      "pattern": "Discard the top {N} cards of your deck. This attack does {N} damage for each Pokémon with a Retreat Cost of exactly {N} that you discarded in this way.",
+      "representativeText": "Discard the top 5 cards of your deck. This attack does 80 damage for each Pokémon with a Retreat Cost of exactly 4 that you discarded in this way.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-95"
+      ],
+      "variants": [
+        "Discard the top 5 cards of your deck. This attack does 80 damage for each Pokémon with a Retreat Cost of exactly 4 that you discarded in this way."
+      ]
+    },
+    {
+      "index": 730,
+      "pattern": "Flip a coin. If heads, search your deck for up to {N} Basic Water Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
+      "representativeText": "Flip a coin. If heads, search your deck for up to 2 Basic Water Energy cards and attach them to this Pokémon. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-98"
+      ],
+      "variants": [
+        "Flip a coin. If heads, search your deck for up to 2 Basic Water Energy cards and attach them to this Pokémon. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 731,
+      "pattern": "This attack does {N} damage to each of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.) Switch this Pokémon with {N} of your Benched Pokémon.",
+      "representativeText": "This attack does 10 damage to each of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.) Switch this Pokémon with 1 of your Benched Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-106",
+        "swsh10-16"
+      ],
+      "variants": [
+        "This attack does 10 damage to each of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.) Switch this Pokémon with 1 of your Benched Pokémon.",
+        "This attack does 20 damage to each of your opponent's Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.) Switch this Pokémon with 1 of your Benched Pokémon."
+      ]
+    },
+    {
+      "index": 732,
+      "pattern": "During your next turn, this Pokémon's Excited Punch attack does {N} more damage (before applying Weakness and Resistance).",
+      "representativeText": "During your next turn, this Pokémon's Excited Punch attack does 60 more damage (before applying Weakness and Resistance).",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-107"
+      ],
+      "variants": [
+        "During your next turn, this Pokémon's Excited Punch attack does 60 more damage (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 733,
+      "pattern": "If you played Giovanni's Charisma from your hand during this turn, this attack does {N} more damage.",
+      "representativeText": "If you played Giovanni's Charisma from your hand during this turn, this attack does 140 more damage.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-112"
+      ],
+      "variants": [
+        "If you played Giovanni's Charisma from your hand during this turn, this attack does 140 more damage."
+      ]
+    },
+    {
+      "index": 734,
+      "pattern": "During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips {N} coins. If either of them is tails, that attack doesn't happen.",
+      "representativeText": "During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips 2 coins. If either of them is tails, that attack doesn't happen.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-117"
+      ],
+      "variants": [
+        "During your opponent's next turn, if the Defending Pokémon tries to use an attack, your opponent flips 2 coins. If either of them is tails, that attack doesn't happen."
+      ]
+    },
+    {
+      "index": 735,
+      "pattern": "Attach a Basic Grass Energy card from your discard pile to {N} of your Benched Pokémon.",
+      "representativeText": "Attach a Basic Grass Energy card from your discard pile to 1 of your Benched Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-123"
+      ],
+      "variants": [
+        "Attach a Basic Grass Energy card from your discard pile to 1 of your Benched Pokémon."
+      ]
+    },
+    {
+      "index": 736,
+      "pattern": "If Magmar is on your Bench, this attack does {N} more damage.",
+      "representativeText": "If Magmar is on your Bench, this attack does 40 more damage.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-125"
+      ],
+      "variants": [
+        "If Magmar is on your Bench, this attack does 40 more damage."
+      ]
+    },
+    {
+      "index": 737,
+      "pattern": "If Electabuzz is on your Bench, this attack does {N} more damage.",
+      "representativeText": "If Electabuzz is on your Bench, this attack does 80 more damage.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-126"
+      ],
+      "variants": [
+        "If Electabuzz is on your Bench, this attack does 80 more damage."
+      ]
+    },
+    {
+      "index": 738,
+      "pattern": "Search your deck for up to {N} Pokémon of different types, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "representativeText": "Search your deck for up to 3 Pokémon of different types, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-133"
+      ],
+      "variants": [
+        "Search your deck for up to 3 Pokémon of different types, reveal them, and put them into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 739,
+      "pattern": "Choose Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, or Dragon type. Until the Defending Pokémon leaves the Active Spot, its Weakness is now that type. (The amount of Weakness doesn't change.)",
+      "representativeText": "Choose Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, or Dragon type. Until the Defending Pokémon leaves the Active Spot, its Weakness is now that type. (The amount of Weakness doesn't change.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-137"
+      ],
+      "variants": [
+        "Choose Grass, Fire, Water, Lightning, Psychic, Fighting, Darkness, Metal, or Dragon type. Until the Defending Pokémon leaves the Active Spot, its Weakness is now that type. (The amount of Weakness doesn't change.)"
+      ]
+    },
+    {
+      "index": 740,
+      "pattern": "If your opponent's Active Pokémon is an evolved Pokémon, devolve it by putting the highest Stage Evolution card on it into your opponent's hand.",
+      "representativeText": "If your opponent's Active Pokémon is an evolved Pokémon, devolve it by putting the highest Stage Evolution card on it into your opponent's hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-142"
+      ],
+      "variants": [
+        "If your opponent's Active Pokémon is an evolved Pokémon, devolve it by putting the highest Stage Evolution card on it into your opponent's hand."
+      ]
+    },
+    {
+      "index": 741,
+      "pattern": "Discard {N} Fire Energy from this Pokémon. This attack does {N} damage to {N} of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "representativeText": "Discard 2 Fire Energy from this Pokémon. This attack does 120 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv3pt5-146"
+      ],
+      "variants": [
+        "Discard 2 Fire Energy from this Pokémon. This attack does 120 damage to 1 of your opponent's Benched Pokémon. (Don't apply Weakness and Resistance for Benched Pokémon.)"
+      ]
+    },
+    {
+      "index": 742,
+      "pattern": "Flip a coin until you get tails. For each heads, shuffle an Energy attached to your opponent's Active Pokémon into their deck.",
+      "representativeText": "Flip a coin until you get tails. For each heads, shuffle an Energy attached to your opponent's Active Pokémon into their deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-2"
+      ],
+      "variants": [
+        "Flip a coin until you get tails. For each heads, shuffle an Energy attached to your opponent's Active Pokémon into their deck."
+      ]
+    },
+    {
+      "index": 743,
+      "pattern": "During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Pokémon that have an Ability, except any Simisage.",
+      "representativeText": "During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Pokémon that have an Ability, except any Simisage.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-5"
+      ],
+      "variants": [
+        "During your opponent's next turn, prevent all damage done to this Pokémon by attacks from Pokémon that have an Ability, except any Simisage."
+      ]
+    },
+    {
+      "index": 744,
+      "pattern": "This attack does {N} damage for each Energy card in your opponent's discard pile.",
+      "representativeText": "This attack does 30 damage for each Energy card in your opponent's discard pile.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-12"
+      ],
+      "variants": [
+        "This attack does 30 damage for each Energy card in your opponent's discard pile."
+      ]
+    },
+    {
+      "index": 745,
+      "pattern": "Attach a Basic Grass Energy card from your hand to {N} of your Benched Pokémon.",
+      "representativeText": "Attach a Basic Grass Energy card from your hand to 1 of your Benched Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-15"
+      ],
+      "variants": [
+        "Attach a Basic Grass Energy card from your hand to 1 of your Benched Pokémon."
+      ]
+    },
+    {
+      "index": 746,
+      "pattern": "Attach up to {N} Basic Grass Energy cards from your discard pile to {N} of your Pokémon.",
+      "representativeText": "Attach up to 2 Basic Grass Energy cards from your discard pile to 1 of your Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-18"
+      ],
+      "variants": [
+        "Attach up to 2 Basic Grass Energy cards from your discard pile to 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 747,
+      "pattern": "During your opponent's next turn, attacks used by the Defending Pokémon cost ColorlessColorless more.",
+      "representativeText": "During your opponent's next turn, attacks used by the Defending Pokémon cost ColorlessColorless more.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-18"
+      ],
+      "variants": [
+        "During your opponent's next turn, attacks used by the Defending Pokémon cost ColorlessColorless more."
+      ]
+    },
+    {
+      "index": 748,
+      "pattern": "Choose up to {N} of your Benched Pokémon and attach a Basic Fire Energy card from your discard pile to each of them.",
+      "representativeText": "Choose up to 2 of your Benched Pokémon and attach a Basic Fire Energy card from your discard pile to each of them.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-22"
+      ],
+      "variants": [
+        "Choose up to 2 of your Benched Pokémon and attach a Basic Fire Energy card from your discard pile to each of them."
+      ]
+    },
+    {
+      "index": 749,
+      "pattern": "Reveal the top {N} cards of your deck. This attack does {N} damage to {N} of your opponent's Pokémon for each Energy card you find there. Then, discard those Energy cards and shuffle the other cards back into your deck. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "representativeText": "Reveal the top 6 cards of your deck. This attack does 60 damage to 1 of your opponent's Pokémon for each Energy card you find there. Then, discard those Energy cards and shuffle the other cards back into your deck. (Don't apply Weakness and Resistance for Benched Pokémon.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "sv4-32"
+      ],
+      "variants": [
+        "Reveal the top 6 cards of your deck. This attack does 60 damage to 1 of your opponent's Pokémon for each Energy card you find there. Then, discard those Energy cards and shuffle the other cards back into your deck. (Don't apply Weakness and Resistance for Benched Pokémon.)"
+      ]
+    }
+  ],
+  "extractionPrompt": "你是 PTCG (宝可梦集换式卡牌游戏) 规则专家。请将以下攻击效果文本解析为标准化的 V2 ActionStep 序列。\n\n## 输出格式 (每条效果)\n\n```json\n{\n  \"index\": <原始序号>,\n  \"pattern\": \"<模式族文本>\",\n  \"analysis\": {\n    \"preconditions\": [<Condition 对象数组, 如果有前置条件>],\n    \"costs\": [<Cost 对象数组, 如果攻击有额外代价(如弃能量)>],\n    \"steps\": [<ActionStep 对象数组, 按执行顺序>],\n    \"modifiers\": [<Modifier 对象数组, 如果有持续效果>],\n    \"dynamicDamage\": <DynamicValue 对象, 如果伤害是动态计算的>,\n    \"flags\": {\n      \"hasBranching\": <boolean>,     // 是否有条件分支\n      \"hasPlayerChoice\": <boolean>,  // 是否需要玩家选择\n      \"hasRNG\": <boolean>,           // 是否涉及掷硬币\n      \"isSelfReferencing\": <boolean>, // 是否引用自身状态\n      \"affectsOpponent\": <boolean>,  // 是否影响对手\n      \"affectsBench\": <boolean>,     // 是否影响备战区\n      \"hasDelayedEffect\": <boolean>  // 是否有延迟效果(下回合)\n    },\n    \"newActionNeeded\": \"<如果现有 ActionType 无法表达, 描述需要什么新动作>\"\n  }\n}\n```\n\n## 可用的 ActionType\n[\n  \"draw_cards\",\n  \"search_deck\",\n  \"shuffle_deck\",\n  \"put_on_deck_top\",\n  \"put_on_deck_bottom\",\n  \"shuffle_into_deck\",\n  \"discard_cards\",\n  \"recover_from_discard\",\n  \"move_to_lost_zone\",\n  \"return_to_hand\",\n  \"put_in_play\",\n  \"move_card\",\n  \"reveal_cards\",\n  \"look_at_cards\",\n  \"show_hand\",\n  \"deal_damage\",\n  \"place_damage_counters\",\n  \"heal\",\n  \"move_damage_counters\",\n  \"spread_damage\",\n  \"full_heal\",\n  \"damage_self\",\n  \"apply_status\",\n  \"remove_status\",\n  \"remove_all_status\",\n  \"attach_energy\",\n  \"accelerate_energy\",\n  \"discard_energy\",\n  \"move_energy\",\n  \"energy_type_change\",\n  \"switch_pokemon\",\n  \"evolve\",\n  \"devolve\",\n  \"copy_attack\",\n  \"use_attack\",\n  \"set_marker\",\n  \"remove_marker\",\n  \"clear_all_markers\",\n  \"check_marker\",\n  \"discard_stadium\",\n  \"flip_coin\",\n  \"flip_coins\",\n  \"choose_cards\",\n  \"choose_pokemon\",\n  \"choose_option\",\n  \"choose_type\",\n  \"order_cards\",\n  \"confirm\",\n  \"if\",\n  \"for_each\",\n  \"repeat\",\n  \"repeat_until\",\n  \"extra_turn\",\n  \"end_turn\",\n  \"prevent_damage\",\n  \"reduce_damage\",\n  \"add_damage\",\n  \"prevent_retreat\",\n  \"prevent_evolution\",\n  \"prevent_item_usage\",\n  \"prevent_supporter_usage\",\n  \"prevent_ability\",\n  \"prevent_attack\",\n  \"prevent_status\",\n  \"prevent_energy_removal\",\n  \"ignore_weakness\",\n  \"ignore_resistance\",\n  \"ignore_effects\",\n  \"log\"\n]\n\n## 可用的 ZoneType\n[\"active\",\"bench\",\"hand\",\"deck\",\"deck_top\",\"deck_bottom\",\"discard\",\"prizes\",\"lost_zone\",\"attached_energy\",\"attached_tool\",\"evolution_stack\",\"stadium\",\"in_play\",\"any\"]\n\n## 可用的 Condition type\n[\"coin_flip\",\"coin_flip_count\",\"zone_has_cards\",\"zone_is_empty\",\"bench_not_full\",\"bench_has_pokemon\",\"is_in_zone\",\"is_active\",\"is_on_bench\",\"has_damage\",\"has_no_damage\",\"has_status\",\"has_no_status\",\"has_energy\",\"has_type\",\"hp_remaining\",\"is_first_turn\",\"usage_limit\",\"has_tag\",\"has_marker\",\"has_rule_box\",\"card_name\",\"card_super_type\",\"card_sub_type\",\"not\",\"and\",\"or\"]\n\n## 规则\n1. 每个 step 必须使用上述 ActionType 枚举值\n2. target 必须指定 owner (\"self\"/\"opponent\") 和 zone\n3. 如果现有 ActionType 无法精确表达某个语义, 在 newActionNeeded 字段说明\n4. 数字参数用实际数值; 如果是模式族(数字被 N 替换), 用 0 作占位符\n5. \"During your next turn, this Pokémon can't attack\" = set_marker(\"cant_attack\", expiry: end_of_next_turn)\n6. 注意区分 deal_damage (走弱点/抵抗管线) 和 place_damage_counters (直接放标记)\n7. \"Flip a coin. If heads...\" = flip_coin + if branch\n8. 掷硬币造成的伤害用 DynamicValue { calc: \"coin_flip\", ... }"
+}

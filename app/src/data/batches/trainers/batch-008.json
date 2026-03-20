@@ -1,0 +1,551 @@
+{
+  "batchId": "trainers-008",
+  "category": "trainers",
+  "totalInCategory": 395,
+  "batchIndex": 7,
+  "batchTotal": 8,
+  "itemCount": 45,
+  "items": [
+    {
+      "index": 350,
+      "pattern": "Your Active Pokémon is now Burned. Heal {N} damage from it.",
+      "representativeText": "Your Active Pokémon is now Burned. Heal 40 damage from it.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-151"
+      ],
+      "variants": [
+        "Your Active Pokémon is now Burned. Heal 40 damage from it."
+      ]
+    },
+    {
+      "index": 351,
+      "pattern": "When applying Weakness to damage from the attacks of the Pokémon this card is attached to done to your opponent's Active Pokémon, apply it as ×{N}.",
+      "representativeText": "When applying Weakness to damage from the attacks of the Pokémon this card is attached to done to your opponent's Active Pokémon, apply it as ×3.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-152"
+      ],
+      "variants": [
+        "When applying Weakness to damage from the attacks of the Pokémon this card is attached to done to your opponent's Active Pokémon, apply it as ×3."
+      ]
+    },
+    {
+      "index": 352,
+      "pattern": "Choose {N} of your Pokémon, and then flip a coin until you get tails. For each heads, heal {N} damage from that Pokémon.",
+      "representativeText": "Choose 1 of your Pokémon, and then flip a coin until you get tails. For each heads, heal 40 damage from that Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-153"
+      ],
+      "variants": [
+        "Choose 1 of your Pokémon, and then flip a coin until you get tails. For each heads, heal 40 damage from that Pokémon."
+      ]
+    },
+    {
+      "index": 353,
+      "pattern": "Switch your Active Basic Pokémon with {N} of your Benched Pokémon. If you do, heal {N} damage from the Pokémon you moved to your Bench.",
+      "representativeText": "Switch your Active Basic Pokémon with 1 of your Benched Pokémon. If you do, heal 30 damage from the Pokémon you moved to your Bench.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-154"
+      ],
+      "variants": [
+        "Switch your Active Basic Pokémon with 1 of your Benched Pokémon. If you do, heal 30 damage from the Pokémon you moved to your Bench."
+      ]
+    },
+    {
+      "index": 354,
+      "pattern": "You can use this card only if you go second, and only during your first turn. Search your deck for a basic Energy card and attach it to {N} of your Pokémon. Then, shuffle your deck. Your turn ends.",
+      "representativeText": "You can use this card only if you go second, and only during your first turn. Search your deck for a basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck. Your turn ends.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-158"
+      ],
+      "variants": [
+        "You can use this card only if you go second, and only during your first turn. Search your deck for a basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck. Your turn ends."
+      ]
+    },
+    {
+      "index": 355,
+      "pattern": "Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities. (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)",
+      "representativeText": "Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities. (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10-213"
+      ],
+      "variants": [
+        "Pokémon with a Rule Box in play (both yours and your opponent's) have no Abilities. (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)"
+      ]
+    },
+    {
+      "index": 356,
+      "pattern": "Draw {N} cards. If you drew any cards in this way, discard up to {N} cards from your hand. (You must discard at least {N} card.)",
+      "representativeText": "Draw 3 cards. If you drew any cards in this way, discard up to 3 cards from your hand. (You must discard at least 1 card.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10tg-TG24"
+      ],
+      "variants": [
+        "Draw 3 cards. If you drew any cards in this way, discard up to 3 cards from your hand. (You must discard at least 1 card.)"
+      ]
+    },
+    {
+      "index": 357,
+      "pattern": "Discard up to {N} cards from your hand, and draw {N} cards for each card you discarded in this way.",
+      "representativeText": "Discard up to 2 cards from your hand, and draw 2 cards for each card you discarded in this way.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10tg-TG27"
+      ],
+      "variants": [
+        "Discard up to 2 cards from your hand, and draw 2 cards for each card you discarded in this way."
+      ]
+    },
+    {
+      "index": 358,
+      "pattern": "Search your deck for an Energy card and a Darkness Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "representativeText": "Search your deck for an Energy card and a Darkness Pokémon, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh10tg-TG28"
+      ],
+      "variants": [
+        "Search your deck for an Energy card and a Darkness Pokémon, reveal them, and put them into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 359,
+      "pattern": "Look at the top card of your deck. You may switch that card with {N} of your face-down Prize cards. (The cards stay face down.)",
+      "representativeText": "Look at the top card of your deck. You may switch that card with 1 of your face-down Prize cards. (The cards stay face down.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-152"
+      ],
+      "variants": [
+        "Look at the top card of your deck. You may switch that card with 1 of your face-down Prize cards. (The cards stay face down.)"
+      ]
+    },
+    {
+      "index": 360,
+      "pattern": "Move up to {N} damage counters from {N} of your Pokémon to your other Pokémon in any way you like.",
+      "representativeText": "Move up to 2 damage counters from 1 of your Pokémon to your other Pokémon in any way you like.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-156"
+      ],
+      "variants": [
+        "Move up to 2 damage counters from 1 of your Pokémon to your other Pokémon in any way you like."
+      ]
+    },
+    {
+      "index": 361,
+      "pattern": "All Pokémon that have any Water or Fighting Energy attached (both yours and your opponent's) take {N} less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance).",
+      "representativeText": "All Pokémon that have any Water or Fighting Energy attached (both yours and your opponent's) take 20 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance).",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-160"
+      ],
+      "variants": [
+        "All Pokémon that have any Water or Fighting Energy attached (both yours and your opponent's) take 20 less damage from attacks from the opponent's Pokémon (after applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 362,
+      "pattern": "Whenever a Pokémon (either yours or your opponent's) is Knocked Out, put that Pokémon in the Lost Zone instead of the discard pile. (Discard all attached cards.)",
+      "representativeText": "Whenever a Pokémon (either yours or your opponent's) is Knocked Out, put that Pokémon in the Lost Zone instead of the discard pile. (Discard all attached cards.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-161"
+      ],
+      "variants": [
+        "Whenever a Pokémon (either yours or your opponent's) is Knocked Out, put that Pokémon in the Lost Zone instead of the discard pile. (Discard all attached cards.)"
+      ]
+    },
+    {
+      "index": 363,
+      "pattern": "You can use this card only if you have {N} or more cards in the Lost Zone. Search your deck for up to {N} basic Energy cards of different types and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "representativeText": "You can use this card only if you have 7 or more cards in the Lost Zone. Search your deck for up to 2 basic Energy cards of different types and attach them to your Pokémon in any way you like. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-163"
+      ],
+      "variants": [
+        "You can use this card only if you have 7 or more cards in the Lost Zone. Search your deck for up to 2 basic Energy cards of different types and attach them to your Pokémon in any way you like. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 364,
+      "pattern": "Prevent all damage done to the Pokémon this card is attached to by attacks from your opponent's Pokémon that have {N} HP or less remaining.",
+      "representativeText": "Prevent all damage done to the Pokémon this card is attached to by attacks from your opponent's Pokémon that have 40 HP or less remaining.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-165"
+      ],
+      "variants": [
+        "Prevent all damage done to the Pokémon this card is attached to by attacks from your opponent's Pokémon that have 40 HP or less remaining."
+      ]
+    },
+    {
+      "index": 365,
+      "pattern": "Reveal the top {N} cards of your deck and have your opponent choose {N} of them. Discard the chosen cards and put the remaining cards into your hand.",
+      "representativeText": "Reveal the top 5 cards of your deck and have your opponent choose 2 of them. Discard the chosen cards and put the remaining cards into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-166"
+      ],
+      "variants": [
+        "Reveal the top 5 cards of your deck and have your opponent choose 2 of them. Discard the chosen cards and put the remaining cards into your hand."
+      ]
+    },
+    {
+      "index": 366,
+      "pattern": "Look at the top {N} cards of your deck. You may reveal any number of Pokémon Tool cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "representativeText": "Look at the top 7 cards of your deck. You may reveal any number of Pokémon Tool cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-168"
+      ],
+      "variants": [
+        "Look at the top 7 cards of your deck. You may reveal any number of Pokémon Tool cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+      ]
+    },
+    {
+      "index": 367,
+      "pattern": "The Pokémon this card is attached to can attack even if it's Asleep or Paralyzed.",
+      "representativeText": "The Pokémon this card is attached to can attack even if it's Asleep or Paralyzed.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11-170"
+      ],
+      "variants": [
+        "The Pokémon this card is attached to can attack even if it's Asleep or Paralyzed."
+      ]
+    },
+    {
+      "index": 368,
+      "pattern": "Search your deck for up to {N} Pokémon V, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "representativeText": "Search your deck for up to 3 Pokémon V, reveal them, and put them into your hand. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11tg-TG23"
+      ],
+      "variants": [
+        "Search your deck for up to 3 Pokémon V, reveal them, and put them into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 369,
+      "pattern": "Shuffle your hand into your deck. Then, draw {N} cards. If your Active Pokémon is your only Pokémon in play, draw {N} cards instead.",
+      "representativeText": "Shuffle your hand into your deck. Then, draw 4 cards. If your Active Pokémon is your only Pokémon in play, draw 8 cards instead.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11tg-TG26"
+      ],
+      "variants": [
+        "Shuffle your hand into your deck. Then, draw 4 cards. If your Active Pokémon is your only Pokémon in play, draw 8 cards instead."
+      ]
+    },
+    {
+      "index": 370,
+      "pattern": "Flip {N} coins. Search your deck for a number of cards up to the number of heads, put them into your hand, and shuffle your deck.",
+      "representativeText": "Flip 2 coins. Search your deck for a number of cards up to the number of heads, put them into your hand, and shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh11tg-TG28"
+      ],
+      "variants": [
+        "Flip 2 coins. Search your deck for a number of cards up to the number of heads, put them into your hand, and shuffle your deck."
+      ]
+    },
+    {
+      "index": 371,
+      "pattern": "Flip a coin. If heads, search your deck for an Evolution Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "representativeText": "Flip a coin. If heads, search your deck for an Evolution Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-153"
+      ],
+      "variants": [
+        "Flip a coin. If heads, search your deck for an Evolution Pokémon, reveal it, and put it into your hand. If tails, search your deck for a Basic Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 372,
+      "pattern": "The Pokémon V this card is attached to can use the VSTAR Power on this card. (You still need the necessary Energy to use this attack.)",
+      "representativeText": "The Pokémon V this card is attached to can use the VSTAR Power on this card. (You still need the necessary Energy to use this attack.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-154"
+      ],
+      "variants": [
+        "The Pokémon V this card is attached to can use the VSTAR Power on this card. (You still need the necessary Energy to use this attack.)"
+      ]
+    },
+    {
+      "index": 373,
+      "pattern": "At the end of each turn, if the Pokémon this card is attached to has {N} HP or less remaining and has any damage counters on it, heal {N} damage from it. If you healed any damage in this way, discard this card.",
+      "representativeText": "At the end of each turn, if the Pokémon this card is attached to has 30 HP or less remaining and has any damage counters on it, heal 120 damage from it. If you healed any damage in this way, discard this card.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-155"
+      ],
+      "variants": [
+        "At the end of each turn, if the Pokémon this card is attached to has 30 HP or less remaining and has any damage counters on it, heal 120 damage from it. If you healed any damage in this way, discard this card."
+      ]
+    },
+    {
+      "index": 374,
+      "pattern": "Once during each player's turn, that player may look at the top card of their deck. They may discard that card.",
+      "representativeText": "Once during each player's turn, that player may look at the top card of their deck. They may discard that card.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-161"
+      ],
+      "variants": [
+        "Once during each player's turn, that player may look at the top card of their deck. They may discard that card."
+      ]
+    },
+    {
+      "index": 375,
+      "pattern": "Put up to {N} Pokémon that have \"Hisuian\" in their names from your discard pile into your hand.",
+      "representativeText": "Put up to 3 Pokémon that have \"Hisuian\" in their names from your discard pile into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-162"
+      ],
+      "variants": [
+        "Put up to 3 Pokémon that have \"Hisuian\" in their names from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 376,
+      "pattern": "You may use {N} Quad Stone cards at once.\n• If you used {N} card, heal {N} damage from your Active Pokémon.\n• If you used {N} cards, heal all damage from each of your Pokémon. (This effect works one time for {N} cards.)",
+      "representativeText": "You may use 4 Quad Stone cards at once.\n• If you used 1 card, heal 10 damage from your Active Pokémon.\n• If you used 4 cards, heal all damage from each of your Pokémon. (This effect works one time for 4 cards.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12-163"
+      ],
+      "variants": [
+        "You may use 4 Quad Stone cards at once.\n• If you used 1 card, heal 10 damage from your Active Pokémon.\n• If you used 4 cards, heal all damage from each of your Pokémon. (This effect works one time for 4 cards.)"
+      ]
+    },
+    {
+      "index": 377,
+      "pattern": "Attach a basic Energy card from your hand to {N} of your Benched Pokémon.",
+      "representativeText": "Attach a basic Energy card from your hand to 1 of your Benched Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-124"
+      ],
+      "variants": [
+        "Attach a basic Energy card from your hand to 1 of your Benched Pokémon."
+      ]
+    },
+    {
+      "index": 378,
+      "pattern": "Flip a coin. If heads, look at the bottom {N} cards of your deck and put {N} of them into your hand. If tails, look at the bottom {N} cards of your deck and put {N} of them into your hand. Shuffle the other cards back into your deck.",
+      "representativeText": "Flip a coin. If heads, look at the bottom 8 cards of your deck and put 1 of them into your hand. If tails, look at the bottom 3 cards of your deck and put 1 of them into your hand. Shuffle the other cards back into your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-126"
+      ],
+      "variants": [
+        "Flip a coin. If heads, look at the bottom 8 cards of your deck and put 1 of them into your hand. If tails, look at the bottom 3 cards of your deck and put 1 of them into your hand. Shuffle the other cards back into your deck."
+      ]
+    },
+    {
+      "index": 379,
+      "pattern": "Put up to {N} basic Energy cards from your discard pile into your hand.",
+      "representativeText": "Put up to 2 basic Energy cards from your discard pile into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-127"
+      ],
+      "variants": [
+        "Put up to 2 basic Energy cards from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 380,
+      "pattern": "Search your deck for a basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "representativeText": "Search your deck for a basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-128"
+      ],
+      "variants": [
+        "Search your deck for a basic Energy card, reveal it, and put it into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 381,
+      "pattern": "During this turn, your Pokémon's attacks do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "representativeText": "During this turn, your Pokémon's attacks do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-134"
+      ],
+      "variants": [
+        "During this turn, your Pokémon's attacks do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 382,
+      "pattern": "Flip a coin. If heads, switch {N} of your opponent's Benched Pokémon with their Active Pokémon.",
+      "representativeText": "Flip a coin. If heads, switch 1 of your opponent's Benched Pokémon with their Active Pokémon.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-138"
+      ],
+      "variants": [
+        "Flip a coin. If heads, switch 1 of your opponent's Benched Pokémon with their Active Pokémon."
+      ]
+    },
+    {
+      "index": 383,
+      "pattern": "Put up to {N} Pokémon, each with {N} HP or less, from your discard pile into your hand.",
+      "representativeText": "Put up to 2 Pokémon, each with 90 HP or less, from your discard pile into your hand.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-142"
+      ],
+      "variants": [
+        "Put up to 2 Pokémon, each with 90 HP or less, from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 384,
+      "pattern": "Choose up to {N} of your Fusion Strike Pokémon. For each of those Pokémon, search your deck for a Fusion Strike Energy card and attach it to that Pokémon. Then, shuffle your deck.",
+      "representativeText": "Choose up to 2 of your Fusion Strike Pokémon. For each of those Pokémon, search your deck for a Fusion Strike Energy card and attach it to that Pokémon. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12pt5-147"
+      ],
+      "variants": [
+        "Choose up to 2 of your Fusion Strike Pokémon. For each of those Pokémon, search your deck for a Fusion Strike Energy card and attach it to that Pokémon. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 385,
+      "pattern": "Look at the top {N} cards of your deck. You may reveal any number of Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "representativeText": "Look at the top 7 cards of your deck. You may reveal any number of Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12tg-TG24"
+      ],
+      "variants": [
+        "Look at the top 7 cards of your deck. You may reveal any number of Energy cards you find there and put them into your hand. Shuffle the other cards back into your deck."
+      ]
+    },
+    {
+      "index": 386,
+      "pattern": "Choose a Trainer card from your discard pile. Then, ask your opponent if you may put it into your hand. If yes, put that card into your hand. If no, draw {N} cards.",
+      "representativeText": "Choose a Trainer card from your discard pile. Then, ask your opponent if you may put it into your hand. If yes, put that card into your hand. If no, draw 3 cards.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh12tg-TG28"
+      ],
+      "variants": [
+        "Choose a Trainer card from your discard pile. Then, ask your opponent if you may put it into your hand. If yes, put that card into your hand. If no, draw 3 cards."
+      ]
+    },
+    {
+      "index": 387,
+      "pattern": "If the Pokémon this card is attached to uses an attack, if you flip any coins for the damage or effect of that attack, and if any of them are tails, draw {N} cards at the end of your turn.",
+      "representativeText": "If the Pokémon this card is attached to uses an attack, if you flip any coins for the damage or effect of that attack, and if any of them are tails, draw 3 cards at the end of your turn.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9-131"
+      ],
+      "variants": [
+        "If the Pokémon this card is attached to uses an attack, if you flip any coins for the damage or effect of that attack, and if any of them are tails, draw 3 cards at the end of your turn."
+      ]
+    },
+    {
+      "index": 388,
+      "pattern": "The attacks of the Pokémon this card is attached to do {N} more damage to your opponent's Active Psychic Pokémon (before applying Weakness and Resistance).",
+      "representativeText": "The attacks of the Pokémon this card is attached to do 30 more damage to your opponent's Active Psychic Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9-136"
+      ],
+      "variants": [
+        "The attacks of the Pokémon this card is attached to do 30 more damage to your opponent's Active Psychic Pokémon (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 389,
+      "pattern": "The attacks of the Pokémon this card is attached to do {N} more damage to your opponent's Active Dragon Pokémon (before applying Weakness and Resistance).",
+      "representativeText": "The attacks of the Pokémon this card is attached to do 30 more damage to your opponent's Active Dragon Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9-142"
+      ],
+      "variants": [
+        "The attacks of the Pokémon this card is attached to do 30 more damage to your opponent's Active Dragon Pokémon (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 390,
+      "pattern": "If the Pokémon this card is attached to doesn't have a Rule Box, it takes {N} less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)",
+      "representativeText": "If the Pokémon this card is attached to doesn't have a Rule Box, it takes 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9-146"
+      ],
+      "variants": [
+        "If the Pokémon this card is attached to doesn't have a Rule Box, it takes 30 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance). (Pokémon V, Pokémon-GX, etc. have Rule Boxes.)"
+      ]
+    },
+    {
+      "index": 391,
+      "pattern": "Shuffle up to {N} in any combination of Pokémon and Supporter cards, except for Team Yell's Cheer, from your discard pile into your deck.",
+      "representativeText": "Shuffle up to 3 in any combination of Pokémon and Supporter cards, except for Team Yell's Cheer, from your discard pile into your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9-149"
+      ],
+      "variants": [
+        "Shuffle up to 3 in any combination of Pokémon and Supporter cards, except for Team Yell's Cheer, from your discard pile into your deck."
+      ]
+    },
+    {
+      "index": 392,
+      "pattern": "Put a Rapid Strike Pokémon from your discard pile onto your Bench. If you do, draw {N} cards.",
+      "representativeText": "Put a Rapid Strike Pokémon from your discard pile onto your Bench. If you do, draw 5 cards.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9tg-TG27"
+      ],
+      "variants": [
+        "Put a Rapid Strike Pokémon from your discard pile onto your Bench. If you do, draw 5 cards."
+      ]
+    },
+    {
+      "index": 393,
+      "pattern": "Search your deck for a Single Strike Pokémon and put it onto your Bench. Then, shuffle your deck. If you searched your deck in this way, draw {N} cards.",
+      "representativeText": "Search your deck for a Single Strike Pokémon and put it onto your Bench. Then, shuffle your deck. If you searched your deck in this way, draw 5 cards.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "swsh9tg-TG28"
+      ],
+      "variants": [
+        "Search your deck for a Single Strike Pokémon and put it onto your Bench. Then, shuffle your deck. If you searched your deck in this way, draw 5 cards."
+      ]
+    },
+    {
+      "index": 394,
+      "pattern": "Flip {N} coins. If both of them are heads, search your deck for a Basic Energy card and attach it to {N} of your Pokémon. Then, shuffle your deck.",
+      "representativeText": "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck.",
+      "totalCount": 1,
+      "sampleCardIds": [
+        "zsv10pt5-81"
+      ],
+      "variants": [
+        "Flip 2 coins. If both of them are heads, search your deck for a Basic Energy card and attach it to 1 of your Pokémon. Then, shuffle your deck."
+      ]
+    }
+  ],
+  "extractionPrompt": "你是 PTCG 规则专家。请将以下训练家卡(Trainer)效果文本解析为标准化的 V2 规则。\n\n## 输出格式\n\n```json\n{\n  \"index\": <原始序号>,\n  \"pattern\": \"<模式族文本>\",\n  \"trainerSubType\": \"Item\" | \"Supporter\" | \"Stadium\" | \"Tool\" | \"TechnicalMachine\",\n  \"analysis\": {\n    \"triggers\": [<TriggerType 数组>],\n    \"conditions\": [<Condition 对象数组>],\n    \"steps\": [<ActionStep 对象数组>],\n    \"modifiers\": [<Modifier 对象数组, Stadium/Tool 的持续效果>],\n    \"flags\": { ... },\n    \"newActionNeeded\": \"<如果需要新 ActionType>\"\n  }\n}\n```\n\n## 注意\n- Item/Supporter: triggers = [\"on_play\"], 执行后进弃牌区\n- Stadium: triggers = [\"while_in_stadium\"], 全局持续效果\n- Tool: triggers = [\"while_attached\"], 附着持续效果\n- 如果文本含多段效果(如场地: 双方各有不同效果), 分别列出\n\n## 可用的 ActionType\n[\n  \"draw_cards\",\n  \"search_deck\",\n  \"shuffle_deck\",\n  \"put_on_deck_top\",\n  \"put_on_deck_bottom\",\n  \"shuffle_into_deck\",\n  \"discard_cards\",\n  \"recover_from_discard\",\n  \"move_to_lost_zone\",\n  \"return_to_hand\",\n  \"put_in_play\",\n  \"move_card\",\n  \"reveal_cards\",\n  \"look_at_cards\",\n  \"show_hand\",\n  \"deal_damage\",\n  \"place_damage_counters\",\n  \"heal\",\n  \"move_damage_counters\",\n  \"spread_damage\",\n  \"full_heal\",\n  \"damage_self\",\n  \"apply_status\",\n  \"remove_status\",\n  \"remove_all_status\",\n  \"attach_energy\",\n  \"accelerate_energy\",\n  \"discard_energy\",\n  \"move_energy\",\n  \"energy_type_change\",\n  \"switch_pokemon\",\n  \"evolve\",\n  \"devolve\",\n  \"copy_attack\",\n  \"use_attack\",\n  \"set_marker\",\n  \"remove_marker\",\n  \"clear_all_markers\",\n  \"check_marker\",\n  \"discard_stadium\",\n  \"flip_coin\",\n  \"flip_coins\",\n  \"choose_cards\",\n  \"choose_pokemon\",\n  \"choose_option\",\n  \"choose_type\",\n  \"order_cards\",\n  \"confirm\",\n  \"if\",\n  \"for_each\",\n  \"repeat\",\n  \"repeat_until\",\n  \"extra_turn\",\n  \"end_turn\",\n  \"prevent_damage\",\n  \"reduce_damage\",\n  \"add_damage\",\n  \"prevent_retreat\",\n  \"prevent_evolution\",\n  \"prevent_item_usage\",\n  \"prevent_supporter_usage\",\n  \"prevent_ability\",\n  \"prevent_attack\",\n  \"prevent_status\",\n  \"prevent_energy_removal\",\n  \"ignore_weakness\",\n  \"ignore_resistance\",\n  \"ignore_effects\",\n  \"log\"\n]"
+}

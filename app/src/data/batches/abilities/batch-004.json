@@ -1,0 +1,666 @@
+{
+  "batchId": "abilities-004",
+  "category": "abilities",
+  "totalInCategory": 493,
+  "batchIndex": 3,
+  "batchTotal": 10,
+  "itemCount": 50,
+  "items": [
+    {
+      "index": 150,
+      "pattern": "Whenever your opponent's Active Pokémon moves to the Bench during their turn, place {N} damage counters on that Pokémon.",
+      "representativeText": "Whenever your opponent's Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "me2pt5-101",
+        "me2pt5-239"
+      ],
+      "variants": [
+        "Whenever your opponent's Active Pokémon moves to the Bench during their turn, place 2 damage counters on that Pokémon."
+      ]
+    },
+    {
+      "index": 151,
+      "pattern": "Once during your turn, you may search your deck for a Cynthia's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "representativeText": "Once during your turn, you may search your deck for a Cynthia's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "me2pt5-110",
+        "sv10-103"
+      ],
+      "variants": [
+        "Once during your turn, you may search your deck for a Cynthia's Pokémon, reveal it, and put it into your hand. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 152,
+      "pattern": "As long as this Pokémon is in play, it is Fighting and Psychic type.",
+      "representativeText": "As long as this Pokémon is in play, it is Fighting and Psychic type.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "me2pt5-117",
+        "me2pt5-242"
+      ],
+      "variants": [
+        "As long as this Pokémon is in play, it is Fighting and Psychic type."
+      ]
+    },
+    {
+      "index": 153,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may search your deck for up to {N} Basic Darkness Energy cards and attach them to your Marnie's Pokémon in any way you like. Then, shuffle your deck.",
+      "representativeText": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic Darkness Energy cards and attach them to your Marnie's Pokémon in any way you like. Then, shuffle your deck.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "me2pt5-287",
+        "sv10-136"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may search your deck for up to 5 Basic Darkness Energy cards and attach them to your Marnie's Pokémon in any way you like. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 154,
+      "pattern": "Once during your turn, you may search your deck for a Basic Psychic Energy card, a Basic Metal Energy card, or {N} of each and attach them to your Psychic Pokémon and Metal Pokémon in any way you like. Then, shuffle your deck.",
+      "representativeText": "Once during your turn, you may search your deck for a Basic Psychic Energy card, a Basic Metal Energy card, or 1 of each and attach them to your Psychic Pokémon and Metal Pokémon in any way you like. Then, shuffle your deck.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "me2pt5-289",
+        "sv10-145"
+      ],
+      "variants": [
+        "Once during your turn, you may search your deck for a Basic Psychic Energy card, a Basic Metal Energy card, or 1 of each and attach them to your Psychic Pokémon and Metal Pokémon in any way you like. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 155,
+      "pattern": "Once during your turn, you may heal {N} damage from your Active Pokémon.",
+      "representativeText": "Once during your turn, you may heal 20 damage from your Active Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-2",
+        "rsv10pt5-88"
+      ],
+      "variants": [
+        "Once during your turn, you may heal 20 damage from your Active Pokémon."
+      ]
+    },
+    {
+      "index": 156,
+      "pattern": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it.",
+      "representativeText": "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-8",
+        "rsv10pt5-93"
+      ],
+      "variants": [
+        "If you have Karrablast in play, this Pokémon can evolve during your first turn or the turn you play it."
+      ]
+    },
+    {
+      "index": 157,
+      "pattern": "As often as you like during your turn, you may attach a Basic Fire Energy card from your hand to {N} of your Pokémon.",
+      "representativeText": "As often as you like during your turn, you may attach a Basic Fire Energy card from your hand to 1 of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-13",
+        "rsv10pt5-98"
+      ],
+      "variants": [
+        "As often as you like during your turn, you may attach a Basic Fire Energy card from your hand to 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 158,
+      "pattern": "Once during your turn, you may switch your Active Pokémon with {N} of your Benched Pokémon. If you do, switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
+      "representativeText": "Once during your turn, you may switch your Active Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-23",
+        "rsv10pt5-107"
+      ],
+      "variants": [
+        "Once during your turn, you may switch your Active Pokémon with 1 of your Benched Pokémon. If you do, switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
+      ]
+    },
+    {
+      "index": 159,
+      "pattern": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve {N} of your opponent's evolved Pokémon by putting the highest Stage Evolution card on it into your opponent's hand.",
+      "representativeText": "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent's evolved Pokémon by putting the highest Stage Evolution card on it into your opponent's hand.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-51",
+        "rsv10pt5-132"
+      ],
+      "variants": [
+        "Once during your turn, if this Pokémon is in the Active Spot, you may devolve 1 of your opponent's evolved Pokémon by putting the highest Stage Evolution card on it into your opponent's hand."
+      ]
+    },
+    {
+      "index": 160,
+      "pattern": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with {N} HP or less that you find there onto your opponent's Bench.",
+      "representativeText": "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent's Bench.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "rsv10pt5-64",
+        "rsv10pt5-145"
+      ],
+      "variants": [
+        "Once during your turn, you may use this Ability. Your opponent reveals their hand, and you put a Basic Pokémon with 70 HP or less that you find there onto your opponent's Bench."
+      ]
+    },
+    {
+      "index": 161,
+      "pattern": "This Pokémon can evolve during your first turn or the turn you play it.",
+      "representativeText": "This Pokémon can evolve during your first turn or the turn you play it.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv1-8",
+        "sv1-9"
+      ],
+      "variants": [
+        "This Pokémon can evolve during your first turn or the turn you play it."
+      ]
+    },
+    {
+      "index": 162,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may heal all damage from {N} of your Pokémon.",
+      "representativeText": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from 1 of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv1-23",
+        "sv4pt5-104"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may heal all damage from 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 163,
+      "pattern": "As often as you like during your turn, you may move {N} damage counter from {N} of your other Pokémon to this Pokémon.",
+      "representativeText": "As often as you like during your turn, you may move 1 damage counter from 1 of your other Pokémon to this Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv1-43",
+        "sv4pt5-117"
+      ],
+      "variants": [
+        "As often as you like during your turn, you may move 1 damage counter from 1 of your other Pokémon to this Pokémon."
+      ]
+    },
+    {
+      "index": 164,
+      "pattern": "Once during your turn, you may attach a Basic Energy card from your hand to {N} of your Pokémon.",
+      "representativeText": "Once during your turn, you may attach a Basic Energy card from your hand to 1 of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv1-54",
+        "svp-5"
+      ],
+      "variants": [
+        "Once during your turn, you may attach a Basic Energy card from your hand to 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 165,
+      "pattern": "Once during your turn, you may switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
+      "representativeText": "Once during your turn, you may switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv1-137",
+        "sv1-218"
+      ],
+      "variants": [
+        "Once during your turn, you may switch out your opponent's Active Pokémon to the Bench. (Your opponent chooses the new Active Pokémon.)"
+      ]
+    },
+    {
+      "index": 166,
+      "pattern": "Attacks used by your Cynthia's Pokémon do {N} more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "representativeText": "Attacks used by your Cynthia's Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance).",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv10-8",
+        "sv10-184"
+      ],
+      "variants": [
+        "Attacks used by your Cynthia's Pokémon do 30 more damage to your opponent's Active Pokémon (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 167,
+      "pattern": "Prevent all damage done to your Benched Pokémon that don't have a Rule Box by attacks from your opponent's Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "representativeText": "Prevent all damage done to your Benched Pokémon that don't have a Rule Box by attacks from your opponent's Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv10-10",
+        "sv10-185"
+      ],
+      "variants": [
+        "Prevent all damage done to your Benched Pokémon that don't have a Rule Box by attacks from your opponent's Pokémon. (Pokémon ex, Pokémon V, etc. have Rule Boxes.)"
+      ]
+    },
+    {
+      "index": 168,
+      "pattern": "Once during your turn, if this Pokémon is on your Bench, you may discard the bottom card of your deck. If you do, discard all cards from this Pokémon and put this Pokémon on top of your deck.",
+      "representativeText": "Once during your turn, if this Pokémon is on your Bench, you may discard the bottom card of your deck. If you do, discard all cards from this Pokémon and put this Pokémon on top of your deck.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv10-45",
+        "sv10-193"
+      ],
+      "variants": [
+        "Once during your turn, if this Pokémon is on your Bench, you may discard the bottom card of your deck. If you do, discard all cards from this Pokémon and put this Pokémon on top of your deck."
+      ]
+    },
+    {
+      "index": 169,
+      "pattern": "As often as you like during your turn, you may move {N} damage counter from {N} of your Team Rocket's Pokémon to another of your Pokémon.",
+      "representativeText": "As often as you like during your turn, you may move 1 damage counter from 1 of your Team Rocket's Pokémon to another of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv10-89",
+        "sv10-198"
+      ],
+      "variants": [
+        "As often as you like during your turn, you may move 1 damage counter from 1 of your Team Rocket's Pokémon to another of your Pokémon."
+      ]
+    },
+    {
+      "index": 170,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may put up to {N} Arven's Sandwich cards from your discard pile into your hand.",
+      "representativeText": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may put up to 2 Arven's Sandwich cards from your discard pile into your hand.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv10-159",
+        "sv10-205"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may put up to 2 Arven's Sandwich cards from your discard pile into your hand."
+      ]
+    },
+    {
+      "index": 171,
+      "pattern": "Once during your turn, you may heal {N} damage from your Active Evolution Pokémon.",
+      "representativeText": "Once during your turn, you may heal 20 damage from your Active Evolution Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-33",
+        "sv4pt5-113"
+      ],
+      "variants": [
+        "Once during your turn, you may heal 20 damage from your Active Evolution Pokémon."
+      ]
+    },
+    {
+      "index": 172,
+      "pattern": "Once during your turn, if this Pokémon is in your hand and you have more Prize cards remaining than your opponent, you may put this Pokémon onto your Bench.",
+      "representativeText": "Once during your turn, if this Pokémon is in your hand and you have more Prize cards remaining than your opponent, you may put this Pokémon onto your Bench.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-71",
+        "sv4pt5-137"
+      ],
+      "variants": [
+        "Once during your turn, if this Pokémon is in your hand and you have more Prize cards remaining than your opponent, you may put this Pokémon onto your Bench."
+      ]
+    },
+    {
+      "index": 173,
+      "pattern": "Once during your turn, you may attach a Therapeutic Energy card from your hand to {N} of your Pokémon.",
+      "representativeText": "Once during your turn, you may attach a Therapeutic Energy card from your hand to 1 of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-84",
+        "sv4pt5-147"
+      ],
+      "variants": [
+        "Once during your turn, you may attach a Therapeutic Energy card from your hand to 1 of your Pokémon."
+      ]
+    },
+    {
+      "index": 174,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may move an Energy from your opponent's Active Pokémon to {N} of their Benched Pokémon.",
+      "representativeText": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may move an Energy from your opponent's Active Pokémon to 1 of their Benched Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-88",
+        "sv2-212"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may move an Energy from your opponent's Active Pokémon to 1 of their Benched Pokémon."
+      ]
+    },
+    {
+      "index": 175,
+      "pattern": "All of your Pokémon take {N} less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance).",
+      "representativeText": "All of your Pokémon take 10 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance).",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-113",
+        "sv8pt5-67"
+      ],
+      "variants": [
+        "All of your Pokémon take 10 less damage from attacks from your opponent's Pokémon (after applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 176,
+      "pattern": "During Pokémon Checkup, heal {N} damage from each of your Pokémon.",
+      "representativeText": "During Pokémon Checkup, heal 20 damage from each of your Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-123",
+        "sv4pt5-178"
+      ],
+      "variants": [
+        "During Pokémon Checkup, heal 20 damage from each of your Pokémon."
+      ]
+    },
+    {
+      "index": 177,
+      "pattern": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may switch in {N} of your opponent's Benched Basic Pokémon to the Active Spot.",
+      "representativeText": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-134",
+        "sv4pt5-183"
+      ],
+      "variants": [
+        "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may switch in 1 of your opponent's Benched Basic Pokémon to the Active Spot."
+      ]
+    },
+    {
+      "index": 178,
+      "pattern": "If this Pokémon has {N} or more Metal Energy attached, it gets +{N} HP.",
+      "representativeText": "If this Pokémon has 3 or more Metal Energy attached, it gets +100 HP.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv2-151",
+        "sv2-224"
+      ],
+      "variants": [
+        "If this Pokémon has 3 or more Metal Energy attached, it gets +100 HP."
+      ]
+    },
+    {
+      "index": 179,
+      "pattern": "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do {N} less damage (before applying Weakness and Resistance).",
+      "representativeText": "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 20 less damage (before applying Weakness and Resistance).",
+      "totalCount": 3,
+      "sampleCardIds": [
+        "sv3-30",
+        "sv4pt5-112",
+        "me1-24"
+      ],
+      "variants": [
+        "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 20 less damage (before applying Weakness and Resistance).",
+        "As long as this Pokémon is in the Active Spot, attacks used by your opponent's Active Pokémon do 30 less damage (before applying Weakness and Resistance)."
+      ]
+    },
+    {
+      "index": 180,
+      "pattern": "As long as this Pokémon is in the Active Spot, prevent all damage done to your Benched Pokémon by attacks from your opponent's Pokémon.",
+      "representativeText": "As long as this Pokémon is in the Active Spot, prevent all damage done to your Benched Pokémon by attacks from your opponent's Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3-70",
+        "sv4pt5-139"
+      ],
+      "variants": [
+        "As long as this Pokémon is in the Active Spot, prevent all damage done to your Benched Pokémon by attacks from your opponent's Pokémon."
+      ]
+    },
+    {
+      "index": 181,
+      "pattern": "Prevent all damage done to this Pokémon by attacks from your opponent's Lightning Pokémon.",
+      "representativeText": "Prevent all damage done to this Pokémon by attacks from your opponent's Lightning Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3-78",
+        "sv3-201"
+      ],
+      "variants": [
+        "Prevent all damage done to this Pokémon by attacks from your opponent's Lightning Pokémon."
+      ]
+    },
+    {
+      "index": 182,
+      "pattern": "Once at the end of your turn (after your attack), you may use this Ability. Draw cards until you have {N} cards in your hand.",
+      "representativeText": "Once at the end of your turn (after your attack), you may use this Ability. Draw cards until you have 8 cards in your hand.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3-85",
+        "svp-38"
+      ],
+      "variants": [
+        "Once at the end of your turn (after your attack), you may use this Ability. Draw cards until you have 8 cards in your hand."
+      ]
+    },
+    {
+      "index": 183,
+      "pattern": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Special Energy from your opponent's Active Pokémon.",
+      "representativeText": "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Special Energy from your opponent's Active Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3-143",
+        "svp-39"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand onto your Bench during your turn, you may discard a Special Energy from your opponent's Active Pokémon."
+      ]
+    },
+    {
+      "index": 184,
+      "pattern": "If you have Nidoqueen in play, ignore all Energy in the costs of attacks used by this Pokémon.",
+      "representativeText": "If you have Nidoqueen in play, ignore all Energy in the costs of attacks used by this Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-34",
+        "sv3pt5-174"
+      ],
+      "variants": [
+        "If you have Nidoqueen in play, ignore all Energy in the costs of attacks used by this Pokémon."
+      ]
+    },
+    {
+      "index": 185,
+      "pattern": "When you play this Pokémon from your hand to evolve {N} of your Pokémon during your turn, you may look at the top {N} cards of your deck and attach any number of Basic Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.",
+      "representativeText": "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may look at the top 3 cards of your deck and attach any number of Basic Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.",
+      "totalCount": 4,
+      "sampleCardIds": [
+        "sv3pt5-44",
+        "sv4pt5-93",
+        "sv3pt5-45",
+        "sv4pt5-94"
+      ],
+      "variants": [
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may look at the top 3 cards of your deck and attach any number of Basic Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck.",
+        "When you play this Pokémon from your hand to evolve 1 of your Pokémon during your turn, you may look at the top 8 cards of your deck and attach any number of Basic Energy cards you find there to your Pokémon in any way you like. Shuffle the other cards back into your deck."
+      ]
+    },
+    {
+      "index": 186,
+      "pattern": "Once during your turn, you may put {N} damage counter on this Pokémon. If you do, draw a card.",
+      "representativeText": "Once during your turn, you may put 1 damage counter on this Pokémon. If you do, draw a card.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-85",
+        "sv4pt5-200"
+      ],
+      "variants": [
+        "Once during your turn, you may put 1 damage counter on this Pokémon. If you do, draw a card."
+      ]
+    },
+    {
+      "index": 187,
+      "pattern": "Once during your turn, you may put {N} damage counters on {N} of your opponent's Pokémon. If you placed any damage counters in this way, discard this Pokémon and all attached cards.",
+      "representativeText": "Once during your turn, you may put 2 damage counters on 1 of your opponent's Pokémon. If you placed any damage counters in this way, discard this Pokémon and all attached cards.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-121",
+        "sv4pt5-119"
+      ],
+      "variants": [
+        "Once during your turn, you may put 2 damage counters on 1 of your opponent's Pokémon. If you placed any damage counters in this way, discard this Pokémon and all attached cards."
+      ]
+    },
+    {
+      "index": 188,
+      "pattern": "If this Pokémon and your opponent's Active Pokémon have the same amount of Energy attached, prevent all damage done to this Pokémon by attacks from your opponent's Pokémon.",
+      "representativeText": "If this Pokémon and your opponent's Active Pokémon have the same amount of Energy attached, prevent all damage done to this Pokémon by attacks from your opponent's Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-122",
+        "sv3pt5-179"
+      ],
+      "variants": [
+        "If this Pokémon and your opponent's Active Pokémon have the same amount of Energy attached, prevent all damage done to this Pokémon by attacks from your opponent's Pokémon."
+      ]
+    },
+    {
+      "index": 189,
+      "pattern": "Once during your first turn, if this Pokémon is in the Active Spot, you may search your deck and choose a Basic Pokémon you find there, except any Ditto. If you do, discard this Pokémon and all attached cards, and put the chosen Pokémon in its place. Then, shuffle your deck.",
+      "representativeText": "Once during your first turn, if this Pokémon is in the Active Spot, you may search your deck and choose a Basic Pokémon you find there, except any Ditto. If you do, discard this Pokémon and all attached cards, and put the chosen Pokémon in its place. Then, shuffle your deck.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-132",
+        "sv4pt5-201"
+      ],
+      "variants": [
+        "Once during your first turn, if this Pokémon is in the Active Spot, you may search your deck and choose a Basic Pokémon you find there, except any Ditto. If you do, discard this Pokémon and all attached cards, and put the chosen Pokémon in its place. Then, shuffle your deck."
+      ]
+    },
+    {
+      "index": 190,
+      "pattern": "If this Pokémon has any Fire Energy attached, it has no Retreat Cost.",
+      "representativeText": "If this Pokémon has any Fire Energy attached, it has no Retreat Cost.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-146",
+        "swsh12pt5-21"
+      ],
+      "variants": [
+        "If this Pokémon has any Fire Energy attached, it has no Retreat Cost."
+      ]
+    },
+    {
+      "index": 191,
+      "pattern": "As long as this Pokémon is in the Active Spot, your opponent can't play any Stadium cards from their hand.",
+      "representativeText": "As long as this Pokémon is in the Active Spot, your opponent can't play any Stadium cards from their hand.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-153",
+        "sv6pt5-42"
+      ],
+      "variants": [
+        "As long as this Pokémon is in the Active Spot, your opponent can't play any Stadium cards from their hand."
+      ]
+    },
+    {
+      "index": 192,
+      "pattern": "Prevent all effects of your opponent's Pokémon's Abilities done to this Pokémon.",
+      "representativeText": "Prevent all effects of your opponent's Pokémon's Abilities done to this Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv3pt5-154",
+        "swsh12tg-TG19"
+      ],
+      "variants": [
+        "Prevent all effects of your opponent's Pokémon's Abilities done to this Pokémon."
+      ]
+    },
+    {
+      "index": 193,
+      "pattern": "If this Pokémon is in the Active Spot and is Knocked Out, flip a coin. If heads, your opponent takes {N} fewer Prize card.",
+      "representativeText": "If this Pokémon is in the Active Spot and is Knocked Out, flip a coin. If heads, your opponent takes 1 fewer Prize card.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-3",
+        "sv4-217"
+      ],
+      "variants": [
+        "If this Pokémon is in the Active Spot and is Knocked Out, flip a coin. If heads, your opponent takes 1 fewer Prize card."
+      ]
+    },
+    {
+      "index": 194,
+      "pattern": "Cards in your opponent's discard pile can't be put into their hand by an effect of your opponent's Abilities or Trainer cards.",
+      "representativeText": "Cards in your opponent's discard pile can't be put into their hand by an effect of your opponent's Abilities or Trainer cards.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-17",
+        "sv4-185"
+      ],
+      "variants": [
+        "Cards in your opponent's discard pile can't be put into their hand by an effect of your opponent's Abilities or Trainer cards."
+      ]
+    },
+    {
+      "index": 195,
+      "pattern": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may move any amount of Fire Energy from your other Pokémon to it.",
+      "representativeText": "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may move any amount of Fire Energy from your other Pokémon to it.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-28",
+        "sv4-187"
+      ],
+      "variants": [
+        "Once during your turn, when this Pokémon moves from your Bench to the Active Spot, you may move any amount of Fire Energy from your other Pokémon to it."
+      ]
+    },
+    {
+      "index": 196,
+      "pattern": "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to {N} Water Energy cards from this Pokémon to {N} of your Benched Pokémon.",
+      "representativeText": "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 2 Water Energy cards from this Pokémon to 1 of your Benched Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-54",
+        "sv4-192"
+      ],
+      "variants": [
+        "If this Pokémon is in the Active Spot and is Knocked Out by damage from an attack from your opponent's Pokémon, move up to 2 Water Energy cards from this Pokémon to 1 of your Benched Pokémon."
+      ]
+    },
+    {
+      "index": 197,
+      "pattern": "If you have Plusle in play, whenever your opponent attaches an Energy card from their hand to {N} of their Pokémon, put {N} damage counters on that Pokémon. The effect of Buddy Pulse doesn't stack.",
+      "representativeText": "If you have Plusle in play, whenever your opponent attaches an Energy card from their hand to 1 of their Pokémon, put 2 damage counters on that Pokémon. The effect of Buddy Pulse doesn't stack.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-61",
+        "sv4-194"
+      ],
+      "variants": [
+        "If you have Plusle in play, whenever your opponent attaches an Energy card from their hand to 1 of their Pokémon, put 2 damage counters on that Pokémon. The effect of Buddy Pulse doesn't stack."
+      ]
+    },
+    {
+      "index": 198,
+      "pattern": "Once during your turn, if this Pokémon is on your Bench, when you attach an Energy card from your hand to this Pokémon, you may switch it with your Active Pokémon.",
+      "representativeText": "Once during your turn, if this Pokémon is on your Bench, when you attach an Energy card from your hand to this Pokémon, you may switch it with your Active Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-99",
+        "sv4-201"
+      ],
+      "variants": [
+        "Once during your turn, if this Pokémon is on your Bench, when you attach an Energy card from your hand to this Pokémon, you may switch it with your Active Pokémon."
+      ]
+    },
+    {
+      "index": 199,
+      "pattern": "Once during your turn, you may attach a Basic Fighting Energy card from your discard pile to {N} of your Pokémon. If you attached Energy to a Pokémon in this way, heal {N} damage from that Pokémon.",
+      "representativeText": "Once during your turn, you may attach a Basic Fighting Energy card from your discard pile to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon.",
+      "totalCount": 2,
+      "sampleCardIds": [
+        "sv4-104",
+        "sv4-202"
+      ],
+      "variants": [
+        "Once during your turn, you may attach a Basic Fighting Energy card from your discard pile to 1 of your Pokémon. If you attached Energy to a Pokémon in this way, heal 30 damage from that Pokémon."
+      ]
+    }
+  ],
+  "extractionPrompt": "你是 PTCG 规则专家。请将以下宝可梦特性(Ability)文本解析为标准化的 V2 规则。\n\n## 输出格式\n\n```json\n{\n  \"index\": <原始序号>,\n  \"pattern\": \"<模式族文本>\",\n  \"analysis\": {\n    \"abilitySubType\": \"activated\" | \"passive\" | \"triggered\" | \"on_enter\",\n    \"triggers\": [<TriggerType 数组>],\n    \"conditions\": [<Condition 对象数组>],\n    \"steps\": [<ActionStep 对象数组>],\n    \"modifiers\": [<Modifier 对象数组, passive 特性的核心>],\n    \"flags\": { ... },\n    \"newActionNeeded\": \"<如果需要新 ActionType>\"\n  }\n}\n```\n\n## 特性子类型判定规则\n- activated: 文本含 \"Once during your turn\" / \"you may\" + 主动动作\n- passive: 文本描述持续状态修改 (增减伤害/HP/费用, 免疫等)\n- triggered: 文本含 \"When/Whenever/If ... you may/do\" + 事件触发\n- on_enter: 文本含 \"When you play this Pokémon\" / \"when this Pokémon enters play\"\n\n## 可用的 ActionType\n[\n  \"draw_cards\",\n  \"search_deck\",\n  \"shuffle_deck\",\n  \"put_on_deck_top\",\n  \"put_on_deck_bottom\",\n  \"shuffle_into_deck\",\n  \"discard_cards\",\n  \"recover_from_discard\",\n  \"move_to_lost_zone\",\n  \"return_to_hand\",\n  \"put_in_play\",\n  \"move_card\",\n  \"reveal_cards\",\n  \"look_at_cards\",\n  \"show_hand\",\n  \"deal_damage\",\n  \"place_damage_counters\",\n  \"heal\",\n  \"move_damage_counters\",\n  \"spread_damage\",\n  \"full_heal\",\n  \"damage_self\",\n  \"apply_status\",\n  \"remove_status\",\n  \"remove_all_status\",\n  \"attach_energy\",\n  \"accelerate_energy\",\n  \"discard_energy\",\n  \"move_energy\",\n  \"energy_type_change\",\n  \"switch_pokemon\",\n  \"evolve\",\n  \"devolve\",\n  \"copy_attack\",\n  \"use_attack\",\n  \"set_marker\",\n  \"remove_marker\",\n  \"clear_all_markers\",\n  \"check_marker\",\n  \"discard_stadium\",\n  \"flip_coin\",\n  \"flip_coins\",\n  \"choose_cards\",\n  \"choose_pokemon\",\n  \"choose_option\",\n  \"choose_type\",\n  \"order_cards\",\n  \"confirm\",\n  \"if\",\n  \"for_each\",\n  \"repeat\",\n  \"repeat_until\",\n  \"extra_turn\",\n  \"end_turn\",\n  \"prevent_damage\",\n  \"reduce_damage\",\n  \"add_damage\",\n  \"prevent_retreat\",\n  \"prevent_evolution\",\n  \"prevent_item_usage\",\n  \"prevent_supporter_usage\",\n  \"prevent_ability\",\n  \"prevent_attack\",\n  \"prevent_status\",\n  \"prevent_energy_removal\",\n  \"ignore_weakness\",\n  \"ignore_resistance\",\n  \"ignore_effects\",\n  \"log\"\n]\n\n## 可用的 TriggerType\n[\"on_game_start\", \"on_turn_start\", \"on_draw\", \"on_play\", \"on_enter_play\",\n \"on_activate\", \"on_evolve\", \"on_energy_attach\", \"on_retreat\", \"on_tool_attach\",\n \"on_attack_declare\", \"on_damage_calc\", \"on_damage_modify\", \"on_damage_apply\",\n \"on_attack_effect\", \"on_attack_end\", \"on_damage_received\", \"on_knockout\",\n \"on_knockout_opponent\", \"on_prize_take\", \"on_promote\", \"between_turns\",\n \"on_turn_end\", \"on_discard\", \"on_leave_play\", \"on_hand_enter\",\n \"while_in_play\", \"while_attached\", \"while_in_stadium\"]"
+}
