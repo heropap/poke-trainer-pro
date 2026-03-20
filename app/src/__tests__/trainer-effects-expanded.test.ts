@@ -16,6 +16,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { performAttack } from "@/engine/game-actions";
 import { playSupporter, playItem } from "@/engine/turn-actions";
@@ -56,7 +57,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupGame(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;

@@ -68,25 +68,30 @@ export interface Player {
   prizes: Zone;
   /** Discard pile */
   discard: Zone;
+  /** Lost Zone (cards removed from play) */
+  lostZone: Zone;
   /** Whether energy has been attached this turn */
   energyAttachedThisTurn: boolean;
   /** Whether a supporter was used this turn */
   supporterUsedThisTurn: boolean;
+  /** Number of mulligans taken during setup */
+  mulliganCount: number;
 }
 
 // ───────────────────────────────────────────────
 // Game Phases & Turn Flow
 // ───────────────────────────────────────────────
 
-export type GamePhase =
-  | "not_started"     // Game not yet initialized
-  | "setup"           // Initial setup (draw hand, place basics, set prizes)
-  | "mulligan"        // Handling mulligan (no basic Pokemon)
-  | "draw"            // Start of turn: draw a card
-  | "main"            // Main phase: play cards, attach energy, etc.
-  | "attack"          // Attack phase: choose and resolve attack
-  | "between_turns"   // Between turns: check status conditions
-  | "game_over";      // Game ended
+export enum GamePhase {
+  SETUP = "SETUP",
+  MULLIGAN = "MULLIGAN",
+  DRAW = "DRAW",
+  MAIN = "MAIN",
+  ATTACK = "ATTACK",
+  CHECKUP = "CHECKUP",
+  BETWEEN_TURNS = "BETWEEN_TURNS",
+  GAME_OVER = "GAME_OVER"
+}
 
 export type WinCondition =
   | "prizes_taken"        // All 6 prizes collected
@@ -99,18 +104,20 @@ export type WinCondition =
 // ───────────────────────────────────────────────
 
 export interface TurnState {
-  /** Current phase of the turn */
-  phase: "DRAW" | "MAIN" | "ATTACK" | "CHECKUP";
-  /** Has energy been attached this turn? */
-  energyAttached: boolean;
-  /** Has a supporter been used this turn? */
-  supporterUsed: boolean;
-  /** Has a stadium been played this turn? */
-  stadiumPlayed: boolean;
-  /** Has the active Pokemon retreated this turn? */
-  retreated: boolean;
-  /** Has the player attacked this turn? (attack = turn-ending action) */
-  hasAttackedThisTurn: boolean;
+  currentPlayerId: string;
+  turnCount: number;
+  currentPhase: GamePhase;
+  
+  // Turn-specific limits (Reset at the end of CHECKUP)
+  hasAttachedEnergy: boolean;
+  hasPlayedSupporter: boolean;
+  hasPlayedStadium: boolean;
+  hasRetreated: boolean;
+  hasAttacked: boolean;
+  
+  // VSTAR/GX tracking (Persists across turns)
+  p1VstarUsed: boolean;
+  p2VstarUsed: boolean;
 }
 
 export interface GameState {
@@ -120,9 +127,9 @@ export interface GameState {
   players: [Player, Player];
   /** Which player's turn (0 or 1) */
   currentPlayer: 0 | 1;
-  /** Current game phase (Legacy: synced with turnStatus.phase) */
+  /** Current game phase (Legacy: synced with turnStatus.currentPhase) */
   phase: GamePhase;
-  /** Turn status (Golden Loop) */
+  /** Turn status (FSM) */
   turnStatus: TurnState;
   /** Turn counter */
   turn: number;
@@ -325,8 +332,10 @@ export function createPlayer(id: string, name: string): Player {
     bench: createZone(),
     prizes: createZone(),
     discard: createZone(),
+    lostZone: createZone(),
     energyAttachedThisTurn: false,
     supporterUsedThisTurn: false,
+    mulliganCount: 0,
   };
 }
 
@@ -344,14 +353,18 @@ export function createGameState(
       createPlayer("p2", player2Name),
     ],
     currentPlayer: 0,
-    phase: "not_started",
+    phase: GamePhase.SETUP,
     turnStatus: {
-      phase: "DRAW",
-      energyAttached: false,
-      supporterUsed: false,
-      stadiumPlayed: false,
-      retreated: false,
-      hasAttackedThisTurn: false,
+      currentPlayerId: "p1",
+      turnCount: 0,
+      currentPhase: GamePhase.SETUP,
+      hasAttachedEnergy: false,
+      hasPlayedSupporter: false,
+      hasPlayedStadium: false,
+      hasRetreated: false,
+      hasAttacked: false,
+      p1VstarUsed: false,
+      p2VstarUsed: false,
     },
     turn: 0,
     isFirstTurn: true,

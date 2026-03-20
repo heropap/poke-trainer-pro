@@ -16,6 +16,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import {
   canEvolve,
@@ -63,7 +64,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupMainPhase(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   return state;
@@ -120,7 +121,7 @@ describe("Evolution Middleware — Individual Rules", () => {
 
     it("blocks during draw phase", () => {
       const { state, charmeleon, charmander } = setupEvolutionScenario();
-      state.phase = "draw";
+      state.phase = GamePhase.DRAW;
       const event = makeEvolveEvent(charmeleon.instanceId, charmander.instanceId);
       const result = phaseGateRule.validate(state, event);
       expect(result.allowed).toBe(false);
@@ -129,14 +130,14 @@ describe("Evolution Middleware — Individual Rules", () => {
 
     it("blocks during attack phase", () => {
       const { state, charmeleon, charmander } = setupEvolutionScenario();
-      state.phase = "attack";
+      state.phase = GamePhase.ATTACK;
       const event = makeEvolveEvent(charmeleon.instanceId, charmander.instanceId);
       expect(phaseGateRule.validate(state, event).allowed).toBe(false);
     });
 
     it("blocks during game_over phase", () => {
       const { state, charmeleon, charmander } = setupEvolutionScenario();
-      state.phase = "game_over";
+      state.phase = GamePhase.GAME_OVER;
       const event = makeEvolveEvent(charmeleon.instanceId, charmander.instanceId);
       expect(phaseGateRule.validate(state, event).allowed).toBe(false);
     });
@@ -359,7 +360,7 @@ describe("Evolution Middleware — Pipeline", () => {
 
   it("first denial short-circuits — phase check before card lookup", () => {
     const { state, charmeleon, charmander } = setupEvolutionScenario();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     // Also make the card invalid to confirm we don't reach that rule
     state.players[0].hand.cards = [];
     const event = makeEvolveEvent(charmeleon.instanceId, charmander.instanceId);
@@ -416,7 +417,7 @@ describe("Evolution Middleware — runMiddleware infrastructure", () => {
 
   it("runs rules in priority order regardless of array order", () => {
     const { state, charmeleon, charmander } = setupEvolutionScenario();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     state.isFirstTurn = true;
 
     // Pass rules in reverse order — pipeline should still sort by priority
@@ -475,7 +476,7 @@ describe("Evolution Middleware — canEvolve integration", () => {
 
   it("canEvolve blocks wrong phase via middleware", () => {
     const { state, charmeleon, charmander } = setupEvolutionScenario();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const result = canEvolve(state, charmeleon.instanceId, charmander.instanceId);
     expect(result.success).toBe(false);
     expect(result.error).toContain("主阶段");
@@ -609,7 +610,7 @@ describe("Evolution Middleware — Edge Cases", () => {
 
     // Now it's player 0's turn again, charmander's flags should be reset
     expect(state.currentPlayer).toBe(0);
-    expect(state.phase).toBe("main");
+    expect(state.phase).toBe(GamePhase.MAIN);
     expect(charmander.playedThisTurn).toBe(false);
 
     // Evolution should now be allowed

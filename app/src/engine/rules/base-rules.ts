@@ -1,6 +1,6 @@
 
 import { RuleValidator, ValidationResult } from "../interfaces/validation";
-import { GameState } from "../game-state";
+import { GameState, GamePhase } from "../game-state";
 import { GameAction } from "../game-controller";
 import { checkEnergyCostDetailed } from "../game-actions";
 import { ActionEvent, EffectActionType, MiddlewareRule, deny, runMiddleware } from "../middleware/types";
@@ -21,7 +21,7 @@ export const checkTurnOwnership: RuleValidator = (state, action, playerIndex) =>
 };
 
 export const checkGameOver: RuleValidator = (state) => {
-  if (state.phase === "game_over") {
+  if (state.phase === GamePhase.GAME_OVER) {
     return { valid: false, reason: "游戏已结束", code: "GAME_OVER" };
   }
   return { valid: true };
@@ -42,20 +42,18 @@ export const checkPhase: RuleValidator = (state, action) => {
   const mainPhaseActions = ["play_card", "use_ability", "retreat", "evolve"];
 
   if (mainPhaseActions.includes(action.type)) {
-    const normalizedPhase = String(state.phase).toLowerCase();
-    if (normalizedPhase !== "main") {
+    if (state.phase !== GamePhase.MAIN) {
       return { valid: false, reason: "只能在主阶段进行此操作", code: "PHASE_ERROR" };
     }
     // PTCG Rule: Attack is turn-ending — no more main-phase actions after attacking
-    if (state.turnStatus.hasAttackedThisTurn) {
+    if (state.turnStatus.hasAttacked) {
       return { valid: false, reason: "攻击后回合结束，不能再进行操作", code: "ATTACK_ENDS_TURN" };
     }
   }
 
   // Attack ends main phase / enters attack phase
   if (action.type === "attack") {
-    const normalizedPhase = String(state.phase).toLowerCase();
-    if (normalizedPhase !== "main") {
+    if (state.phase !== GamePhase.MAIN) {
        return { valid: false, reason: "只能在主阶段攻击", code: "PHASE_ERROR" };
     }
   }
@@ -73,7 +71,7 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
 
   // 1. Retreat Limit
   if (action.type === "retreat") {
-    if (turnStatus.retreated) {
+    if (state.turnStatus.hasRetreated) {
       return { valid: false, reason: "每回合只能撤退一次", code: "RETREAT_LIMIT" };
     }
     // Status Check
@@ -86,7 +84,7 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
   // 2. Attack Rules
   if (action.type === "attack") {
     // Attack is a turn-ending action — can only attack once per turn
-    if (turnStatus.hasAttackedThisTurn) {
+    if (state.turnStatus.hasAttacked) {
       return { valid: false, reason: "每回合只能攻击一次", code: "ATTACK_LIMIT" };
     }
     // First Turn Rule
@@ -112,7 +110,7 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
     if (card) {
       // Supporter Check
       if (card.card.supertype === "Trainer" && card.card.subtypes.includes("Supporter")) {
-        if (turnStatus.supporterUsed) {
+        if (state.turnStatus.hasPlayedSupporter) {
           // Check overrides?
           return { valid: false, reason: "每回合只能使用一张支持者", code: "SUPPORTER_LIMIT" };
         }
@@ -124,7 +122,7 @@ export const checkHardRules: RuleValidator = (state, action, playerIndex) => {
 
       // Energy Check
       if (card.card.supertype === "Energy") {
-        if (turnStatus.energyAttached) {
+        if (state.turnStatus.hasAttachedEnergy) {
            return { valid: false, reason: "每回合只能附加一次能量", code: "ENERGY_LIMIT" };
         }
       }
@@ -203,7 +201,7 @@ const actionRules: MiddlewareRule[] = [
     priority: -1,
     appliesTo: middlewareActionTypes,
     validate: (state) => {
-      if (state.phase === "game_over") {
+      if (state.phase === GamePhase.GAME_OVER) {
         return deny("游戏已结束", "GAME_OVER");
       }
       return { allowed: true };
@@ -233,11 +231,10 @@ const actionRules: MiddlewareRule[] = [
       "ATTACK_ACTION",
     ],
     validate: (state) => {
-      const normalized = String(state.phase).toLowerCase();
-      if (normalized !== "main") {
+      if (state.phase !== GamePhase.MAIN) {
         return deny("只能在主阶段进行此操作", "PHASE_ERROR");
       }
-      if (state.turnStatus.hasAttackedThisTurn) {
+      if (state.turnStatus.hasAttacked) {
         return deny("攻击后回合结束，不能再进行操作", "ATTACK_ENDS_TURN");
       }
       return { allowed: true };
@@ -248,8 +245,7 @@ const actionRules: MiddlewareRule[] = [
     priority: 6,
     appliesTo: ["END_TURN_ACTION"],
     validate: (state) => {
-      const normalized = String(state.phase).toLowerCase();
-      if (normalized !== "main" && normalized !== "attack") {
+      if (state.phase !== GamePhase.MAIN && state.phase !== GamePhase.ATTACK) {
         return deny("当前阶段不能结束回合", "PHASE_ERROR");
       }
       return { allowed: true };
@@ -265,16 +261,16 @@ const actionRules: MiddlewareRule[] = [
       "ATTACK_ACTION",
     ],
     validate: (state, event) => {
-      if (event.type === "ATTACH_ENERGY_ACTION" && state.turnStatus.energyAttached) {
+      if (event.type === "ATTACH_ENERGY_ACTION" && state.turnStatus.hasAttachedEnergy) {
         return deny("每回合只能附加一次能量", "ENERGY_LIMIT");
       }
-      if (event.type === "PLAY_SUPPORTER_ACTION" && state.turnStatus.supporterUsed) {
+      if (event.type === "PLAY_SUPPORTER_ACTION" && state.turnStatus.hasPlayedSupporter) {
         return deny("每回合只能使用一张支持者", "SUPPORTER_LIMIT");
       }
-      if (event.type === "RETREAT_ACTION" && state.turnStatus.retreated) {
+      if (event.type === "RETREAT_ACTION" && state.turnStatus.hasRetreated) {
         return deny("每回合只能撤退一次", "RETREAT_LIMIT");
       }
-      if (event.type === "ATTACK_ACTION" && state.turnStatus.hasAttackedThisTurn) {
+      if (event.type === "ATTACK_ACTION" && state.turnStatus.hasAttacked) {
         return deny("每回合只能攻击一次", "ATTACK_LIMIT");
       }
       return { allowed: true };

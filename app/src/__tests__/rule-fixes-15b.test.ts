@@ -16,6 +16,7 @@ import {
   createZone,
   createPlayer,
   resetInstanceCounter,
+  GamePhase,
 } from "../engine/game-state";
 import {
   canRetreat,
@@ -81,7 +82,7 @@ function createEnergyCard(type: string = "Fire"): Card {
 function setupBattleState(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;
@@ -211,6 +212,9 @@ describe("Bug 1: Retreat clears status conditions", () => {
     // Give new active energy for another retreat
     const newEnergy = createGameCard(createEnergyCard("Fire"));
     state.players[0].active!.attachedEnergy = [newEnergy];
+
+    // Simulate new turn (retreat is once per turn)
+    state.turnStatus.hasRetreated = false;
 
     // Retreat again: Charmander → bench, Charizard → active
     const charizardOnBench = state.players[0].bench.cards.find(c => c.card.name === "Charizard")!;
@@ -346,13 +350,17 @@ describe("Bug 3: endTurn processes BOTH players' status effects", () => {
     expect(state.players[1].active!.statusConditions).not.toContain("asleep");
   });
 
-  it("processes opponent's paralyzed cure at end of turn", () => {
+  it("processes opponent's paralyzed cure at end of THEIR turn (not ours)", () => {
     const state = setupBattleState();
     state.players[1].active!.statusConditions = ["paralyzed"];
 
+    // Alice (P0) ends turn — Bob's paralysis should persist (PTCG rule: cures at own turn end)
     endTurn(state);
+    expect(state.players[1].active!.statusConditions).toContain("paralyzed");
 
-    // Bob's paralyzed Pokemon should be cured
+    // Now it's Bob's turn (P1) — end Bob's turn, paralysis should cure
+    state.phase = GamePhase.MAIN;
+    endTurn(state);
     expect(state.players[1].active!.statusConditions).not.toContain("paralyzed");
   });
 });
@@ -383,7 +391,7 @@ describe("Bug 4: handleAttack promotion flow", () => {
     expect(result.promotionRequired).toBe(true);
 
     // Phase should still be "main" (endTurn not called yet)
-    expect(result.newState.phase).toBe("main");
+    expect(result.newState.phase).toBe(GamePhase.MAIN);
   });
 
   it("multi-bench promotion: endTurn runs after promote action", async () => {
@@ -513,6 +521,8 @@ describe("Integration scenarios", () => {
     // Later, bring Charizard back (give Charmander energy to retreat)
     const newEnergy = createGameCard(createEnergyCard("Fire"));
     state.players[0].active!.attachedEnergy = [newEnergy];
+    // Simulate new turn (retreat is once per turn)
+    state.turnStatus.hasRetreated = false;
     retreat(state, [newEnergy.instanceId], charizard.instanceId);
 
     // Charizard is active again — still no poison

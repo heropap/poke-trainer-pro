@@ -16,9 +16,10 @@
  * - Retreat when current active is low HP and bench has better option
  */
 
-import { GameState, GameCard, Player } from "./game-state";
+import { GameState, GamePhase, GameCard, Player } from "./game-state";
 import { GameAction, ActionResult } from "./game-controller";
 import { canAttack, checkEnergyCostDetailed } from "./game-actions";
+import { getEffectiveRetreatCost } from "./turn-actions";
 import { getEffect } from "./effects/effect-registry";
 import { ABILITY_BLOCKED } from "./effects/markers";
 
@@ -50,7 +51,7 @@ export function computeAIAction(
   playerIndex: 0 | 1
 ): AIDecision | null {
   // Don't act if game is over
-  if (state.phase === "game_over") return null;
+  if (state.phase === GamePhase.GAME_OVER) return null;
 
   // Don't act if it's not our turn (except for promotion)
   if (state.currentPlayer !== playerIndex) {
@@ -63,7 +64,7 @@ export function computeAIAction(
   }
 
   // Must be in main phase
-  if (state.phase !== "main") return null;
+  if (state.phase !== GamePhase.MAIN) return null;
 
   const player = state.players[playerIndex];
 
@@ -141,7 +142,7 @@ export function computeAIAction(
   }
 
   // ── Priority 7.5: Play Stadium cards ──
-  if (!state.turnStatus.stadiumPlayed) {
+  if (!state.turnStatus.hasPlayedStadium) {
     const stadiumCards = player.hand.cards.filter(
       c => c.card.supertype === "Trainer" && c.card.subtypes.includes("Stadium") &&
         // Don't play same-name stadium
@@ -189,7 +190,7 @@ export function computeAITurnActions(
   const actions: AIDecision[] = [];
   const player = state.players[playerIndex];
 
-  if (state.phase !== "main" || state.currentPlayer !== playerIndex) {
+  if (state.phase !== GamePhase.MAIN || state.currentPlayer !== playerIndex) {
     return actions;
   }
 
@@ -490,7 +491,7 @@ function considerRetreat(
   if (maxHp === 0 || remainingHp / maxHp > 0.3) return null;
 
   // Check retreat cost
-  const retreatCost = active.card.convertedRetreatCost || 0;
+  const retreatCost = getEffectiveRetreatCost(state, playerIndex, active);
   if (retreatCost > 0) {
     const cost = Array.from({ length: retreatCost }, () => "Colorless");
     const energyCheck = checkEnergyCostDetailed(active.attachedEnergy, cost);

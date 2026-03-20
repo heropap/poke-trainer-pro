@@ -1,8 +1,8 @@
 
 import {
   GameState,
-  Player,
   GameCard,
+  Player,
   logEvent,
   GamePhase
 } from "./game-state";
@@ -86,7 +86,7 @@ export function canAttachEnergy(
   const player = state.players[playerIndex];
   
   // Check if energy already attached this turn (unless ability overrides)
-  if (player.energyAttachedThisTurn) return false;
+  if (state.turnStatus.hasAttachedEnergy) return false;
   
   const card = player.hand.cards.find(c => c.instanceId === cardInstanceId);
   if (!card || card.card.supertype !== "Energy") return false;
@@ -179,7 +179,7 @@ export function attachEnergy(
   
   if (target) {
     target.attachedEnergy.push(card);
-    player.energyAttachedThisTurn = true;
+    state.turnStatus.hasAttachedEnergy = true;
     logEvent(state, playerIndex, "attach_energy", `${player.name} attached ${card.card.name} to ${target.card.name}`);
     return { success: true };
   }
@@ -324,10 +324,10 @@ export function canAttack(
   if (!player.active) return false;
 
   // Must be in main phase
-  if (state.phase !== "main") return false;
+  if (state.phase !== GamePhase.MAIN) return false;
 
   // PTCG Rule: Can only attack once per turn (attack is turn-ending)
-  if (state.turnStatus.hasAttackedThisTurn) return false;
+  if (state.turnStatus.hasAttacked) return false;
 
   // Find attack
   const attack = player.active.card.attacks?.find(a => a.name === attackName);
@@ -551,7 +551,7 @@ export function takePrizes(
 
   // Check Win Condition: Prizes
   if (isZoneEmpty(player.prizes)) {
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
     state.winner = {
       playerIndex,
       condition: "prizes_taken"
@@ -564,14 +564,14 @@ export function takePrizes(
  * Check Win Condition: No Bench Pokemon (after active KO)
  */
 export function checkWinCondition(state: GameState): boolean {
-  if (state.phase === "game_over") return true;
+  if (state.phase === GamePhase.GAME_OVER) return true;
 
   // Check if any player has no active and no bench
   for (let p = 0; p < 2; p++) {
     const player = state.players[p as 0 | 1];
     if (!player.active && isZoneEmpty(player.bench)) {
       const winnerIndex = p === 0 ? 1 : 0;
-      state.phase = "game_over";
+      state.phase = GamePhase.GAME_OVER;
       state.winner = {
         playerIndex: winnerIndex as 0 | 1,
         condition: "no_bench_pokemon"
@@ -656,16 +656,16 @@ export function concede(
   state: GameState,
   playerIndex: 0 | 1
 ): PlayCardResult {
-  if (state.phase === "game_over") {
+  if (state.phase === GamePhase.GAME_OVER) {
     return { success: false, error: "游戏已经结束" };
   }
 
   const opponentIndex = playerIndex === 0 ? 1 : 0;
-  state.phase = "game_over";
-  state.winner = {
-    playerIndex: opponentIndex as 0 | 1,
-    condition: "concede"
-  };
+  state.phase = GamePhase.GAME_OVER;
+    state.winner = {
+      playerIndex: opponentIndex as 0 | 1,
+      condition: "concede",
+    };
 
   logEvent(state, playerIndex, "game_over", `${state.players[playerIndex].name} 认输了，${state.players[opponentIndex].name} 获胜！`);
 
@@ -700,7 +700,7 @@ export function performAttack(
   }
 
   // PTCG Rule: Attack is a turn-ending action — mark that attack has been used
-  state.turnStatus.hasAttackedThisTurn = true;
+  state.turnStatus.hasAttacked = true;
 
   const attacker = state.players[playerIndex];
   const defenderIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;

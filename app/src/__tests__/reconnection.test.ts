@@ -13,7 +13,9 @@
 
 import { GameRoom, ServerDeck, DISCONNECT_GRACE_MS } from "@/server/game-room";
 import { Card } from "@/types/card";
-import { resetInstanceCounter } from "@/engine/game-state";
+import { resetInstanceCounter,
+  GamePhase,
+} from "@/engine/game-state";
 import { initializeEffects } from "@/engine/effects";
 
 // ─── Test Fixtures ───
@@ -270,7 +272,7 @@ describe("Full reconnection flow", () => {
 
     // Game continues working
     const maskedForAlice = room.getMaskedState("new-sock-alice");
-    expect(maskedForAlice.phase).toBe("main");
+    expect(maskedForAlice.phase).toBe(GamePhase.MAIN);
     expect(maskedForAlice.players[0].hand.cards.length).toBeGreaterThan(0);
 
     // Can still perform actions

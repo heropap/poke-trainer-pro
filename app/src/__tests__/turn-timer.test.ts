@@ -12,7 +12,9 @@
 
 import { GameRoom, TURN_TIME_LIMIT } from "@/server/game-room";
 import { Card } from "@/types/card";
-import { resetInstanceCounter, createGameState } from "@/engine/game-state";
+import { resetInstanceCounter, createGameState,
+  GamePhase,
+} from "@/engine/game-state";
 import { initializeEffects } from "@/engine/effects";
 
 // ─── Test Fixtures ───
@@ -220,7 +222,7 @@ describe("Timer interaction with game", () => {
     room.startTurnTimer();
 
     // End the game manually
-    room.state.phase = "game_over";
+    room.state.phase = GamePhase.GAME_OVER;
     room.state.turnTimer!.active = false;
 
     jest.advanceTimersByTime(TURN_TIME_LIMIT * 1000);

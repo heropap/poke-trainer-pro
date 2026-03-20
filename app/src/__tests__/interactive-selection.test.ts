@@ -14,7 +14,9 @@
  * - Only 1 bench Pokemon (for switch methods)
  */
 
-import { GameState, GameCard, createGameState, resetInstanceCounter } from "@/engine/game-state";
+import { GameState, GameCard, createGameState, resetInstanceCounter,
+  GamePhase,
+} from "@/engine/game-state";
 import { createEffectContext } from "@/engine/effects/effect-context";
 import {
   setPromptStateChangeCallback,
@@ -56,7 +58,7 @@ function makeGameCard(overrides: Partial<GameCard["card"]> & { instanceId?: stri
 function setupTestState(): GameState {
   resetInstanceCounter();
   const state = createGameState("Player 1", "Player 2");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;

@@ -19,6 +19,7 @@ import {
   GameCard,
   Player,
   logEvent,
+  GamePhase
 } from "./game-state";
 import { removeCard, addToBottom, findCard } from "./zones";
 import { getEffect, getEffectSource } from "./effects/effect-registry";
@@ -44,6 +45,48 @@ function ok(): ActionResult {
 
 function fail(error: string): ActionResult {
   return { success: false, error };
+}
+
+export function getEffectiveRetreatCost(
+  state: GameState,
+  playerIndex: 0 | 1,
+  card: GameCard
+): number {
+  let retreatCost = card.card.convertedRetreatCost ?? 0;
+
+  // Apply tool retreat cost modifiers
+  for (const tool of card.attachedTools) {
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
+    if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
+      const ctx = createEffectContext(state, playerIndex, tool);
+      retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
+    }
+  }
+
+  // Apply passive ability retreat cost modifiers from all Pokemon in play
+  const player = state.players[playerIndex];
+  const allInPlay: GameCard[] = [];
+  if (player.active) allInPlay.push(player.active);
+  allInPlay.push(...player.bench.cards);
+  for (const pokemon of allInPlay) {
+    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    const pokEffect = getEffect(pokemon.cardId, pokemon.card.name);
+    if (!pokEffect?.abilities) continue;
+    for (const ability of pokEffect.abilities) {
+      if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
+      const abilityCtx = createEffectContext(state, playerIndex, pokemon);
+      retreatCost = ability.modifyRetreatCost(abilityCtx, retreatCost);
+    }
+  }
+
+  // Apply Beach Court stadium effect: Basic Pokemon retreat cost -1
+  if (state.stadium && state.stadium.card.card.name === "Beach Court") {
+    if (card.card.subtypes.includes("Basic")) {
+      retreatCost -= 1;
+    }
+  }
+
+  return Math.max(0, retreatCost);
 }
 
 function checkTrainerEffectCanPlay(state: GameState, playerIndex: 0 | 1, card: GameCard): ActionResult {
@@ -89,7 +132,7 @@ export function canAttachEnergy(
   energyInstanceId: string,
   targetInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段附加能量");
   }
 
@@ -135,7 +178,7 @@ export function attachEnergy(
   // Use immutable update for attachedEnergy to ensure React detects the change
   target.attachedEnergy = [...target.attachedEnergy, energyCard];
   player.energyAttachedThisTurn = true;
-  state.turnStatus.energyAttached = true;
+  state.turnStatus.hasAttachedEnergy = true;
 
   logEvent(
     state,
@@ -294,8 +337,12 @@ export function canRetreat(
   state: GameState,
   energyToDiscard: string[]
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段撤退");
+  }
+
+  if (state.turnStatus.hasRetreated) {
+    return fail("本回合已经撤退过了");
   }
 
   const player = getCurrentPlayer(state);
@@ -323,41 +370,7 @@ export function canRetreat(
     return fail("该宝可梦被禁止撤退");
   }
 
-  // Check retreat cost (with tool + stadium modifiers)
-  let retreatCost = player.active.card.convertedRetreatCost ?? 0;
-
-  // Apply tool retreat cost modifiers
-  for (const tool of player.active.attachedTools) {
-    const toolEffect = getEffect(tool.cardId, tool.card.name);
-    if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
-      const ctx = createEffectContext(state, state.currentPlayer, tool);
-      retreatCost = toolEffect.tool.whileAttached.modifyRetreatCost(ctx, retreatCost);
-    }
-  }
-
-  // Apply passive ability retreat cost modifiers from all Pokemon in play
-  const allInPlay: GameCard[] = [];
-  if (player.active) allInPlay.push(player.active);
-  allInPlay.push(...player.bench.cards);
-  for (const pokemon of allInPlay) {
-    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
-    const pokEffect = getEffect(pokemon.cardId, pokemon.card.name);
-    if (!pokEffect?.abilities) continue;
-    for (const ability of pokEffect.abilities) {
-      if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
-      const abilityCtx = createEffectContext(state, state.currentPlayer, pokemon);
-      retreatCost = ability.modifyRetreatCost(abilityCtx, retreatCost);
-    }
-  }
-
-  // Apply Beach Court stadium effect: Basic Pokemon retreat cost -1
-  if (state.stadium && state.stadium.card.card.name === "Beach Court") {
-    if (player.active.card.subtypes.includes("Basic")) {
-      retreatCost -= 1;
-    }
-  }
-
-  if (retreatCost < 0) retreatCost = 0;
+  const retreatCost = getEffectiveRetreatCost(state, state.currentPlayer, player.active);
 
   const selectedEnergy: GameCard[] = [];
   for (const eid of energyToDiscard) {
@@ -421,7 +434,7 @@ export function retreat(
   removeCard(player.bench, benchInstanceId);
   addToBottom(player.bench, active);
   player.active = benchCard;
-  state.turnStatus.retreated = true;
+  state.turnStatus.hasRetreated = true;
 
   logEvent(
     state,
@@ -445,7 +458,7 @@ export function canPlaySupporter(
   state: GameState,
   supporterInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段使用支持者");
   }
 
@@ -490,7 +503,7 @@ export async function playSupporter(
   const card = removeCard(player.hand, supporterInstanceId)!;
 
   player.supporterUsedThisTurn = true;
-  state.turnStatus.supporterUsed = true;
+  state.turnStatus.hasPlayedSupporter = true;
 
   const effectSource = getEffectSource(card.cardId, card.card.name) || "none";
 
@@ -521,7 +534,7 @@ export function canPlayItem(
   state: GameState,
   itemInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段使用物品卡");
   }
 
@@ -610,7 +623,7 @@ export function canPlayBasicToBench(
   state: GameState,
   pokemonInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段放置宝可梦");
   }
 
@@ -712,11 +725,11 @@ export function canPlayStadium(
   state: GameState,
   stadiumInstanceId: string
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return fail("只能在主阶段使用场地卡");
   }
 
-  if (state.turnStatus.stadiumPlayed) {
+  if (state.turnStatus.hasPlayedStadium) {
     return fail("每回合只能使用一张场地卡");
   }
 
@@ -775,7 +788,7 @@ export async function playStadium(
     card: card,
     owner: state.currentPlayer,
   };
-  state.turnStatus.stadiumPlayed = true;
+  state.turnStatus.hasPlayedStadium = true;
 
   logEvent(
     state,
@@ -800,7 +813,7 @@ export async function playStadium(
  * Processes between-turns status effects, resets flags, switches player.
  */
 export function endTurn(state: GameState): ActionResult {
-  if (state.phase !== "main" && state.phase !== "attack") {
+  if (state.phase !== GamePhase.MAIN && state.phase !== GamePhase.ATTACK) {
     return fail("当前阶段不能结束回合");
   }
 
@@ -809,7 +822,7 @@ export function endTurn(state: GameState): ActionResult {
 
   // Process between-turns status effects for BOTH players (PTCG rule)
   // Current player's active Pokemon checked first, then opponent's
-  processBetweenTurns(state, currentPlayerIndex);
+  processBetweenTurns(state, currentPlayerIndex, true);
 
   // Check if status damage caused a game over
   if ((state.phase as string) === "game_over") {
@@ -818,7 +831,7 @@ export function endTurn(state: GameState): ActionResult {
 
   // Process opponent's active Pokemon status effects
   const opponentIndex = (currentPlayerIndex === 0 ? 1 : 0) as 0 | 1;
-  processBetweenTurns(state, opponentIndex);
+  processBetweenTurns(state, opponentIndex, false);
 
   // Check again if opponent's status damage caused a game over
   if ((state.phase as string) === "game_over") {
@@ -831,12 +844,16 @@ export function endTurn(state: GameState): ActionResult {
 
   // Reset turn status for the NEXT turn
   state.turnStatus = {
-    phase: "DRAW",
-    energyAttached: false,
-    supporterUsed: false,
-    stadiumPlayed: false,
-    retreated: false,
-    hasAttackedThisTurn: false,
+    currentPlayerId: state.players[state.currentPlayer === 0 ? 1 : 0].id,
+    turnCount: state.turn + 1,
+    currentPhase: GamePhase.DRAW,
+    hasAttachedEnergy: false,
+    hasPlayedSupporter: false,
+    hasPlayedStadium: false,
+    hasRetreated: false,
+    hasAttacked: false,
+    p1VstarUsed: state.turnStatus.p1VstarUsed,
+    p2VstarUsed: state.turnStatus.p2VstarUsed,
   };
 
   // Reset per-turn flags for all of this player's Pokemon
@@ -855,7 +872,7 @@ export function endTurn(state: GameState): ActionResult {
   state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
   state.turn++;
   state.isFirstTurn = false;
-  state.phase = "draw";
+  state.phase = GamePhase.DRAW;
 
   logEvent(
     state,
@@ -876,7 +893,7 @@ export function endTurn(state: GameState): ActionResult {
  * Draw a card at the start of the turn.
  */
 export function drawCard(state: GameState): ActionResult {
-  if (state.phase !== "draw") {
+  if (state.phase !== GamePhase.DRAW) {
     return fail("只能在抽牌阶段抽牌");
   }
 
@@ -884,7 +901,7 @@ export function drawCard(state: GameState): ActionResult {
 
   if (player.deck.cards.length === 0) {
     // Deck out — opponent wins
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
     state.winner = {
       playerIndex: state.currentPlayer === 0 ? 1 : 0,
       condition: "deck_out",
@@ -902,8 +919,8 @@ export function drawCard(state: GameState): ActionResult {
   const drawn = player.deck.cards.shift()!;
   player.hand.cards.push(drawn);
 
-  state.phase = "main";
-  state.turnStatus.phase = "MAIN";
+  state.phase = GamePhase.MAIN;
+  state.turnStatus.currentPhase = GamePhase.MAIN;
 
   logEvent(
     state,

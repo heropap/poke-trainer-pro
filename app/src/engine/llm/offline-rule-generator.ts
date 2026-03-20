@@ -1016,7 +1016,12 @@ function generateTrainerRule(card: CardInput): TrainerRuleDef | null {
   if (card.supertype !== "Trainer") return null;
   if (!card.rules || card.rules.length === 0) return null;
 
-  const subtype = ((card.subtypes || [])[0] || "Item") as TrainerRuleDef["subtype"];
+  let rawSubtype = (card.subtypes || [])[0] || "Item";
+  if (rawSubtype === "Pokémon Tool") {
+    rawSubtype = "Tool";
+  }
+
+  const subtype = rawSubtype as TrainerRuleDef["subtype"];
   const ruleTexts = card.rules.filter(r =>
     !r.includes("rule box") &&
     !r.includes("may play only 1 Supporter") &&
@@ -1034,7 +1039,7 @@ function generateTrainerRule(card: CardInput): TrainerRuleDef | null {
     return generateStadiumRule(text);
   }
 
-  if (subtype === "Pokémon Tool") {
+  if (subtype === "Tool") {
     return generateToolRule(text);
   }
 

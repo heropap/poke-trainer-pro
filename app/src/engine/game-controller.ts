@@ -15,7 +15,7 @@
  * - Game over detection
  */
 
-import { GameState, GameCard, logEvent } from "./game-state";
+import { GameState, GameCard, logEvent, GamePhase } from "./game-state";
 import {
   getCurrentPlayer,
   getOpponent,
@@ -230,9 +230,9 @@ function handlePlayCard(
       return { success: false, error: "缺少卡牌 ID", newState: { ...state } };
     }
 
-    if (state.phase !== "main") {
-      return { success: false, error: "只能在主阶段打出卡牌", newState: { ...state } };
-    }
+    if (state.phase !== GamePhase.MAIN) {
+    return { success: false, error: "只能在主阶段打出卡牌", newState: { ...state } };
+  }
 
     const player = state.players[playerIndex];
     const card = player.hand.cards.find(c => c.instanceId === action.cardId);
@@ -331,7 +331,7 @@ function handleAttack(
     return { success: false, error: "缺少攻击名称", newState: { ...state } };
   }
 
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return { success: false, error: "只能在主阶段攻击", newState: { ...state } };
   }
 
@@ -374,10 +374,10 @@ function handleAttack(
   // Auto-draw for the new turn's player
   // Note: engineEndTurn mutates state.phase to "draw", but TS can't track this
   const phaseAfterEnd = state.phase as string;
-  if (endRes.success && phaseAfterEnd === "draw") {
+  if (endRes.success && phaseAfterEnd === GamePhase.DRAW) {
     engineDrawCard(state);
     const phaseAfterDraw = state.phase as string;
-    if (phaseAfterDraw === "game_over") {
+    if (phaseAfterDraw === GamePhase.GAME_OVER) {
       return { success: true, gameEnded: true, newState: { ...state } };
     }
   }
@@ -389,7 +389,7 @@ function handleEndTurn(
   state: GameState,
   playerIndex: 0 | 1
 ): ActionResult {
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return { success: false, error: "当前阶段不能结束回合", newState: { ...state } };
   }
 
@@ -403,10 +403,10 @@ function handleEndTurn(
   // Auto-draw for the new turn's player
   // Note: engineEndTurn mutates state.phase to "draw", but TS can't track this
   const phaseAfterEnd = state.phase as string;
-  if (phaseAfterEnd === "draw") {
+  if (phaseAfterEnd === GamePhase.DRAW) {
     engineDrawCard(state);
     const phaseAfterDraw = state.phase as string;
-    if (phaseAfterDraw === "game_over") {
+    if (phaseAfterDraw === GamePhase.GAME_OVER) {
       return { success: true, gameEnded: true, newState: { ...state } };
     }
   }
@@ -437,7 +437,7 @@ function handleRetreat(
   }
 
   // PTCG Rule: Only one retreat per turn
-  if (state.turnStatus.retreated) {
+  if (state.turnStatus.hasRetreated) {
     return { success: false, error: "本回合已经撤退过了", newState: { ...state } };
   }
 
@@ -471,24 +471,24 @@ function handlePromote(
   // If we're still in "main" phase, this promotion was triggered after a KO
   // during the opponent's attack. We need to end the attacker's turn now.
   const phaseAfterPromote = state.phase as string;
-  if (phaseAfterPromote === "main") {
+  if (phaseAfterPromote === GamePhase.MAIN) {
     // End the attacker's turn (between-turns processing happens here)
     const endRes = engineEndTurn(state);
 
     // Auto-draw for the new turn's player
     const phaseAfterEnd = state.phase as string;
-    if (endRes.success && phaseAfterEnd === "draw") {
+    if (endRes.success && phaseAfterEnd === GamePhase.DRAW) {
       engineDrawCard(state);
       const phaseAfterDraw = state.phase as string;
-      if (phaseAfterDraw === "game_over") {
+      if (phaseAfterDraw === GamePhase.GAME_OVER) {
         return { success: true, gameEnded: true, newState: { ...state } };
       }
     }
-  } else if (phaseAfterPromote === "draw") {
+  } else if (phaseAfterPromote === GamePhase.DRAW) {
     // Legacy path: already in draw phase, just draw
     engineDrawCard(state);
     const phaseAfterDraw = state.phase as string;
-    if (phaseAfterDraw === "game_over") {
+    if (phaseAfterDraw === GamePhase.GAME_OVER) {
       return { success: true, gameEnded: true, newState: { ...state } };
     }
   }
@@ -518,7 +518,7 @@ async function handleUseAbility(
     return { success: false, error: "缺少卡牌 ID 或特性名称", newState: { ...state } };
   }
 
-  if (state.phase !== "main") {
+  if (state.phase !== GamePhase.MAIN) {
     return { success: false, error: "只能在主阶段使用特性", newState: { ...state } };
   }
 
@@ -596,19 +596,19 @@ async function handleUseAbility(
  */
 export function startFirstTurn(state: GameState): GameState {
   const currentPhase = state.phase as string;
-  if (currentPhase === "main") {
+  if (currentPhase === GamePhase.MAIN) {
     // Already in main phase
     return { ...state };
   }
 
-  if (currentPhase === "draw") {
+  if (currentPhase === GamePhase.DRAW) {
     // In draw phase, perform the draw
     engineDrawCard(state);
     return { ...state };
   }
 
   // Transition to draw phase for the first player
-  state.phase = "draw";
+  state.phase = GamePhase.DRAW;
   state.turn = 1;
 
   engineDrawCard(state);

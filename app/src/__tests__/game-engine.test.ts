@@ -12,6 +12,7 @@ import {
   createGameState,
   logEvent,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import {
   shuffleZone,
@@ -104,7 +105,7 @@ describe("Game State", () => {
       expect(state.players).toHaveLength(2);
       expect(state.players[0].name).toBe("玩家 A");
       expect(state.players[1].name).toBe("玩家 B");
-      expect(state.phase).toBe("not_started");
+      expect(state.phase).toBe(GamePhase.SETUP);
       expect(state.turn).toBe(0);
       expect(state.winner).toBeNull();
       expect(state.log).toHaveLength(0);
@@ -424,7 +425,7 @@ describe("Battle Setup", () => {
       expect(result.gameState).not.toBeNull();
 
       const state = result.gameState!;
-      expect(state.phase).toBe("draw");
+      expect(state.phase).toBe(GamePhase.DRAW);
       expect(state.turn).toBe(1);
       expect(state.players[0].name).toBe("Alice");
       expect(state.players[1].name).toBe("Bob");

@@ -22,11 +22,13 @@ import { TURN_BASED_MARKERS } from "./markers";
  *
  * @param state - Game state (mutated)
  * @param playerIndex - The player whose active Pokemon is checked
+ * @param isTurnOwner - Whether this is the player whose turn just ended (for paralysis cure)
  * @returns true if a KO occurred
  */
 export function processBetweenTurns(
   state: GameState,
-  playerIndex: 0 | 1
+  playerIndex: 0 | 1,
+  isTurnOwner: boolean = false
 ): boolean {
   const player = state.players[playerIndex];
   const active = player.active;
@@ -129,7 +131,7 @@ export function processBetweenTurns(
   }
 
   // ─── Paralyzed: Auto-cures at end of affected player's turn ───
-  if (!koOccurred && active.statusConditions.includes("paralyzed")) {
+  if (!koOccurred && active.statusConditions.includes("paralyzed") && isTurnOwner) {
     active.statusConditions = active.statusConditions.filter(s => s !== "paralyzed");
 
     logEvent(state, playerIndex, "status_effect" as any,

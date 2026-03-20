@@ -33,6 +33,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
 import { performAttack, canAttack } from "@/engine/game-actions";
@@ -71,7 +72,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupGame(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;
@@ -645,7 +646,7 @@ describe("Status Effects - Between Turns", () => {
     const state = setupGame();
     state.players[0].active!.statusConditions.push("paralyzed");
 
-    processBetweenTurns(state, 0);
+    processBetweenTurns(state, 0, true);
     expect(state.players[0].active!.statusConditions).not.toContain("paralyzed");
   });
 

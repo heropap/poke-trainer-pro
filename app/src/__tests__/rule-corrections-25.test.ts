@@ -20,6 +20,7 @@ import {
   createZone,
   resetInstanceCounter,
   GameCard,
+  GamePhase,
 } from "../engine/game-state";
 import {
   canRetreat,
@@ -183,7 +184,7 @@ function createStage2Card(
 function setupBattleState(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;
@@ -270,16 +271,16 @@ function setupBattleState(): GameState {
 describe("Attack as turn-ending action", () => {
   test("hasAttackedThisTurn starts false at beginning of turn", () => {
     const state = setupBattleState();
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
   });
 
   test("performAttack sets hasAttackedThisTurn to true", () => {
     const state = setupBattleState();
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
 
     performAttack(state, 0, "Flamethrower");
 
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(true);
+    expect(state.turnStatus.hasAttacked).toBe(true);
   });
 
   test("canAttack returns false when hasAttackedThisTurn is true", () => {
@@ -309,11 +310,11 @@ describe("Attack as turn-ending action", () => {
     const state = setupBattleState();
 
     performAttack(state, 0, "Flamethrower");
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(true);
+    expect(state.turnStatus.hasAttacked).toBe(true);
 
     endTurn(state);
 
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
   });
 
   test("controller blocks play_card after attack via processAction", async () => {
@@ -342,7 +343,7 @@ describe("Attack as turn-ending action", () => {
 
     // Manually set hasAttackedThisTurn without going through controller
     // (to test the rule in isolation)
-    state.turnStatus.hasAttackedThisTurn = true;
+    state.turnStatus.hasAttacked = true;
 
     const res = await processAction(state, 0, {
       type: "attack",
@@ -356,7 +357,7 @@ describe("Attack as turn-ending action", () => {
     const state = setupBattleState();
 
     // Manually set hasAttackedThisTurn
-    state.turnStatus.hasAttackedThisTurn = true;
+    state.turnStatus.hasAttacked = true;
 
     const res = await processAction(state, 0, {
       type: "play_card",
@@ -369,7 +370,7 @@ describe("Attack as turn-ending action", () => {
   test("base-rules ATTACK_ENDS_TURN blocks retreat after attack flag", async () => {
     const state = setupBattleState();
 
-    state.turnStatus.hasAttackedThisTurn = true;
+    state.turnStatus.hasAttacked = true;
 
     const benchId = state.players[0].bench.cards[0].instanceId;
     const energyId = state.players[0].active!.attachedEnergy[0].instanceId;
@@ -385,7 +386,7 @@ describe("Attack as turn-ending action", () => {
   test("base-rules ATTACK_ENDS_TURN blocks evolve after attack flag", async () => {
     const state = setupBattleState();
 
-    state.turnStatus.hasAttackedThisTurn = true;
+    state.turnStatus.hasAttacked = true;
 
     const res = await processAction(state, 0, {
       type: "evolve",
@@ -532,13 +533,13 @@ describe("Zone integrity", () => {
 
   test("deck out: player loses when deck is empty at draw phase", () => {
     const state = setupBattleState();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     state.currentPlayer = 0;
     state.players[0].deck = createZone([]); // Empty deck
 
     drawCard(state);
 
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner?.playerIndex).toBe(1);
     expect(state.winner?.condition).toBe("deck_out");
   });
@@ -563,7 +564,7 @@ describe("Zone integrity", () => {
 
     takePrizes(state, 0, 1);
 
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner?.condition).toBe("prizes_taken");
     expect(state.winner?.playerIndex).toBe(0);
   });
@@ -665,7 +666,7 @@ describe("Special conditions system", () => {
     const state = setupBattleState();
     state.players[0].active!.statusConditions = ["paralyzed"];
 
-    processBetweenTurns(state, 0);
+    processBetweenTurns(state, 0, true);
 
     expect(
       state.players[0].active!.statusConditions.includes("paralyzed")
@@ -751,7 +752,7 @@ describe("Operational limits", () => {
 
     // Mark supporter as used
     state.players[0].supporterUsedThisTurn = true;
-    state.turnStatus.supporterUsed = true;
+    state.turnStatus.hasPlayedSupporter = true;
 
     const result = canPlaySupporter(state, supporter.instanceId);
     expect(result.success).toBe(false);
@@ -761,7 +762,7 @@ describe("Operational limits", () => {
     const state = setupBattleState();
 
     // Mark retreat as used
-    state.turnStatus.retreated = true;
+    state.turnStatus.hasRetreated = true;
 
     const benchId = state.players[0].bench.cards[0].instanceId;
     const energyId = state.players[0].active!.attachedEnergy[0].instanceId;
@@ -862,7 +863,7 @@ describe("Controller: attack auto-ends turn", () => {
     // Player should have switched
     expect(state.currentPlayer).not.toBe(initialPlayer);
     // Should be in main phase (draw already happened)
-    expect(state.phase).toBe("main");
+    expect(state.phase).toBe(GamePhase.MAIN);
   });
 
   test("end_turn resets hasAttackedThisTurn for next turn", async () => {
@@ -870,7 +871,7 @@ describe("Controller: attack auto-ends turn", () => {
 
     await processAction(state, 0, { type: "end_turn" });
 
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
   });
 });
 
@@ -881,16 +882,16 @@ describe("Controller: attack auto-ends turn", () => {
 describe("TurnState field initialization", () => {
   test("createGameState initializes hasAttackedThisTurn as false", () => {
     const state = createGameState("A", "B");
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
   });
 
   test("endTurn resets hasAttackedThisTurn for next turn", () => {
     const state = setupBattleState();
-    state.turnStatus.hasAttackedThisTurn = true;
+    state.turnStatus.hasAttacked = true;
 
     endTurn(state);
 
-    expect(state.turnStatus.hasAttackedThisTurn).toBe(false);
+    expect(state.turnStatus.hasAttacked).toBe(false);
   });
 });
 

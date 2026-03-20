@@ -15,6 +15,7 @@ import {
   createGameCard,
   createZone,
   logEvent,
+  GamePhase,
 } from "@/engine/game-state";
 import { Card } from "@/types/card";
 import { addCards, shuffleZone } from "@/engine/zones";
@@ -41,7 +42,7 @@ function createTestCard(name: string, supertype = "Pokémon", subtypes = ["Basic
 
 function setupTestGame(): GameState {
   const state = createGameState("Player 1", "Player 2");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 1;
   state.currentPlayer = 0;
 

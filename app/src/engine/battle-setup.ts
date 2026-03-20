@@ -20,6 +20,7 @@ import { Card } from "@/types/card";
 import {
   GameState,
   GameCard,
+  GamePhase,
   createGameState,
   createGameCard,
   createZone,
@@ -266,7 +267,7 @@ export function initializeGame(
   if (typeof prizeCardsPerPlayer === "number") {
     state.rules.prizeCardsPerPlayer = prizeCardsPerPlayer;
   }
-  state.phase = "setup";
+  state.phase = GamePhase.SETUP;
 
   logEvent(state, 0, "game_start", `对战开始: ${player1Name} vs ${player2Name}`, {
     deck1Name: deck1.name,
@@ -333,7 +334,7 @@ export function initializeGame(
     }
 
     // Transition to draw phase
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     state.turn = 1;
 
     logEvent(state, 0, "game_start", `第 1 回合开始，${state.players[0].name} 先手`);

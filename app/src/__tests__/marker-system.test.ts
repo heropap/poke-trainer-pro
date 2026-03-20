@@ -15,6 +15,7 @@ import {
   createGameCard,
   GameState,
   GameCard,
+  GamePhase,
 } from "../engine/game-state";
 import { createEffectContext } from "../engine/effects/effect-context";
 import { processBetweenTurns } from "../engine/effects/status-effects";
@@ -102,7 +103,7 @@ function makeEvolutionCard(): Card {
 
 function setupGameWithActive(): GameState {
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
 

@@ -3,10 +3,11 @@
  *
  * Exports all effect system components and auto-registers initial card effects.
  *
- * 6-Layer Priority Chain:
+ * 7-Layer Priority Chain:
  *   Layer 1:   ID-based hand-written effects (highest priority)
  *   Layer 1.5: JSON schema-compiled effects (visual editor / custom-effects.json)
  *   Layer 2:   Name-based hand-written effects
+ *   Layer 2.5: V2 semantic-extracted + compiled rules (~5,300 cards)
  *   Layer 3:   Text-parser from ryuu-play metadata (ryuu card text is more standardized)
  *   Layer 4:   Text-parser from UI Card data (_index.json)
  *   Layer 5:   No effect (silent skip)
@@ -90,6 +91,10 @@ export type {
   ParamType,
 } from "./pattern-catalog";
 
+// Re-export V2 loader
+export { loadV2Effects, loadV2EffectsFromArray } from "./v2-loader";
+export type { V2LoadResult } from "./v2-loader";
+
 // Re-export ryuu metadata extractor
 export {
   extractAllRyuuMetadata,
@@ -116,6 +121,7 @@ import { expandedTrainerEffects } from "./cards/trainers-expanded";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
+import { loadV2Effects } from "./v2-loader";
 import { Card } from "@/types/card";
 
 /** All built-in card effects (ID-based) */
@@ -125,10 +131,11 @@ const allEffects = [...trainerEffects, ...attackEffects];
  * Initialize the effect system by registering all built-in card effects.
  * Call this once at app startup.
  *
- * Follows the 6-layer priority chain:
+ * Follows the 7-layer priority chain:
  *   Layer 1:   registerAll(allEffects) — ID-based hand-written
  *   Layer 1.5: loadCustomEffects() — JSON schema-compiled (visual editor)
  *   Layer 2:   registerAllByName(trainerNameEffects, ...) — Name-based hand-written
+ *   Layer 2.5: loadV2Effects() — V2 semantic-extracted + compiled rules (~5,300 cards)
  *   Layer 3:   autoRegisterFromRyuuMeta() — Text-parser on ryuu-play metadata
  *   Layer 4:   autoRegisterTextEffects(cards) — Text-parser on UI card data
  *   Layer 5:   Implicit — cards with no registered effect are silently skipped
@@ -138,7 +145,7 @@ const allEffects = [...trainerEffects, ...attackEffects];
  */
 export function initializeEffects(
   cards?: Card[],
-  options?: { skipRyuuMeta?: boolean }
+  options?: { skipRyuuMeta?: boolean; skipV2?: boolean }
 ): void {
   // Layer 1: ID-based hand-written effects
   registerAll(allEffects, "L1");
@@ -151,6 +158,16 @@ export function initializeEffects(
   registerAllByName(stadiumNameEffects, "L2");
   registerAllByName(metaAttackEffects, "L2");
   registerAllByName(expandedTrainerEffects, "L2");
+
+  // Layer 2.5: V2 semantic-extracted + compiled rules
+  // (covers ~5,300 cards from bottom-up ontology extraction)
+  if (!options?.skipV2) {
+    try {
+      loadV2Effects();
+    } catch (err) {
+      console.warn("[Effects] Could not load V2 rules:", (err as Error).message);
+    }
+  }
 
   // Layer 3: Text-parser from ryuu-play metadata
   // (ryuu card text is often more standardized than _index.json text)

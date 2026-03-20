@@ -9,7 +9,7 @@
  * 3. Stateless Logic: Validates (State + Event) -> Result without side effects.
  */
 
-import { GameState, GameCard } from "../game-state";
+import { GameState, GamePhase, GameCard } from "../game-state";
 import {
   MiddlewareRule,
   ActionEvent,
@@ -56,7 +56,7 @@ export const phaseGateRule: MiddlewareRule<"EVOLVE_ACTION"> = {
   priority: 0,
   appliesTo: ["EVOLVE_ACTION"],
   validate: (state) => {
-    if (state.phase !== "main") {
+    if (state.phase !== GamePhase.MAIN) {
       return deny("只能在主阶段进化宝可梦", "PHASE_NOT_MAIN");
     }
     return ALLOW;

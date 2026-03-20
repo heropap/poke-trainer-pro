@@ -629,51 +629,30 @@ const greatBallEffect: NamedEffect = {
         return;
       }
 
-      if (pokemonCards.length === 1) {
-        // Only one Pokemon: auto-select
-        const pokemon = pokemonCards[0];
-        const idx = revealed.indexOf(pokemon);
-        if (idx !== -1) revealed.splice(idx, 1);
-        ctx.addToHand(pokemon, "player");
-        ctx.log(`Great Ball: 找到了 ${pokemon.card.name}!`);
-      } else {
-        // Multiple Pokemon: let user choose (put all revealed temporarily into hand for selection)
-        const pokemonIds = pokemonCards.map(c => c.instanceId);
-        // Temporarily put Pokemon into hand for selection via promptUser
-        for (const p of pokemonCards) {
-          const idx = revealed.indexOf(p);
-          if (idx !== -1) revealed.splice(idx, 1);
-          ctx.player.hand.cards.push(p);
-        }
+      ctx.putOnTopOfDeck(revealed, "player");
 
+      let chosenId: string | null = null;
+      if (pokemonCards.length === 1) {
+        chosenId = pokemonCards[0].instanceId;
+      } else {
         const selected = await ctx.promptUser({
           message: "Great Ball: 选择一只宝可梦加入手牌",
           min: 0,
           max: 1,
-          zone: "hand",
-          targets: pokemonIds,
+          zone: "deck",
+          targets: pokemonCards.map(c => c.instanceId),
         });
-
-        // Remove unselected Pokemon from hand and put them back with non-Pokemon cards
-        for (const p of pokemonCards) {
-          if (!selected.includes(p.instanceId)) {
-            const idx = ctx.player.hand.cards.indexOf(p);
-            if (idx !== -1) {
-              ctx.player.hand.cards.splice(idx, 1);
-              revealed.push(p);
-            }
-          }
-        }
-
-        if (selected.length > 0) {
-          const chosen = pokemonCards.find(p => p.instanceId === selected[0]);
-          if (chosen) ctx.log(`Great Ball: 找到了 ${chosen.card.name}!`);
-        }
+        chosenId = selected.length > 0 ? selected[0] : null;
       }
 
-      // Put rest back on top in any order
-      if (revealed.length > 0) {
-        ctx.putOnTopOfDeck(revealed, "player");
+      if (chosenId) {
+        const deck = ctx.player.deck.cards;
+        const idx = deck.findIndex(c => c.instanceId === chosenId);
+        if (idx !== -1) {
+          const [chosen] = deck.splice(idx, 1);
+          ctx.addToHand(chosen, "player");
+          ctx.log(`Great Ball: 找到了 ${chosen.card.name}!`);
+        }
       }
     },
   },

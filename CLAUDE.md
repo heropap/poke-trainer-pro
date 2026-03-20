@@ -209,3 +209,51 @@ Notes: 使用 NextAuth.js 实现了登录/注册
 ### init.sh
 - 自动生成的可执行脚本
 - 启动开发服务器 → 健康检查 → 运行测试 → 关闭服务器
+
+---
+
+## OpenClaw 决策协议
+
+当通过 `claude -p` 被调用且提示词中包含「决策请求」「decisions/pending」等关键词时，进入**决策模式**。
+
+### 决策模式流程
+
+1. **读取** `decisions/pending/` 中指定的（或最新的）JSON 请求文件
+2. **理解** 决策类型和上下文
+3. **搜索代码库** — 使用 Grep、Glob、Read 充分了解相关代码的现状
+4. **做出决策** — 基于代码库实际情况，不要猜测
+5. **写入结果** 到 `decisions/completed/` 目录，JSON 格式
+6. **不要修改任何代码** — 决策模式只做分析和决策，不改代码
+
+### 决策质量要求
+
+- `reasoning` 必须引用具体的代码文件和行号
+- `action_items` 必须是可直接执行的步骤
+- `risks` 必须基于代码库实际情况
+- 如果信息不足，在决策中明确标注需要补充什么信息
+
+### 决策请求格式
+
+```json
+{
+  "id": "20260309-arch-001",
+  "type": "architecture | priority | bug-analysis | tech-choice | refactor | general",
+  "title": "决策标题",
+  "context": "背景信息",
+  "urgency": "high | medium | low"
+}
+```
+
+### 决策响应格式
+
+```json
+{
+  "id": "与请求相同",
+  "decision": "决策结论",
+  "reasoning": "基于代码分析的理由",
+  "action_items": ["具体行动步骤"],
+  "risks": ["风险点"],
+  "code_references": ["相关文件路径"],
+  "decided_at": "ISO timestamp"
+}
+```

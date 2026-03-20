@@ -426,20 +426,16 @@ const primeCatcher: NamedEffect = {
   cardId: "name:Prime Catcher",
   cardName: "Prime Catcher",
   trainer: {
-    canPlay: (ctx) => ctx.opponent.bench.cards.length > 0,
+    canPlay: (ctx) =>
+      ctx.player.bench.cards.length > 0 && ctx.opponent.bench.cards.length > 0,
     onPlay: async (ctx) => {
-      if (ctx.opponent.bench.cards.length > 0) {
-        const selection = await ctx.promptUser({
-          message: "选择一只对手的备战宝可梦切换到战斗区",
-          min: 1,
-          max: 1,
-          zone: "opponent_bench",
-          targets: ctx.opponent.bench.cards.map((c) => c.instanceId),
-        });
-        if (selection && selection.length > 0) {
-          ctx.switchOpponentActive(selection[0]);
-        }
-      }
+      const switchedOwn = await ctx.promptSwitchOwnActive?.(
+        "Prime Catcher: 选择自己的备战宝可梦切换到战斗区"
+      );
+      if (!switchedOwn) return;
+      await ctx.promptSwitchOpponentActive?.(
+        "Prime Catcher: 选择对手的备战宝可梦切换到战斗区"
+      );
     },
   },
 };

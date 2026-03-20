@@ -1,11 +1,9 @@
 
 import React from "react";
-import { GameState, Player, GameCard } from "@/engine/game-state";
+import { GameState, GamePhase, Player, GameCard } from "@/engine/game-state";
 import { ActiveSpot } from "./ActiveSpot";
 import { BenchSpot } from "./BenchSpot";
 import { Hand } from "./Hand";
-import { ActionMenu } from "./ActionMenu";
-import { zoneSize } from "@/engine/zones";
 import {
   DndContext,
   DragEndEvent,
@@ -22,13 +20,10 @@ import { VisualCard } from "./VisualCard";
 import {
   canPlaySupporter,
   canPlayItem,
-  canPlayBasicToBench,
-  canAttachEnergy,
-  canEvolve,
   canPlayStadium,
+  getEffectiveRetreatCost,
 } from "@/engine/turn-actions";
-import { hasEffect, getEffect } from "@/engine/effects/effect-registry";
-import { ABILITY_BLOCKED } from "@/engine/effects/markers";
+import { hasEffect } from "@/engine/effects/effect-registry";
 import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
@@ -42,6 +37,7 @@ import { CoinFlipModal } from "./CoinFlipModal";
 import { ChooseOptionModal } from "./ChooseOptionModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { OrderCardsModal } from "./OrderCardsModal";
+import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
 
 // ────────────────────────────────────────────────
 // Types
@@ -88,12 +84,12 @@ function computePlayableCardIds(
 ): Set<string> {
   const playable = new Set<string>();
 
-  if (state.phase !== "main" || state.currentPlayer !== playerIndex) {
+  if (state.phase !== GamePhase.MAIN || state.currentPlayer !== playerIndex) {
     return playable;
   }
 
   // PTCG Rule: After attacking, turn is over — no more cards can be played
-  if (state.turnStatus.hasAttackedThisTurn) {
+  if (state.turnStatus.hasAttacked) {
     return playable;
   }
 
@@ -198,7 +194,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   const me = gameState.players[myIndex];
   const opponent = gameState.players[opponentIndex];
 
-  const isMyTurn = gameState.currentPlayer === myIndex && gameState.phase === "main";
+  const isMyTurn = gameState.currentPlayer === myIndex && gameState.phase === GamePhase.MAIN;
 
   // Drag state
   const [activeId, setActiveId] = React.useState<string | null>(null);
@@ -413,41 +409,10 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     setActiveCard(null);
   }
 
-  // ─── Effective retreat cost (accounts for tools, abilities, stadiums) ───
-  function getEffectiveRetreatCost(card: GameCard): number {
-    let cost = card.card.convertedRetreatCost ?? 0;
-    // Apply tool modifiers (e.g., Air Balloon: -2)
-    for (const tool of card.attachedTools) {
-      const toolEffect = hasEffect(tool.cardId, tool.card.name) ? getEffect(tool.cardId, tool.card.name) : null;
-      if (toolEffect?.tool?.whileAttached?.modifyRetreatCost) {
-        cost = toolEffect.tool.whileAttached.modifyRetreatCost({} as any, cost);
-      }
-    }
-    // Apply passive ability modifiers from all Pokemon in play
-    const allInPlay: GameCard[] = [];
-    if (me.active) allInPlay.push(me.active);
-    allInPlay.push(...me.bench.cards);
-    for (const pokemon of allInPlay) {
-      // Skip if ability is blocked (e.g., by Garbodor's Garbotoxin)
-      if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
-      const pokEffect = hasEffect(pokemon.cardId, pokemon.card.name) ? getEffect(pokemon.cardId, pokemon.card.name) : null;
-      if (!pokEffect?.abilities) continue;
-      for (const ability of pokEffect.abilities) {
-        if (ability.type !== "passive" || !ability.modifyRetreatCost) continue;
-        cost = ability.modifyRetreatCost({} as any, cost);
-      }
-    }
-    // Apply Beach Court stadium effect
-    if (gameState.stadium?.card.card.name === "Beach Court" && card.card.subtypes.includes("Basic")) {
-      cost -= 1;
-    }
-    return Math.max(0, cost);
-  }
-
   // ─── Retreat handler ────────────────────────────
   function handleRetreat() {
     if (!isMyTurn || !me.active) return;
-    const retreatCost = getEffectiveRetreatCost(me.active);
+    const retreatCost = getEffectiveRetreatCost(gameState, myIndex, me.active);
 
     if (me.bench.cards.length === 0) {
       showToast("备战区没有宝可梦可以替换", "error");
@@ -471,7 +436,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   function handleRetreatTargetClick(benchInstanceId: string) {
     if (!me.active) return;
-    const retreatCost = getEffectiveRetreatCost(me.active);
+    const retreatCost = getEffectiveRetreatCost(gameState, myIndex, me.active);
 
     if (retreatCost === 0) {
       // Free retreat — dispatch directly
@@ -814,325 +779,251 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     <AnimationProvider aiSpeed={aiSpeed}>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
       <div
-        className="flex h-screen w-full flex-col overflow-hidden bg-zinc-900 text-zinc-100"
+        className="relative grid h-screen w-full grid-rows-[1fr_auto_1fr] overflow-hidden bg-zinc-900 text-zinc-100"
         onClick={(e) => {
-          // Click on background cancels selection (but not if clicking a child element that stops propagation)
           if (targeting && e.target === e.currentTarget) {
             cancelSelection();
           }
         }}
       >
-        {/* ─── OPPONENT ZONE (Top) ─── */}
-        <div className={`flex flex-1 flex-col items-center justify-start border-b border-zinc-800 bg-zinc-900/50 ${isMobile ? "p-2 pt-6" : "p-4 pt-8"}`}>
-          {/* Opponent Info Bar */}
-          <div className={`absolute left-2 top-2 flex items-center rounded-full bg-zinc-800 shadow-lg ${isMobile ? "gap-2 px-2 py-1" : "gap-4 px-4 py-2"}`}>
-            <div className={`rounded-full bg-red-500 ${isMobile ? "h-5 w-5" : "h-8 w-8"}`}></div>
-            <div className={`font-bold ${isMobile ? "text-xs" : "text-sm"}`}>{opponent.name}</div>
-            {!isMobile && (
-              <div className="flex gap-2 text-xs text-zinc-400">
-                <span>手牌: {zoneSize(opponent.hand)}</span>
-                <span>牌库: {zoneSize(opponent.deck)}</span>
-                <span>奖励卡: {zoneSize(opponent.prizes)}</span>
-              </div>
-            )}
+        {/* ─── ROW 1: OPPONENT ZONE ─── */}
+        <div className={`grid w-full grid-cols-[120px_1fr_120px] gap-4 bg-zinc-900/50 ${isMobile ? "p-2" : "p-4"}`}>
+          {/* Top Left: Discard/Deck/Lost (Opponent Right) */}
+          <div className="flex flex-col items-center justify-start gap-4 pt-12">
+             <DiscardPile cards={opponent.discard.cards} label="Discard" />
+             <DeckPile count={opponent.deck.cards.length} label="Deck" />
+             <LostZone count={opponent.lostZone.cards.length} />
           </div>
 
-          {/* Opponent Hand */}
-          <div className={`absolute opacity-75 transition-all hover:opacity-100 ${isMobile ? "top-[-40px] hover:top-[-10px]" : "top-[-60px] hover:top-[-20px]"}`}>
-            <Hand cards={opponent.hand.cards} isOpponent compact={isMobile} />
+          {/* Top Center: Hand/Bench/Active */}
+          <div className="flex flex-col items-center justify-start relative">
+             {/* Opponent Info */}
+             <div className="absolute top-0 left-0 z-10 flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1 text-xs shadow-md border border-zinc-700">
+                <div className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="font-bold text-zinc-300">{opponent.name}</span>
+             </div>
+
+             {/* Opponent Hand */}
+             <div className="-mt-12 mb-2 scale-75 origin-top opacity-80 hover:opacity-100 transition-all hover:scale-90 hover:mt-0 z-20">
+               <Hand cards={opponent.hand.cards} isOpponent compact={isMobile} />
+             </div>
+
+             {/* Opponent Bench */}
+             <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-4 gap-4"}`}>
+               {Array.from({ length: 5 }).map((_, i) => (
+                 <BenchSpot
+                   key={i}
+                   index={i}
+                   card={opponent.bench.cards[i] || null}
+                   onCardContextMenu={handleCardContextMenu}
+                   compact={isMobile}
+                 />
+               ))}
+             </div>
+
+             {/* Opponent Active */}
+             <ActiveSpot
+               card={opponent.active}
+               isOpponent
+               isFirstTurn={false}
+               onCardContextMenu={handleCardContextMenu}
+               isAttacking={attackingPlayer === opponentIndex}
+               compact={isMobile}
+             />
           </div>
 
-          {/* Opponent Bench */}
-            <div className={`flex ${isMobile ? "mb-2 mt-5 gap-1" : "mb-4 mt-8 gap-4"}`}>
-              {Array.from({ length: 5 }).map((_, i) => (
-                <BenchSpot
-                  key={i}
-                  index={i}
-                  card={opponent.bench.cards[i] || null}
-                  onCardContextMenu={handleCardContextMenu}
-                  compact={isMobile}
-                />
-              ))}
-            </div>
-
-          {/* Opponent Active */}
-          <ActiveSpot
-            card={opponent.active}
-            isOpponent
-            isFirstTurn={false}
-            onCardContextMenu={handleCardContextMenu}
-            isAttacking={attackingPlayer === opponentIndex}
-            compact={isMobile}
-          />
+          {/* Top Right: Prizes (Opponent Left) */}
+          <div className="flex flex-col items-center justify-center pt-8">
+             <PrizePile cards={opponent.prizes.cards} isOpponent />
+          </div>
         </div>
 
-        {/* ─── MIDDLE ZONE (Arena / Status) ─── */}
-        <div className={`relative flex w-full items-center justify-center bg-zinc-950 shadow-inner ${isMobile ? "h-10" : "h-12"}`}>
-          {/* Targeting mode overlay banner */}
-          {targeting && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-600/20 backdrop-blur-[1px]">
-              <div className={`flex items-center gap-2 rounded-full bg-blue-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
-                <span className={isMobile ? "truncate max-w-[180px]" : ""}>
-                  选择目标宝可梦 —{" "}
-                  {targeting.action === "attach_energy"
-                    ? `附加 ${targeting.card.card.name}`
-                    : targeting.action === "evolve"
-                    ? `进化为 ${targeting.card.card.name}`
-                    : `装备 ${targeting.card.card.name}`}
-                </span>
-                <button
-                  onClick={cancelSelection}
-                  className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          )}
+        {/* ─── ROW 2: MIDDLE ZONE ─── */}
+        <div className="relative flex w-full items-center justify-between border-y border-zinc-800 bg-zinc-950/80 px-4 py-2 shadow-inner z-30">
+           {/* Left: Stadium */}
+           <div className="w-[120px] flex justify-center">
+             <StadiumSpot 
+               card={gameState.stadium ? gameState.stadium.card : null} 
+               onClick={() => gameState.stadium && setViewingCard(gameState.stadium.card)}
+             />
+           </div>
 
-          {/* Retreat bench selection banner */}
-          {retreatSelecting && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-600/20 backdrop-blur-[1px]">
-              <div className={`flex items-center gap-2 rounded-full bg-blue-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
-                <span>🔄 选择备战区宝可梦来替换</span>
-                <button
-                  onClick={() => setRetreatSelecting(false)}
-                  className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* KO Promotion banner — active is empty, must choose bench Pokemon */}
-          {promotionRequired && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-red-600/20 backdrop-blur-[1px]">
-              <div className={`flex items-center gap-2 rounded-full bg-red-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
-                <span>⚡ 选择备战区宝可梦上战斗场</span>
-              </div>
-            </div>
-          )}
-
-          {/* Bench targeting banner (pick from hand) */}
-          {benchTargeting && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-yellow-600/20 backdrop-blur-[1px]">
-              <div className={`flex items-center gap-2 rounded-full bg-yellow-600 shadow-lg font-bold text-white ${isMobile ? "px-3 py-1 text-xs" : "px-6 py-1.5 text-sm"}`}>
-                <span>
-                  {benchTargeting.action === "attach_energy"
-                    ? "⚡ 从手牌选择能量卡"
-                    : "🔧 从手牌选择道具卡"}
-                </span>
-                <button
-                  onClick={cancelSelection}
-                  className="rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          )}
-
-          {isMobile ? (
-            /* Mobile: compact center info */
-            <div className="flex items-center gap-2">
-              <div className="rounded-full bg-blue-600 px-3 py-0.5 text-[10px] font-bold text-white shadow">
-                T{gameState.turn} · {gameState.players[gameState.currentPlayer].name}
-              </div>
-              {gameState.stadium && (
-                <div className="rounded bg-emerald-700/80 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200 truncate max-w-[80px]">
-                  {gameState.stadium.card.card.name}
-                </div>
+           {/* Center: Info & Banners */}
+           <div className="flex flex-1 flex-col items-center justify-center gap-2">
+              {(targeting || retreatSelecting || promotionRequired || benchTargeting) ? (
+                 <div className="flex justify-center scale-90 origin-center">
+                    {targeting && (
+                      <div className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg animate-pulse">
+                        <span>选择目标: {targeting.action === "attach_energy" ? "附加能量" : targeting.action === "evolve" ? "进化" : "装备道具"}</span>
+                        <button onClick={cancelSelection} className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30">取消</button>
+                      </div>
+                    )}
+                    {retreatSelecting && (
+                      <div className="flex items-center gap-2 rounded-full bg-blue-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg">
+                        <span>🔄 选择备战区宝可梦</span>
+                        <button onClick={() => setRetreatSelecting(false)} className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30">取消</button>
+                      </div>
+                    )}
+                    {promotionRequired && (
+                      <div className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg animate-bounce">
+                        <span>⚡ 必须选择备战区宝可梦上场</span>
+                      </div>
+                    )}
+                    {benchTargeting && (
+                      <div className="flex items-center gap-2 rounded-full bg-yellow-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg">
+                        <span>从手牌选择{benchTargeting.action === "attach_energy" ? "能量" : "道具"}卡</span>
+                        <button onClick={cancelSelection} className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30">取消</button>
+                      </div>
+                    )}
+                 </div>
+              ) : (
+                 <div className="flex flex-col items-center">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                      Turn {gameState.turn} · {gameState.phase} Phase
+                    </div>
+                    <div className={`text-lg font-black tracking-tight ${isMyTurn ? "text-blue-400 drop-shadow-sm" : "text-red-400"}`}>
+                      {isMyTurn ? "YOUR TURN" : `${opponent.name}'s TURN`}
+                    </div>
+                 </div>
               )}
-              {/* Mobile turn status dots */}
-              {isMyTurn && (
-                <div className="flex items-center gap-1">
-                  {me.energyAttachedThisTurn && <div className="h-2 w-2 rounded-full bg-yellow-400" title="已附能" />}
-                  {me.supporterUsedThisTurn && <div className="h-2 w-2 rounded-full bg-purple-400" title="已用支持者" />}
-                  {gameState.turnStatus.retreated && <div className="h-2 w-2 rounded-full bg-blue-400" title="已撤退" />}
-                  {gameState.turnStatus.hasAttackedThisTurn && <div className="h-2 w-2 rounded-full bg-red-400" title="已攻击" />}
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Desktop: full info bar */
-            <div className="flex items-center gap-8">
-              <div className="text-xs uppercase tracking-widest text-zinc-500">
-                Turn {gameState.turn}
-              </div>
-              {gameState.stadium && (
-                <div className="rounded bg-emerald-700/80 px-2 py-0.5 text-[10px] font-bold text-emerald-200" title={gameState.stadium.card.card.rules?.[0] || ""}>
-                  {gameState.stadium.card.card.name}
-                </div>
-              )}
-              <div className="rounded-full bg-blue-600 px-6 py-1 text-sm font-bold text-white shadow-lg shadow-blue-900/20">
-                {gameState.players[gameState.currentPlayer].name} 的回合
-              </div>
-              {/* Desktop turn status indicators */}
-              {isMyTurn && (
-                <div className="flex items-center gap-2 text-[10px]">
-                  <span className={`rounded px-1.5 py-0.5 font-bold ${me.energyAttachedThisTurn ? "bg-yellow-600 text-yellow-100" : "bg-zinc-800 text-zinc-500"}`}>
-                    ⚡附能
-                  </span>
-                  <span className={`rounded px-1.5 py-0.5 font-bold ${me.supporterUsedThisTurn ? "bg-purple-600 text-purple-100" : "bg-zinc-800 text-zinc-500"}`}>
-                    📜支持者
-                  </span>
-                  <span className={`rounded px-1.5 py-0.5 font-bold ${gameState.turnStatus.retreated ? "bg-blue-600 text-blue-100" : "bg-zinc-800 text-zinc-500"}`}>
-                    🔄撤退
-                  </span>
-                  {gameState.turnStatus.hasAttackedThisTurn && (
-                    <span className="rounded bg-red-600 px-1.5 py-0.5 font-bold text-red-100 animate-pulse">
-                      ⚔攻击完毕
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="text-xs uppercase tracking-widest text-zinc-500">
-                {gameState.phase} Phase
-              </div>
-            </div>
-          )}
+           </div>
 
-          {/* Log Toggle (left side) */}
-          <div className={`absolute ${isMobile ? "left-1" : "left-8"}`}>
-            <button
-              className={`rounded px-2 py-1 text-xs font-bold transition-colors ${
-                logOpen
-                  ? "bg-blue-500 text-white hover:bg-blue-400"
-                  : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-              }`}
-              onClick={() => setLogOpen(!logOpen)}
-              title="对战日志"
-            >
-              {isMobile ? "📋" : "📋 日志"}
-            </button>
-          </div>
+           {/* Right: Tools / Actions */}
+           <div className="w-[120px] flex flex-col items-end gap-1">
+              {/* VSTAR Marker Placeholder */}
+              <div className="flex w-full justify-end mb-1 opacity-50">
+                <div className="px-2 py-0.5 bg-white/5 rounded border border-white/10 text-[10px] text-zinc-500 font-mono tracking-widest">
+                  VSTAR
+                </div>
+              </div>
 
-          {/* Action Buttons */}
-          <div className={`absolute ${isMobile ? "right-1" : "right-8"} flex gap-1`}>
-            {!isMobile && (
-              <button
-                className={`rounded px-3 py-1 text-xs font-bold transition-colors ${
-                  toolkitOpen
-                    ? "bg-yellow-500 text-black hover:bg-yellow-400"
-                    : "bg-zinc-700 text-zinc-300 hover:bg-zinc-600"
-                }`}
-                onClick={() => setToolkitOpen(!toolkitOpen)}
-                title="Manual Override Toolkit"
+              <div className="flex gap-1">
+                 {/* Coin Area Placeholder */}
+                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500/50 text-xs" title="Coin Area">
+                   🪙
+                 </div>
+                 <button onClick={() => setLogOpen(!logOpen)} className="rounded bg-zinc-800 p-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors" title="Log">
+                   📋
+                 </button>
+                 {!isMobile && (
+                   <button onClick={() => setToolkitOpen(!toolkitOpen)} className="rounded bg-zinc-800 p-1.5 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-white transition-colors" title="Tools">
+                     🔧
+                   </button>
+                 )}
+              </div>
+              <button 
+                onClick={() => dispatchAction({ type: "end_turn" })}
+                className="w-full rounded bg-red-600 py-1.5 text-xs font-bold text-white hover:bg-red-500 shadow-md transition-colors"
               >
-                🔧 工具
+                End Turn
               </button>
-            )}
-            <button
-              className={`rounded bg-red-600 font-bold hover:bg-red-500 ${isMobile ? "px-2 py-1 text-[10px]" : "px-3 py-1 text-xs"}`}
-              onClick={() => dispatchAction({ type: "end_turn" })}
-            >
-              结束回合
-            </button>
-          </div>
+           </div>
         </div>
 
-        {/* ─── PLAYER ZONE (Bottom) ─── */}
-        <div
+        {/* ─── ROW 3: PLAYER ZONE ─── */}
+        <div 
           ref={playerField.setNodeRef}
-          className={`flex flex-1 flex-col items-center justify-end bg-zinc-800/30 pb-0 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "bg-zinc-800/50 ring-2 ring-blue-500/30" : ""}`}
+          className={`grid w-full grid-cols-[120px_1fr_120px] gap-4 bg-zinc-800/20 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "ring-2 ring-blue-500/30" : ""}`}
         >
-          {/* Player Active */}
-          <div className={isMobile ? "mb-2" : "mb-4"}>
-            <ActiveSpot
-              card={me.active}
-              gameState={gameState}
-              playerIndex={myIndex as 0 | 1}
-              canAttack={isMyTurn && !targeting && !retreatSelecting}
-              isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
-              hasAttackedThisTurn={gameState.turnStatus.hasAttackedThisTurn}
-              onAttack={(attackName) => {
-                setAttackingPlayer(myIndex);
-                setTimeout(() => setAttackingPlayer(null), 400);
-                dispatchAction({ type: "attack", attackName });
-              }}
-              onUseAbility={(cardInstanceId, abilityName) => {
-                dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
-              }}
-              onRetreat={handleRetreat}
-              isTargetable={activeIsTargetable}
-              onTargetClick={() => {
-                if (me.active) handleTargetClick(me.active.instanceId);
-              }}
-              onCardContextMenu={handleCardContextMenu}
-              isAttacking={attackingPlayer === myIndex}
-              compact={isMobile}
-            />
+          {/* Left: Prizes (Player Left) */}
+          <div className="flex flex-col items-center justify-center pb-8">
+             <PrizePile cards={me.prizes.cards} />
           </div>
 
-          {/* Player Bench */}
-          <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-6 gap-4"}`}>
-            {Array.from({ length: 5 }).map((_, i) => {
-              const benchCard = me.bench.cards[i] || null;
-              const isTargetableForCard = benchCard
-                ? benchTargetableIds.has(benchCard.instanceId)
-                : false;
-              const isTargetableForRetreat = retreatSelecting && !!benchCard;
-              const isTargetableForPromotion = promotionRequired && !!benchCard;
+          {/* Center: Active/Bench/Hand */}
+          <div className="flex flex-col items-center justify-end relative">
+             {/* Player Active */}
+             <div className={isMobile ? "mb-2" : "mb-4"}>
+               <ActiveSpot
+                 card={me.active}
+                 gameState={gameState}
+                 playerIndex={myIndex as 0 | 1}
+                 canAttack={isMyTurn && !targeting && !retreatSelecting}
+                 isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
+                 hasAttackedThisTurn={gameState.turnStatus.hasAttacked}
+                 onAttack={(attackName) => {
+                   setAttackingPlayer(myIndex);
+                   setTimeout(() => setAttackingPlayer(null), 400);
+                   dispatchAction({ type: "attack", attackName });
+                 }}
+                 onUseAbility={(cardInstanceId, abilityName) => {
+                   dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
+                 }}
+                 onRetreat={handleRetreat}
+                 isTargetable={activeIsTargetable}
+                 onTargetClick={() => {
+                   if (me.active) handleTargetClick(me.active.instanceId);
+                 }}
+                 onCardContextMenu={handleCardContextMenu}
+                 isAttacking={attackingPlayer === myIndex}
+                 compact={isMobile}
+               />
+             </div>
 
-              return (
-                <BenchSpot
-                  key={i}
-                  index={i}
-                  card={benchCard}
-                  isTargetable={isTargetableForCard || isTargetableForRetreat || isTargetableForPromotion}
-                  onTargetClick={() => {
-                    if (benchCard && promotionRequired) {
-                      // KO Promotion: dispatch promote action
-                      dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
-                    } else if (benchCard && retreatSelecting) {
-                      handleRetreatTargetClick(benchCard.instanceId);
-                    } else if (benchCard) {
-                      handleTargetClick(benchCard.instanceId);
-                    }
-                  }}
-                  onClick={() => benchCard && handleBenchClick(benchCard)}
-                  isSelected={!!benchCard && selectedBenchId === benchCard.instanceId}
-                  onBenchAction={(action) => benchCard && handleBenchAction(benchCard.instanceId, action)}
-                  isMyTurn={isMyTurn}
-                  hasAttackedThisTurn={gameState.turnStatus.hasAttackedThisTurn}
-                  onUseAbility={(cardInstanceId, abilityName) => {
-                    dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
-                    setSelectedBenchId(null);
-                  }}
-                  onCardContextMenu={handleCardContextMenu}
-                  compact={isMobile}
-                />
-              );
-            })}
+             {/* Player Bench */}
+             <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-6 gap-4"}`}>
+               {Array.from({ length: 5 }).map((_, i) => {
+                 const benchCard = me.bench.cards[i] || null;
+                 const isTargetableForCard = benchCard
+                   ? benchTargetableIds.has(benchCard.instanceId)
+                   : false;
+                 const isTargetableForRetreat = retreatSelecting && !!benchCard;
+                 const isTargetableForPromotion = promotionRequired && !!benchCard;
+
+                 return (
+                   <BenchSpot
+                     key={i}
+                     index={i}
+                     card={benchCard}
+                     isTargetable={isTargetableForCard || isTargetableForRetreat || isTargetableForPromotion}
+                     onTargetClick={() => {
+                       if (benchCard && promotionRequired) {
+                         dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
+                       } else if (benchCard && retreatSelecting) {
+                         handleRetreatTargetClick(benchCard.instanceId);
+                       } else if (benchCard) {
+                         handleTargetClick(benchCard.instanceId);
+                       }
+                     }}
+                     onClick={() => benchCard && handleBenchClick(benchCard)}
+                     isSelected={!!benchCard && selectedBenchId === benchCard.instanceId}
+                     onBenchAction={(action) => benchCard && handleBenchAction(benchCard.instanceId, action)}
+                     isMyTurn={isMyTurn}
+                     hasAttackedThisTurn={gameState.turnStatus.hasAttacked}
+                     onUseAbility={(cardInstanceId, abilityName) => {
+                       dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
+                       setSelectedBenchId(null);
+                     }}
+                     onCardContextMenu={handleCardContextMenu}
+                     compact={isMobile}
+                   />
+                 );
+               })}
+             </div>
+
+             {/* Player Hand */}
+             <div className="relative w-full">
+               <Hand
+                 cards={me.hand.cards}
+                 isMyTurn={isMyTurn}
+                 onCardClick={handleCardClick}
+                 selectedCardId={selectedCardId}
+                 selectedCard={selectedCard}
+                 playableCardIds={playableCardIds}
+                 isTargeting={!!targeting}
+                 onMenuAction={handleMenuAction}
+                 onMenuCancel={cancelSelection}
+                 onCardContextMenu={handleCardContextMenu}
+                 compact={isMobile}
+               />
+             </div>
           </div>
 
-          {/* Player Hand & Controls */}
-          <div className="relative w-full">
-            <Hand
-              cards={me.hand.cards}
-              isMyTurn={isMyTurn}
-              onCardClick={handleCardClick}
-              selectedCardId={selectedCardId}
-              selectedCard={selectedCard}
-              playableCardIds={playableCardIds}
-              isTargeting={!!targeting}
-              onMenuAction={handleMenuAction}
-              onMenuCancel={cancelSelection}
-              onCardContextMenu={handleCardContextMenu}
-              compact={isMobile}
-            />
-
-            {/* Player Info (Bottom Right) */}
-            <div className={`absolute bottom-2 right-2 flex flex-col items-end gap-1 rounded-lg bg-zinc-900/80 text-right shadow-xl backdrop-blur-md ${isMobile ? "p-1.5" : "p-3"}`}>
-              <div className={`font-bold text-blue-400 ${isMobile ? "text-xs" : "text-lg"}`}>{me.name}</div>
-              <div className={`text-zinc-400 ${isMobile ? "text-[9px]" : "text-xs"}`}>
-                {isMobile
-                  ? `${zoneSize(me.deck)}D ${zoneSize(me.discard)}G ${zoneSize(me.prizes)}P`
-                  : `Deck: ${zoneSize(me.deck)} | Discard: ${zoneSize(me.discard)} | Prizes: ${zoneSize(me.prizes)}`
-                }
-              </div>
-            </div>
+          {/* Right: Lost/Deck/Discard (Player Right) */}
+          <div className="flex flex-col items-center justify-end gap-4 pb-4">
+             <LostZone count={me.lostZone.cards.length} />
+             <DeckPile count={me.deck.cards.length} label="Deck" />
+             <DiscardPile cards={me.discard.cards} label="Discard" onClick={() => {/* Future: show discard modal */}} />
           </div>
         </div>
 
@@ -1232,7 +1123,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         {retreatEnergyPending && me.active && (
           <EnergySelectionModal
             energyCards={me.active.attachedEnergy}
-            required={getEffectiveRetreatCost(me.active)}
+            required={getEffectiveRetreatCost(gameState, myIndex, me.active)}
             pokemonName={me.active.card.name}
             onConfirm={handleRetreatEnergyConfirm}
             onCancel={() => setRetreatEnergyPending(null)}

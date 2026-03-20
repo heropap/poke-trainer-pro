@@ -13,6 +13,7 @@ import {
   resetInstanceCounter,
   GameState,
   logEvent,
+  GamePhase,
 } from "@/engine/game-state";
 import {
   shuffleZone,
@@ -74,7 +75,7 @@ function createTestState(
   deckSize = 40
 ): GameState {
   const state = createGameState("Alice", "Bob");
-  state.phase = "setup";
+  state.phase = GamePhase.SETUP;
 
   // Build hands
   state.players[0].hand = createZone(hand1Cards.map(createGameCard));
@@ -545,7 +546,7 @@ describe("executePreparation", () => {
     expect(zoneSize(state.players[1].prizes)).toBe(6);
 
     // Phase should be draw
-    expect(state.phase).toBe("draw");
+    expect(state.phase).toBe(GamePhase.DRAW);
     expect(state.turn).toBe(1);
     expect(state.isFirstTurn).toBe(true);
   });

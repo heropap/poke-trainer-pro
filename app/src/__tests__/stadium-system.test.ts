@@ -16,6 +16,7 @@ import {
   createGameState,
   createGameCard,
   GameState,
+  GamePhase,
   GameCard,
 } from "@/engine/game-state";
 import {
@@ -88,10 +89,10 @@ function makeEnergyCard(type: string = "Colorless"): GameCard {
 
 function setupGame(): GameState {
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
-  state.turnStatus.phase = "MAIN";
+  state.turnStatus.currentPhase = GamePhase.MAIN;
 
   // Give both players active Pokemon
   state.players[0].active = makePokemonCard("Pikachu", { convertedRetreatCost: 1 });
@@ -125,7 +126,7 @@ describe("canPlayStadium", () => {
 
   test("rejects playing a stadium outside main phase", () => {
     const state = setupGame();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const stadium = makeStadiumCard("Beach Court");
     state.players[0].hand.cards.push(stadium);
 
@@ -136,7 +137,7 @@ describe("canPlayStadium", () => {
 
   test("rejects playing more than one stadium per turn", () => {
     const state = setupGame();
-    state.turnStatus.stadiumPlayed = true;
+    state.turnStatus.hasPlayedStadium = true;
     const stadium = makeStadiumCard("Beach Court");
     state.players[0].hand.cards.push(stadium);
 
@@ -229,9 +230,9 @@ describe("playStadium", () => {
     const stadium = makeStadiumCard("Beach Court");
     state.players[0].hand.cards.push(stadium);
 
-    expect(state.turnStatus.stadiumPlayed).toBe(false);
+    expect(state.turnStatus.hasPlayedStadium).toBe(false);
     await playStadium(state, stadium.instanceId);
-    expect(state.turnStatus.stadiumPlayed).toBe(true);
+    expect(state.turnStatus.hasPlayedStadium).toBe(true);
   });
 
   test("discards old stadium to its owner's discard pile", async () => {
@@ -443,7 +444,7 @@ describe("GameState stadium field", () => {
 
   test("turnStatus includes stadiumPlayed flag", () => {
     const state = createGameState("Alice", "Bob");
-    expect(state.turnStatus.stadiumPlayed).toBe(false);
+    expect(state.turnStatus.hasPlayedStadium).toBe(false);
   });
 });
 
@@ -458,7 +459,7 @@ describe("endTurn resets stadiumPlayed", () => {
     state.players[0].hand.cards.push(stadium);
 
     await playStadium(state, stadium.instanceId);
-    expect(state.turnStatus.stadiumPlayed).toBe(true);
+    expect(state.turnStatus.hasPlayedStadium).toBe(true);
 
     // End turn via processAction
     // Add cards to deck so draw doesn't fail
@@ -468,7 +469,7 @@ describe("endTurn resets stadiumPlayed", () => {
 
     const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
-    expect(state.turnStatus.stadiumPlayed).toBe(false);
+    expect(state.turnStatus.hasPlayedStadium).toBe(false);
   });
 });
 

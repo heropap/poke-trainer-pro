@@ -6,6 +6,7 @@ import {
   createZone,
   logEvent,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import {
   canAttachEnergy,
@@ -47,7 +48,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupMainPhase(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 1;
   state.isFirstTurn = false;
   return state;
@@ -146,7 +147,7 @@ describe("Attach Energy", () => {
 
   it("不能在非主阶段附加能量", () => {
     const state = setupMainPhase();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const player = getCurrentPlayer(state);
 
     const pikachu = makeGameCard({ name: "Pikachu", hp: "60" });
@@ -593,7 +594,7 @@ describe("End Turn", () => {
     expect(result.success).toBe(true);
     expect(state.currentPlayer).toBe(1);
     expect(state.turn).toBe(2);
-    expect(state.phase).toBe("draw");
+    expect(state.phase).toBe(GamePhase.DRAW);
     expect(state.isFirstTurn).toBe(false);
 
     // Check per-turn flags reset
@@ -605,7 +606,7 @@ describe("End Turn", () => {
 
   it("不能在抽牌阶段结束回合", () => {
     const state = setupMainPhase();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
 
     const result = endTurn(state);
     expect(result.success).toBe(false);
@@ -617,7 +618,7 @@ describe("End Turn", () => {
 describe("Draw Card", () => {
   it("成功抽牌并进入主阶段", () => {
     const state = setupMainPhase();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const player = getCurrentPlayer(state);
 
     const topCard = makeGameCard({ name: "Pikachu", hp: "60" });
@@ -625,7 +626,7 @@ describe("Draw Card", () => {
 
     const result = drawCard(state);
     expect(result.success).toBe(true);
-    expect(state.phase).toBe("main");
+    expect(state.phase).toBe(GamePhase.MAIN);
     expect(player.hand.cards).toHaveLength(1);
     expect(player.hand.cards[0].card.name).toBe("Pikachu");
     expect(player.deck.cards).toHaveLength(0);
@@ -633,13 +634,13 @@ describe("Draw Card", () => {
 
   it("牌组为空时触发 deck_out 败北", () => {
     const state = setupMainPhase();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const player = getCurrentPlayer(state);
     // deck is empty
 
     const result = drawCard(state);
     expect(result.success).toBe(true);
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner).toBeDefined();
     expect(state.winner!.condition).toBe("deck_out");
     expect(state.winner!.playerIndex).toBe(1); // opponent wins

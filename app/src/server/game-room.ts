@@ -3,6 +3,7 @@
 
 import {
   GameState,
+  GamePhase,
   Player,
   GameCard,
   Zone,
@@ -133,7 +134,7 @@ export class GameRoom {
     }
 
     // Set up initial state
-    this.state.phase = "setup";
+    this.state.phase = GamePhase.SETUP;
     this.state.players[0].deck = createZone(p1Cards);
     this.state.players[1].deck = createZone(p2Cards);
 
@@ -264,7 +265,7 @@ export class GameRoom {
    * Check if the game is over.
    */
   public isGameOver(): boolean {
-    return this.state.phase === "game_over";
+    return this.state.phase === GamePhase.GAME_OVER;
   }
 
   /**

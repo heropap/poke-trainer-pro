@@ -328,6 +328,8 @@ function mapRyuuPlayerToUI(player: RyuuPlayer, id: string): UIPlayer {
     discard: cardListToZone(player.discard),
     energyAttachedThisTurn: false,
     supporterUsedThisTurn: false,
+    lostZone: { cards: [] },
+    mulliganCount: 0,
   };
 }
 

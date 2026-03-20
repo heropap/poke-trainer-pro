@@ -500,29 +500,35 @@ function compilePassiveAbility(
 
   for (const modDef of rule.modifiers) {
     switch (modDef.type.modify) {
-      case "incoming_damage":
+      case "incoming_damage": {
+        const amount = modDef.type.amount;
         effect.modifyIncomingDamage = (_ctx, damage) =>
-          Math.max(0, damage + modDef.type.amount);
+          Math.max(0, damage + amount);
         break;
-      case "outgoing_damage":
-        if ((modDef.type as any).type_filter) {
-          const typeFilter = (modDef.type as any).type_filter;
+      }
+      case "outgoing_damage": {
+        const amount = modDef.type.amount;
+        const typeFilter = modDef.type.type_filter;
+        if (typeFilter) {
           effect.modifyDamage = (ctx, damage, isAttacker) => {
             if (!isAttacker) return damage;
             if (typeFilter && ctx.source.card.types) {
               if (!typeFilter.some((t: string) => ctx.source.card.types?.includes(t))) return damage;
             }
-            return damage + modDef.type.amount;
+            return damage + amount;
           };
         } else {
           effect.modifyDamage = (_ctx, damage, isAttacker) =>
-            isAttacker ? damage + modDef.type.amount : damage;
+            isAttacker ? damage + amount : damage;
         }
         break;
-      case "retreat_cost":
+      }
+      case "retreat_cost": {
+        const amount = modDef.type.amount;
         effect.modifyRetreatCost = (_ctx, cost) =>
-          Math.max(0, cost + modDef.type.amount);
+          Math.max(0, cost + amount);
         break;
+      }
       case "prevent_bench_damage":
         effect.preventBenchDamage = true;
         break;
@@ -617,18 +623,24 @@ function compileToolModifiers(modifierDefs: ModifierDef[]): ToolEffect {
 
   for (const modDef of modifierDefs) {
     switch (modDef.type.modify) {
-      case "outgoing_damage":
+      case "outgoing_damage": {
+        const amount = modDef.type.amount;
         tool.whileAttached!.modifyDamage = (_ctx, damage) =>
-          damage + modDef.type.amount;
+          damage + amount;
         break;
-      case "incoming_damage":
+      }
+      case "incoming_damage": {
+        const amount = modDef.type.amount;
         tool.whileAttached!.modifyIncomingDamage = (_ctx, damage) =>
-          Math.max(0, damage + modDef.type.amount);
+          Math.max(0, damage + amount);
         break;
-      case "retreat_cost":
+      }
+      case "retreat_cost": {
+        const amount = modDef.type.amount;
         tool.whileAttached!.modifyRetreatCost = (_ctx, cost) =>
-          Math.max(0, cost + modDef.type.amount);
+          Math.max(0, cost + amount);
         break;
+      }
     }
   }
 

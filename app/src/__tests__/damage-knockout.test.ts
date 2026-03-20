@@ -21,6 +21,7 @@ import {
   createZone,
   logEvent,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import {
   calculateWeakness,
@@ -59,7 +60,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupMainPhase(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   return state;
@@ -496,7 +497,7 @@ describe("Win Conditions", () => {
     player.prizes.cards.push(prize);
 
     takePrizes(state, 0, 1);
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner).not.toBeNull();
     expect(state.winner!.playerIndex).toBe(0);
     expect(state.winner!.condition).toBe("prizes_taken");
@@ -551,14 +552,14 @@ describe("Concede", () => {
     const result = concede(state, 0);
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner!.playerIndex).toBe(1);
     expect(state.winner!.condition).toBe("concede");
   });
 
   it("游戏已结束时不能认输", () => {
     const state = setupMainPhase();
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
 
     const result = concede(state, 0);
     expect(result.success).toBe(false);
@@ -770,7 +771,7 @@ describe("performAttack Integration", () => {
     const result = performAttack(state, 0, "Hit");
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
-    expect(state.phase).toBe("game_over");
+    expect(state.phase).toBe(GamePhase.GAME_OVER);
     expect(state.winner!.playerIndex).toBe(0);
     expect(state.winner!.condition).toBe("no_bench_pokemon");
   });
@@ -798,7 +799,7 @@ describe("performAttack Integration", () => {
 
   it("主阶段以外不能攻击", () => {
     const state = setupMainPhase();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const attacker = state.players[0];
 
     const pokemon = makeGameCard({

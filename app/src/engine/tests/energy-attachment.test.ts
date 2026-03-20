@@ -1,5 +1,5 @@
 
-import { createGameState, createGameCard, createZone, GameState, GameCard } from "../game-state";
+import { createGameState, createGameCard, createZone, GameState, GamePhase, GameCard } from "../game-state";
 import { attachEnergy } from "../turn-actions";
 import { checkEnergyCostDetailed } from "../game-actions";
 import { Card } from "@/types/card";
@@ -25,7 +25,7 @@ describe("Energy Attachment Logic", () => {
 
   beforeEach(() => {
     state = createGameState("Player 1", "Player 2");
-    state.phase = "main";
+    state.phase = GamePhase.MAIN;
     state.currentPlayer = playerIndex;
     
     const p1 = state.players[0];

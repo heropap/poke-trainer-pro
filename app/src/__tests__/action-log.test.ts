@@ -5,7 +5,9 @@
  * from the ActionLog component, plus retreat-once-per-turn validation.
  */
 
-import { GameEvent, GameEventType } from "@/engine/game-state";
+import { GameEvent, GameEventType,
+  GamePhase,
+} from "@/engine/game-state";
 import { formatGameEvent, groupEventsByTurn } from "@/components/battle/board/ActionLog";
 
 // ─── Helper factories ───
@@ -192,16 +194,16 @@ describe("retreat once-per-turn (TurnState.retreated)", () => {
   test("TurnState has retreated field defaulting to false", () => {
     const { createGameState } = require("@/engine/game-state");
     const state = createGameState("p1", "p2");
-    expect(state.turnStatus.retreated).toBe(false);
+    expect(state.turnStatus.hasRetreated).toBe(false);
   });
 
-  test("retreat() sets turnStatus.retreated to true", () => {
+  test("retreat() sets turnStatus.hasRetreated to true", () => {
     const { createGameState, createGameCard } = require("@/engine/game-state");
     const { retreat } = require("@/engine/turn-actions");
     const { addCards, addToBottom } = require("@/engine/zones");
 
     const state = createGameState("p1", "p2");
-    state.phase = "main";
+    state.phase = GamePhase.MAIN;
     state.currentPlayer = 0;
 
     // Setup: active with 1 energy, and a bench Pokemon
@@ -247,7 +249,7 @@ describe("retreat once-per-turn (TurnState.retreated)", () => {
 
     const result = retreat(state, [energy.instanceId], benchCard.instanceId);
     expect(result.success).toBe(true);
-    expect(state.turnStatus.retreated).toBe(true);
+    expect(state.turnStatus.hasRetreated).toBe(true);
   });
 
   test("checkHardRules rejects second retreat in same turn", () => {
@@ -255,9 +257,9 @@ describe("retreat once-per-turn (TurnState.retreated)", () => {
     const { checkHardRules } = require("@/engine/rules/base-rules");
 
     const state = createGameState("p1", "p2");
-    state.phase = "main";
+    state.phase = GamePhase.MAIN;
     state.currentPlayer = 0;
-    state.turnStatus.retreated = true; // Already retreated
+    state.turnStatus.hasRetreated = true; // Already retreated
 
     const result = checkHardRules(state, { type: "retreat" }, 0);
     expect(result.valid).toBe(false);

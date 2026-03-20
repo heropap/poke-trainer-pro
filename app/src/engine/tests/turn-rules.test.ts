@@ -1,5 +1,5 @@
 
-import { createGameState, createGameCard, GameState } from "../game-state";
+import { createGameState, createGameCard, GameState, GamePhase } from "../game-state";
 import { checkHardRules } from "../rules/base-rules";
 import { GameAction } from "../game-controller";
 
@@ -8,8 +8,8 @@ describe("Turn Rules (The Golden Loop)", () => {
   
   beforeEach(() => {
     state = createGameState("P1", "P2");
-    state.phase = "main";
-    state.turnStatus.phase = "MAIN";
+    state.phase = GamePhase.MAIN;
+    state.turnStatus.currentPhase = GamePhase.MAIN;
     state.currentPlayer = 0;
   });
 
@@ -40,7 +40,7 @@ describe("Turn Rules (The Golden Loop)", () => {
   });
 
   test("Cannot retreat twice", () => {
-    state.turnStatus.retreated = true;
+    state.turnStatus.hasRetreated = true;
     const action: GameAction = { type: "retreat", benchInstanceId: "bench-1" };
     const result = checkHardRules(state, action, 0);
     

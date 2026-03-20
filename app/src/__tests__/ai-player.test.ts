@@ -21,6 +21,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { computeAIAction, computeAITurnActions, AIDecision } from "@/engine/ai-player";
 import { Card } from "@/types/card";
@@ -50,7 +51,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupAIGame(aiIndex: 0 | 1 = 1): GameState {
   resetInstanceCounter();
   const state = createGameState("Human", "AI Bot");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = aiIndex;
@@ -92,7 +93,7 @@ function setupAIGame(aiIndex: 0 | 1 = 1): GameState {
 describe("AI Player - Game Over & Turn Checks", () => {
   it("game_over 时返回 null", () => {
     const state = setupAIGame(1);
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
 
     const result = computeAIAction(state, 1);
     expect(result).toBeNull();
@@ -108,7 +109,7 @@ describe("AI Player - Game Over & Turn Checks", () => {
 
   it("不是主阶段时返回 null", () => {
     const state = setupAIGame(1);
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
 
     const result = computeAIAction(state, 1);
     expect(result).toBeNull();
@@ -561,7 +562,7 @@ describe("AI Player - computeAITurnActions", () => {
 
   it("非 main 阶段返回空列表", () => {
     const state = setupAIGame(1);
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
 
     const actions = computeAITurnActions(state, 1);
     expect(actions).toHaveLength(0);

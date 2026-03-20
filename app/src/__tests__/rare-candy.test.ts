@@ -8,7 +8,9 @@
  * - Must have a valid Stage 2 in hand that matches via Stage 1 chain
  */
 
-import { GameState, GameCard, createGameState, resetInstanceCounter } from "@/engine/game-state";
+import { GameState, GameCard, createGameState, resetInstanceCounter,
+  GamePhase,
+} from "@/engine/game-state";
 import { createEffectContext } from "@/engine/effects/effect-context";
 import {
   setPromptStateChangeCallback,
@@ -74,7 +76,7 @@ function makeRareCandySource(): GameCard {
 function setupTestState(): GameState {
   resetInstanceCounter();
   const state = createGameState("Player 1", "Player 2");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;

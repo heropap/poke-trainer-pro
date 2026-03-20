@@ -1,12 +1,16 @@
-
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es2020",
+    "outDir": "dist",
     "noEmit": false,
-    "esModuleInterop": true,
-    "isolatedModules": false
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true
   },
-  "include": ["server.ts"]
+  "include": ["server.ts", "src/**/*"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs"
+    }
+  }
 }

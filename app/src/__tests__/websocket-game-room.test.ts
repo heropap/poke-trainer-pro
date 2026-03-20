@@ -18,6 +18,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
 import { Card } from "@/types/card";
@@ -116,7 +117,7 @@ describe("GameRoom initialization", () => {
 
     const success = room.initialize(deck1, deck2);
     expect(success).toBe(true);
-    expect(room.state.phase).toBe("main");
+    expect(room.state.phase).toBe(GamePhase.MAIN);
     expect(room.state.gameId).toBe("test-game-1");
 
     // Both players should have been set up
@@ -390,7 +391,7 @@ describe("Game lifecycle", () => {
     );
 
     expect(room.isGameOver()).toBe(false);
-    expect(room.state.phase).toBe("main");
+    expect(room.state.phase).toBe(GamePhase.MAIN);
 
     // Concede
     const currentSocket = room.state.currentPlayer === 0 ? "sock-1" : "sock-2";

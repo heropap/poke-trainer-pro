@@ -9,7 +9,9 @@
  * - AI player ability usage
  */
 
-import { createGameState, GameCard, GameState, resetInstanceCounter } from "@/engine/game-state";
+import { createGameState, GameCard, GameState, resetInstanceCounter,
+  GamePhase,
+} from "@/engine/game-state";
 import { processAction } from "@/engine/game-controller";
 import { registerEffect, clearRegistry } from "@/engine/effects/effect-registry";
 import { ABILITY_BLOCKED } from "@/engine/effects/markers";
@@ -102,7 +104,7 @@ function makeEnergyCard(type: string = "Fire"): GameCard {
 
 function setupGame(): GameState {
   const state = createGameState("TestPlayer", "TestOpponent");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.currentPlayer = 0;
   state.turn = 2;
   state.isFirstTurn = false;
@@ -600,7 +602,7 @@ describe("AI player uses abilities", () => {
 describe("Ability edge cases", () => {
   it("不在主阶段不能使用特性", async () => {
     const state = setupGame();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const active = state.players[0].active!;
     active.card.abilities = [
       { name: "Test", text: "", type: "Ability" },

@@ -25,10 +25,11 @@ import { CardEffectDef } from "./effect-types";
  * L1   = ID-based hand-written effects (highest priority)
  * L1.5 = JSON schema-compiled effects (visual editor / custom-effects.json)
  * L2   = Name-based hand-written effects
+ * L2.5 = V2 semantic-extracted + compiled rules
  * L3   = Text-parser from ryuu-play metadata
  * L4   = Text-parser from UI Card data
  */
-export type EffectSourceLayer = "L1" | "L1.5" | "L2" | "L3" | "L4";
+export type EffectSourceLayer = "L1" | "L1.5" | "L2" | "L2.5" | "L3" | "L4";
 
 /** Primary storage: cardId → CardEffectDef */
 const registry = new Map<string, CardEffectDef>();

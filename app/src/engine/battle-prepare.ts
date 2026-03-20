@@ -22,6 +22,7 @@
 import {
   GameState,
   GameCard,
+  GamePhase,
   logEvent,
 } from "./game-state";
 import {
@@ -436,11 +437,11 @@ export function executePreparation(
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  state.phase = "setup";
+  state.phase = GamePhase.SETUP;
 
   // ─── Step 1: Resolve Mulligans ───
 
-  state.phase = "mulligan";
+  state.phase = GamePhase.MULLIGAN;
   const mulliganResult = resolveMulligans(state);
 
   if (!mulliganResult.success) {
@@ -467,7 +468,7 @@ export function executePreparation(
 
   // ─── Step 2: Auto-place Basic Pokemon ───
 
-  state.phase = "setup";
+  state.phase = GamePhase.SETUP;
 
   for (let p = 0; p < 2; p++) {
     const pIdx = p as 0 | 1;
@@ -517,7 +518,7 @@ export function executePreparation(
 
   // ─── Step 5: Transition to Draw Phase ───
 
-  state.phase = "draw";
+  state.phase = GamePhase.DRAW;
   state.turn = 1;
   state.isFirstTurn = true;
 

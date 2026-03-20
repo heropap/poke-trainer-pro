@@ -80,7 +80,9 @@ function adaptPlayer(extPlayer: ExternalPlayer, id: string): Player {
     discard: adaptCardList(extPlayer.discard),
     prizes: createZone(extPlayer.prizes.flatMap(p => p.cards.map(c => adaptCard(c)))),
     energyAttachedThisTurn: extPlayer.energyPlayedTurn > 0, // Needs context of current turn
-    supporterUsedThisTurn: extPlayer.supporterPlayedTurn > 0
+    supporterUsedThisTurn: extPlayer.supporterPlayedTurn > 0,
+    lostZone: createZone([]),
+    mulliganCount: 0
   };
 }
 

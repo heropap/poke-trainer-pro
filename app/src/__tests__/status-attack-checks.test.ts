@@ -21,6 +21,7 @@ import {
   createPlayer,
   resetInstanceCounter,
   StatusCondition,
+  GamePhase,
 } from "../engine/game-state";
 import {
   canAttack,
@@ -83,7 +84,7 @@ function createEnergyCard(type: string = "Fire"): Card {
 function setupBattleState(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2; // Not first turn
   state.isFirstTurn = false;
   state.currentPlayer = 0;

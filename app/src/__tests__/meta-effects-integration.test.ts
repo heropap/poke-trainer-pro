@@ -12,6 +12,7 @@ import {
   createGameCard,
   GameState,
   GameCard,
+  GamePhase,
 } from "@/engine/game-state";
 import { createEffectContext } from "@/engine/effects/effect-context";
 import { addToBottom } from "@/engine/zones";
@@ -93,10 +94,10 @@ function makeStadiumCard(name: string): GameCard {
 
 function setupGame(): GameState {
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
-  state.turnStatus.phase = "MAIN";
+  state.turnStatus.currentPhase = GamePhase.MAIN;
 
   state.players[0].active = makePokemonCard("Pikachu");
   state.players[1].active = makePokemonCard("Charmander", { hp: "70" });

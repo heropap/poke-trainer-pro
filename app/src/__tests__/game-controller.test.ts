@@ -20,6 +20,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
 import { Card } from "@/types/card";
@@ -49,7 +50,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupPlayableGame(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;
@@ -144,7 +145,7 @@ describe("Turn Validation", () => {
 
   it("游戏已结束时不能行动", async () => {
     const state = setupPlayableGame();
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
 
     const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(false);
@@ -165,7 +166,7 @@ describe("End Turn Flow", () => {
 
     // Should now be Bob's turn (player 1) in main phase after auto-draw
     expect(result.newState.currentPlayer).toBe(1);
-    expect(result.newState.phase).toBe("main");
+    expect(result.newState.phase).toBe(GamePhase.MAIN);
     // Bob should have drawn 1 card
     expect(result.newState.players[1].hand.cards.length).toBe(bobHandBefore + 1);
     expect(result.newState.players[1].deck.cards.length).toBe(bobDeckBefore - 1);
@@ -179,7 +180,7 @@ describe("End Turn Flow", () => {
     const result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
     expect(result.gameEnded).toBe(true);
-    expect(result.newState.phase).toBe("game_over");
+    expect(result.newState.phase).toBe(GamePhase.GAME_OVER);
     expect(result.newState.winner!.condition).toBe("deck_out");
     expect(result.newState.winner!.playerIndex).toBe(0); // Alice wins because Bob can't draw
   });
@@ -235,7 +236,7 @@ describe("Play Card Actions", () => {
 
   it("非主阶段不能打出卡牌", async () => {
     const state = setupPlayableGame();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const charmander = state.players[0].hand.cards.find(c => c.card.name === "Charmander")!;
 
     const result = await processAction(state, 0, {
@@ -264,7 +265,7 @@ describe("Attack Flow", () => {
     expect(result.newState.players[1].active!.damageCounters).toBeGreaterThan(0);
     // Turn should have switched to Bob with auto-draw
     expect(result.newState.currentPlayer).toBe(1);
-    expect(result.newState.phase).toBe("main");
+    expect(result.newState.phase).toBe(GamePhase.MAIN);
     expect(result.newState.players[1].hand.cards.length).toBe(bobHandBefore + 1);
   });
 
@@ -284,7 +285,7 @@ describe("Attack Flow", () => {
 
   it("非主阶段不能攻击", async () => {
     const state = setupPlayableGame();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
 
     const result = await processAction(state, 0, {
       type: "attack",
@@ -346,22 +347,22 @@ describe("Concede Action", () => {
 describe("startFirstTurn", () => {
   it("从 draw 阶段自动抽牌进入 main 阶段", () => {
     const state = setupPlayableGame();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     state.turn = 1;
     const handBefore = state.players[0].hand.cards.length;
 
     const newState = startFirstTurn(state);
-    expect(newState.phase).toBe("main");
+    expect(newState.phase).toBe(GamePhase.MAIN);
     expect(newState.players[0].hand.cards.length).toBe(handBefore + 1);
   });
 
   it("已在 main 阶段时不做额外操作", () => {
     const state = setupPlayableGame();
-    state.phase = "main";
+    state.phase = GamePhase.MAIN;
     const handBefore = state.players[0].hand.cards.length;
 
     const newState = startFirstTurn(state);
-    expect(newState.phase).toBe("main");
+    expect(newState.phase).toBe(GamePhase.MAIN);
     expect(newState.players[0].hand.cards.length).toBe(handBefore);
   });
 });
@@ -387,7 +388,7 @@ describe("Full Game Flow Integration", () => {
     result = await processAction(state, 0, { type: "end_turn" });
     expect(result.success).toBe(true);
     expect(result.newState.currentPlayer).toBe(1);
-    expect(result.newState.phase).toBe("main");
+    expect(result.newState.phase).toBe(GamePhase.MAIN);
 
     // Turn 2: Bob attacks Alice's Charizard
     result = await processAction(state, 1, {

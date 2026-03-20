@@ -23,6 +23,7 @@ import {
   createGameCard,
   createZone,
   resetInstanceCounter,
+  GamePhase,
 } from "@/engine/game-state";
 import { processAction, GameAction } from "@/engine/game-controller";
 import { Card } from "@/types/card";
@@ -52,7 +53,7 @@ function makeGameCard(overrides: Partial<Card> & { name: string }): GameCard {
 function setupFullHand(): GameState {
   resetInstanceCounter();
   const state = createGameState("Alice", "Bob");
-  state.phase = "main";
+  state.phase = GamePhase.MAIN;
   state.turn = 2;
   state.isFirstTurn = false;
   state.currentPlayer = 0;
@@ -629,7 +630,7 @@ describe("Evolution (via play_card)", () => {
 describe("Play Card Error Cases", () => {
   it("非主阶段不能打出任何卡", async () => {
     const state = setupFullHand();
-    state.phase = "draw";
+    state.phase = GamePhase.DRAW;
     const charmander = findInHand(state, 0, "Charmander");
 
     const result = await processAction(state, 0, {
@@ -684,7 +685,7 @@ describe("Play Card Error Cases", () => {
 
   it("游戏结束后不能打出卡牌", async () => {
     const state = setupFullHand();
-    state.phase = "game_over";
+    state.phase = GamePhase.GAME_OVER;
     const charmander = findInHand(state, 0, "Charmander");
 
     const result = await processAction(state, 0, {

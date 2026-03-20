@@ -7,7 +7,7 @@ import { useDeckContext } from "@/components/deck/DeckContext";
 import { useSocket } from "@/components/socket/SocketContext";
 import { StoredDeck } from "@/services/deck-storage";
 import { initializeGame, SetupResult } from "@/engine/battle-setup";
-import { GameState, GameCard } from "@/engine/game-state";
+import { GameState, GamePhase, GameCard } from "@/engine/game-state";
 import { zoneSize } from "@/engine/zones";
 import { processAction, startFirstTurn, GameAction } from "@/engine/game-controller";
 import { computeAIAction, AIDecision } from "@/engine/ai-player";
@@ -53,7 +53,7 @@ export default function BattlePageClient() {
 
   // Client-side turn timer countdown (synced periodically by server)
   useEffect(() => {
-    if (battleMode !== "online" || !gameState || gameState.phase === "game_over") {
+    if (battleMode !== "online" || !gameState || gameState.phase === GamePhase.GAME_OVER) {
       if (turnTimerRef.current) { clearInterval(turnTimerRef.current); turnTimerRef.current = null; }
       return;
     }
@@ -427,7 +427,7 @@ export default function BattlePageClient() {
    * has the turn, it computes and executes the next action.
    */
   const executeAITurn = useCallback(async (currentState: GameState, actionCount: number = 0) => {
-    if (currentState.phase === "game_over") {
+    if (currentState.phase === GamePhase.GAME_OVER) {
       setAiThinking(false);
       return;
     }
@@ -466,7 +466,7 @@ export default function BattlePageClient() {
     aiTimerRef.current = setTimeout(async () => {
       // Use the ref to get the absolute latest state
       const latestState = gameStateRef.current;
-      if (!latestState || latestState.phase === "game_over") {
+      if (!latestState || latestState.phase === GamePhase.GAME_OVER) {
         setAiThinking(false);
         return;
       }
@@ -493,7 +493,7 @@ export default function BattlePageClient() {
         setGameState(result.newState);
 
         // If game ended or turn switched, stop
-        if (result.gameEnded || result.newState.phase === "game_over") {
+        if (result.gameEnded || result.newState.phase === GamePhase.GAME_OVER) {
           setAiThinking(false);
           setAiLastAction("");
           return;
@@ -535,7 +535,7 @@ export default function BattlePageClient() {
    */
   useEffect(() => {
     if (!gameState || battleMode !== "ai" || !isLocalGame.current) return;
-    if (gameState.phase === "game_over") return;
+    if (gameState.phase === GamePhase.GAME_OVER) return;
 
     // AI is player 1
     if (gameState.currentPlayer === 1 && !aiThinking) {
@@ -756,7 +756,7 @@ export default function BattlePageClient() {
         )}
 
         {/* Opponent Disconnected Banner */}
-        {opponentDisconnected && battleMode === "online" && gameState.phase !== "game_over" && (
+        {opponentDisconnected && battleMode === "online" && gameState.phase !== GamePhase.GAME_OVER && (
           <div className="fixed left-1/2 top-4 z-[70] -translate-x-1/2 flex items-center gap-3 rounded-xl bg-orange-600/90 px-6 py-3 shadow-xl backdrop-blur-md">
             <div className="h-3 w-3 animate-pulse rounded-full bg-orange-300"></div>
             <span className="text-sm font-medium text-white">
@@ -766,7 +766,7 @@ export default function BattlePageClient() {
         )}
 
         {/* Online Mode Indicator */}
-        {battleMode === "online" && gameState.phase !== "game_over" && !isReconnecting && !opponentDisconnected && (
+        {battleMode === "online" && gameState.phase !== GamePhase.GAME_OVER && !isReconnecting && !opponentDisconnected && (
           <div className="fixed right-4 top-4 z-[60] flex items-center gap-2 rounded-full bg-green-600/80 px-4 py-1.5 text-xs font-medium text-white shadow-lg backdrop-blur-md">
             <div className="h-2 w-2 animate-pulse rounded-full bg-green-300"></div>
             在线对战
@@ -774,7 +774,7 @@ export default function BattlePageClient() {
         )}
 
         {/* Turn Timer (Online) */}
-        {battleMode === "online" && gameState.phase !== "game_over" && !isReconnecting && (() => {
+        {battleMode === "online" && gameState.phase !== GamePhase.GAME_OVER && !isReconnecting && (() => {
           const pct = turnTimeTotal > 0 ? turnTimeRemaining / turnTimeTotal : 1;
           const isWarning = turnTimeRemaining <= 10;
           const isMyTurn = gameState.currentPlayer === (myPlayerId ?? 0);
@@ -813,7 +813,7 @@ export default function BattlePageClient() {
         })()}
 
         {/* AI Thinking Indicator */}
-        {isAITurn && aiThinking && gameState.phase !== "game_over" && (
+        {isAITurn && aiThinking && gameState.phase !== GamePhase.GAME_OVER && (
           <div className="fixed left-1/2 top-4 z-[60] -translate-x-1/2 flex items-center gap-3 rounded-full bg-zinc-800/90 px-6 py-2 shadow-xl backdrop-blur-md">
             <div className="h-3 w-3 animate-pulse rounded-full bg-yellow-400"></div>
             <span className="text-sm font-medium text-zinc-200">
@@ -828,7 +828,7 @@ export default function BattlePageClient() {
         )}
 
         {/* Game Over Overlay */}
-        {gameState.phase === "game_over" && gameState.winner && (() => {
+        {gameState.phase === GamePhase.GAME_OVER && gameState.winner && (() => {
           // Determine if the local player won
           const localPlayerIndex = myPlayerId ?? 0;
           const iWon = gameState.winner!.playerIndex === localPlayerIndex;
