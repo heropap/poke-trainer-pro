@@ -72,12 +72,12 @@ const SPECIAL_CONDITION_MAP: Record<SpecialCondition, StatusCondition> = {
 };
 
 const PHASE_MAP: Record<RyuuPhase, GamePhase> = {
-  [RyuuPhase.WAITING_FOR_PLAYERS]: 'not_started',
-  [RyuuPhase.SETUP]: 'setup',
-  [RyuuPhase.PLAYER_TURN]: 'main',
-  [RyuuPhase.ATTACK]: 'attack',
-  [RyuuPhase.BETWEEN_TURNS]: 'between_turns',
-  [RyuuPhase.FINISHED]: 'game_over',
+  [RyuuPhase.WAITING_FOR_PLAYERS]: GamePhase.SETUP,
+  [RyuuPhase.SETUP]: GamePhase.SETUP,
+  [RyuuPhase.PLAYER_TURN]: GamePhase.MAIN,
+  [RyuuPhase.ATTACK]: GamePhase.ATTACK,
+  [RyuuPhase.BETWEEN_TURNS]: GamePhase.BETWEEN_TURNS,
+  [RyuuPhase.FINISHED]: GamePhase.GAME_OVER,
 };
 
 // ─── Core Converters ────────────────────────────────────────────
@@ -262,7 +262,7 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
     mapRyuuPlayerToUI(ryuuState.players[1], 'p2'),
   ];
 
-  const phase = PHASE_MAP[ryuuState.phase] || 'main';
+  const phase = PHASE_MAP[ryuuState.phase] || GamePhase.MAIN;
   const activePlayerIndex = (ryuuState.activePlayer as 0 | 1);
 
   let winner: GameState['winner'] = null;
@@ -289,15 +289,16 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
     currentPlayer: activePlayerIndex,
     phase,
     turnStatus: {
-      phase: phase === 'draw' ? 'DRAW'
-        : phase === 'attack' ? 'ATTACK'
-        : phase === 'between_turns' ? 'CHECKUP'
-        : 'MAIN',
-      energyAttached: ryuuState.players[activePlayerIndex]?.energyPlayedTurn >= ryuuState.turn,
-      supporterUsed: false, // ryuu-play tracks this differently
-      stadiumPlayed: ryuuState.players[activePlayerIndex]?.stadiumPlayedTurn >= ryuuState.turn,
-      retreated: ryuuState.players[activePlayerIndex]?.retreatedTurn >= ryuuState.turn,
-      hasAttackedThisTurn: false,
+      currentPlayerId: activePlayerIndex === 0 ? 'p1' : 'p2',
+      turnCount: ryuuState.turn,
+      currentPhase: phase,
+      hasAttachedEnergy: ryuuState.players[activePlayerIndex]?.energyPlayedTurn >= ryuuState.turn,
+      hasPlayedSupporter: (ryuuState.players[activePlayerIndex]?.supporter?.cards?.length ?? 0) > 0,
+      hasPlayedStadium: ryuuState.players[activePlayerIndex]?.stadiumPlayedTurn >= ryuuState.turn,
+      hasRetreated: ryuuState.players[activePlayerIndex]?.retreatedTurn >= ryuuState.turn,
+      hasAttacked: phase === GamePhase.ATTACK || phase === GamePhase.BETWEEN_TURNS,
+      p1VstarUsed: false,
+      p2VstarUsed: false,
     },
     turn: ryuuState.turn,
     isFirstTurn: ryuuState.turn <= 1,

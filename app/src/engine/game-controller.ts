@@ -65,7 +65,8 @@ export interface GameAction {
     | "concede"
     | "use_ability"
     | "manual_override"
-    | "select_cards_response";
+    | "select_cards_response"
+    | "prompt_response";
   cardId?: string;
   targetZone?: "active" | "bench" | "attach";
   targetId?: string;
@@ -75,6 +76,13 @@ export interface GameAction {
   benchInstanceId?: string;
   /** Response for select_cards */
   selectedIds?: string[];
+  /** Response data for prompt_response (coin_flip, choose_option, confirm, order_cards) */
+  data?: {
+    acknowledged?: boolean;
+    selectedOptions?: string[];
+    confirmed?: boolean;
+    orderedIds?: string[];
+  };
   /** Manual override fields (Layer 2) */
   overrideType?: ManualOverrideType;
   params?: Record<string, any>;
@@ -198,6 +206,39 @@ export function processAction(
             state.prompt = null;
             result = { success: true, newState: { ...state } };
           } else {
+            state.prompt = null;
+            result = { success: true, newState: { ...state } };
+          }
+        }
+        break;
+      }
+      case "prompt_response": {
+        // Generic prompt response handler for coin_flip, choose_option, confirm, order_cards
+        if (!state.prompt) {
+          result = { success: false, error: "没有待处理的提示请求", newState: { ...state } };
+        } else if (state.prompt.playerIndex !== playerIndex) {
+          result = { success: false, error: "不是你的回合", newState: { ...state } };
+        } else {
+          const resolve = pendingPrompts.get(state.prompt.id);
+          if (resolve) {
+            // Normalize response data to string[] for the generic resolver
+            let responseIds: string[] = [];
+            const data = action.data;
+            if (data?.selectedOptions) {
+              responseIds = data.selectedOptions;
+            } else if (data?.orderedIds) {
+              responseIds = data.orderedIds;
+            } else if (data?.confirmed !== undefined) {
+              responseIds = data.confirmed ? ["yes"] : ["no"];
+            }
+            // For coin_flip (acknowledged), responseIds stays [] — just acknowledge
+
+            resolve(responseIds);
+            pendingPrompts.delete(state.prompt.id);
+            state.prompt = null;
+            result = { success: true, newState: { ...state } };
+          } else {
+            // No pending resolver — just clear the prompt
             state.prompt = null;
             result = { success: true, newState: { ...state } };
           }
