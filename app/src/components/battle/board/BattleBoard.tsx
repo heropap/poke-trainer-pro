@@ -37,6 +37,7 @@ import { CoinFlipModal } from "./CoinFlipModal";
 import { ChooseOptionModal } from "./ChooseOptionModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { OrderCardsModal } from "./OrderCardsModal";
+import { SelectPokemonModal } from "./SelectPokemonModal";
 import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
 
 // ────────────────────────────────────────────────
@@ -1116,6 +1117,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           <OrderCardsModal
             prompt={gameState.prompt}
             onConfirm={(orderedIds) => onAction?.({ type: "prompt_response", data: { orderedIds } })}
+          />
+        )}
+
+        {/* Select Pokemon Modal */}
+        {gameState.prompt && gameState.prompt.type === "select_pokemon" && gameState.prompt.playerIndex === myIndex && (
+          <SelectPokemonModal
+            prompt={gameState.prompt}
+            gameState={gameState}
+            myIndex={myIndex}
+            onConfirm={(selectedIds) => onAction?.({ type: "prompt_response", data: { selectedOptions: selectedIds } })}
           />
         )}
 

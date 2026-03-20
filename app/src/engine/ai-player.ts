@@ -126,7 +126,7 @@ export function computeAIAction(
   }
 
   // ── Priority 6: Attach energy ──
-  if (!player.energyAttachedThisTurn) {
+  if (!state.turnStatus.hasAttachedEnergy && !player.energyAttachedThisTurn) {
     const energyAction = decideEnergyAttachment(state, playerIndex);
     if (energyAction) {
       return energyAction;
@@ -134,7 +134,7 @@ export function computeAIAction(
   }
 
   // ── Priority 7: Use Supporter cards ──
-  if (!player.supporterUsedThisTurn) {
+  if (!state.turnStatus.hasPlayedSupporter && !player.supporterUsedThisTurn) {
     const supporterAction = decideSupporterUse(state, playerIndex);
     if (supporterAction) {
       return supporterAction;
@@ -220,7 +220,7 @@ export function computeAITurnActions(
   actions.push(...abilityActions);
 
   // 3. Attach energy
-  if (!player.energyAttachedThisTurn) {
+  if (!state.turnStatus.hasAttachedEnergy && !player.energyAttachedThisTurn) {
     const energyAction = decideEnergyAttachment(state, playerIndex);
     if (energyAction) {
       actions.push(energyAction);

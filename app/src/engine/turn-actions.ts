@@ -138,7 +138,7 @@ export function canAttachEnergy(
 
   const player = getCurrentPlayer(state);
 
-  if (player.energyAttachedThisTurn) {
+  if (state.turnStatus.hasAttachedEnergy || player.energyAttachedThisTurn) {
     return fail("每回合只能附加一次能量");
   }
 
@@ -464,7 +464,7 @@ export function canPlaySupporter(
 
   const player = getCurrentPlayer(state);
 
-  if (player.supporterUsedThisTurn) {
+  if (state.turnStatus.hasPlayedSupporter || player.supporterUsedThisTurn) {
     return fail("每回合只能使用一张支持者卡");
   }
 
@@ -824,8 +824,8 @@ export function endTurn(state: GameState): ActionResult {
   // Current player's active Pokemon checked first, then opponent's
   processBetweenTurns(state, currentPlayerIndex, true);
 
-  // Check if status damage caused a game over
-  if ((state.phase as string) === "game_over") {
+  // Check if status damage caused a game over (processBetweenTurns may mutate phase)
+  if ((state.phase as GamePhase) === GamePhase.GAME_OVER) {
     return ok();
   }
 
@@ -834,7 +834,7 @@ export function endTurn(state: GameState): ActionResult {
   processBetweenTurns(state, opponentIndex, false);
 
   // Check again if opponent's status damage caused a game over
-  if ((state.phase as string) === "game_over") {
+  if ((state.phase as GamePhase) === GamePhase.GAME_OVER) {
     return ok();
   }
 

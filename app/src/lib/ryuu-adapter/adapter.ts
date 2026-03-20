@@ -7,6 +7,7 @@ import {
 } from "./external-types";
 import {
   GameState,
+  GamePhase,
   Player,
   GameCard,
   Zone,
@@ -23,12 +24,12 @@ export function adaptGameState(external: ExternalState): GameState {
   const p1 = adaptPlayer(external.players[0], "p1");
   const p2 = adaptPlayer(external.players[1], "p2");
 
-  // Map phase
-  let phase: any = "main";
-  if (external.phase === "SETUP") phase = "setup";
-  if (external.phase === "ATTACK") phase = "attack";
-  if (external.phase === "BETWEEN_TURNS") phase = "between_turns";
-  if (external.phase === "END_GAME") phase = "game_over";
+  // Map phase to V2 GamePhase enum
+  let phase: GamePhase = GamePhase.MAIN;
+  if (external.phase === "SETUP") phase = GamePhase.SETUP;
+  if (external.phase === "ATTACK") phase = GamePhase.ATTACK;
+  if (external.phase === "BETWEEN_TURNS") phase = GamePhase.BETWEEN_TURNS;
+  if (external.phase === "END_GAME") phase = GamePhase.GAME_OVER;
 
   // Map turn status
   // Note: RyuuPlay might track this differently, we infer from player state
@@ -40,14 +41,18 @@ export function adaptGameState(external: ExternalState): GameState {
     gameId: `ext-${Date.now()}`,
     players: [p1, p2],
     currentPlayer: external.activePlayer as 0 | 1,
-    phase: phase,
+    phase,
     turnStatus: {
-      phase: external.phase === "ATTACK" ? "ATTACK" : "MAIN", // Simplified
-      energyAttached,
-      supporterUsed,
-      stadiumPlayed: false,
-      retreated: false,
-      hasAttackedThisTurn: false,
+      currentPlayerId: external.activePlayer === 0 ? 'p1' : 'p2',
+      turnCount: external.turn,
+      currentPhase: phase,
+      hasAttachedEnergy: energyAttached,
+      hasPlayedSupporter: supporterUsed,
+      hasPlayedStadium: false,
+      hasRetreated: false,
+      hasAttacked: phase === GamePhase.ATTACK || phase === GamePhase.BETWEEN_TURNS,
+      p1VstarUsed: false,
+      p2VstarUsed: false,
     },
     turn: external.turn,
     isFirstTurn: external.turn === 1,

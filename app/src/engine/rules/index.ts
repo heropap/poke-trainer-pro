@@ -1,64 +1,41 @@
 /**
- * Rule Engine Module — Public API
+ * Rule Engine Module — Public API (V2)
  *
- * CTA (Condition-Target-Action) rule system for PTCG cards.
- * Converts declarative JSON rules into executable CardEffectDefs.
+ * V2 declarative rule system for PTCG cards.
+ * Converts semantic JSON rules into executable CardEffectDefs.
+ *
+ * V1 modules (rule-executor, rule-validator, event-hooks, rule-loader,
+ * modifier-pipeline, rule-compiler) are deprecated and excluded from compilation.
  */
 
-// ─── Type Definitions ───
+// ─── V2 Type Definitions ───
 export type {
   EnergyType,
   StatusCondition,
-  PlayerRef,
+  ZoneType,
+  OwnerType,
+  TargetKind,
   TargetSelector,
-  CardFilter,
-  DynamicValue,
-  CountableRef,
   Condition,
-  MarkerLifecycle,
+  Cost,
+  TriggerType,
+  ActionType,
   ActionStep,
-  TriggerEvent,
   Modifier,
-  ModifierType,
 } from "./rule-schema";
 
 export type {
   CardRuleDef,
-  AttackRuleDef,
-  AbilityRuleDef,
-  AbilityRuleType,
-  TrainerRuleDef,
-  ModifierDef,
-  MarkerDeclaration,
 } from "./card-rule-def";
 
-// ─── Zod Validation ───
+// ─── V2 Zod Validation ───
 export {
   CardRuleDefSchema,
-  AttackRuleDefSchema,
-  AbilityRuleDefSchema,
-  TrainerRuleDefSchema,
   ActionStepSchema,
   ConditionSchema,
-  ModifierTypeSchema,
   validateCardRuleDef,
 } from "./rule-schema-zod";
 export type { ValidationResult } from "./rule-schema-zod";
 
-// ─── Rule Compiler (Phase 1e) ───
-export { compileRule } from "./rule-compiler";
-
-// ─── Rule Executor (Phase 1b) ───
-export { executeSteps } from "./rule-executor";
-
-// ─── Modifier Pipeline (Phase 1c) ───
-export { ModifierPipeline } from "./modifier-pipeline";
-
-// ─── Event Hooks (Phase 1d) ───
-export { EventHookRegistry } from "./event-hooks";
-
-// ─── Rule Validator (Phase 1f) ───
-export { validateRule } from "./rule-validator";
-
-// ─── Rule Loader (Phase 1g) ───
-export { loadRuleEffects } from "./rule-loader";
+// ─── V2 Rule Compiler ───
+export { compileAllV2 } from "./rule-compiler-v2";

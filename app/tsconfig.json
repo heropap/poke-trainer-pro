@@ -32,5 +32,21 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "src/lib/ptcg-engine/**/*.spec.ts", "src/lib/ptcg-sets/**/tests/**"]
+  "exclude": [
+    "node_modules",
+    "src/lib/ptcg-engine/**/*.spec.ts",
+    "src/lib/ptcg-sets/**/tests/**",
+    "src/engine/rules/rule-executor.ts",
+    "src/engine/rules/rule-compiler.ts",
+    "src/engine/rules/rule-validator.ts",
+    "src/engine/rules/rule-loader.ts",
+    "src/engine/rules/event-hooks.ts",
+    "src/engine/rules/modifier-pipeline.ts",
+    "src/engine/llm/offline-rule-generator.ts",
+    "src/engine/llm/batch-processor.ts",
+    "src/engine/llm/generate-all-rules.ts",
+    "src/engine/llm/index.ts",
+    "src/__tests__/offline-rule-generator.test.ts",
+    "src/__tests__/cta-rule-system.test.ts"
+  ]
 }
