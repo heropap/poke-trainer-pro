@@ -32,6 +32,9 @@ export const DAMAGE_BOOST = "DAMAGE_BOOST";
 /** Ability is blocked on this Pokemon */
 export const ABILITY_BLOCKED = "ABILITY_BLOCKED";
 
+/** Ability is blocked this turn only (e.g., Canceling Cologne) — auto-clears at end of turn */
+export const ABILITY_BLOCKED_TEMP = "ABILITY_BLOCKED_TEMP";
+
 /** Prevent all damage next turn (e.g., coin flip protection attacks) */
 export const PREVENT_ALL_DAMAGE_NEXT_TURN = "PREVENT_ALL_DAMAGE_NEXT_TURN";
 
@@ -42,4 +45,5 @@ export const TURN_BASED_MARKERS = [
   CANT_ATTACK_NEXT_TURN,
   PREVENT_RETREAT_NEXT_TURN,
   PREVENT_ALL_DAMAGE_NEXT_TURN,
+  ABILITY_BLOCKED_TEMP,
 ] as const;

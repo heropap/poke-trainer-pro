@@ -21,7 +21,7 @@ import { GameAction, ActionResult } from "./game-controller";
 import { canAttack, checkEnergyCostDetailed } from "./game-actions";
 import { getEffectiveRetreatCost } from "./turn-actions";
 import { getEffect } from "./effects/effect-registry";
-import { ABILITY_BLOCKED } from "./effects/markers";
+import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 
 // ───────────────────────────────────────────────
 // AI Decision Result
@@ -555,7 +555,7 @@ function findAllAbilityActions(
     // Skip if already used ability this turn
     if (pokemon.abilityUsedThisTurn) continue;
     // Skip if ability is blocked
-    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
     // Skip if no abilities
     if (!pokemon.card.abilities) continue;
 

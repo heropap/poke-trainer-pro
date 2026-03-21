@@ -44,7 +44,7 @@ import {
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext, pendingPrompts } from "./effects/effect-context";
-import { ABILITY_BLOCKED } from "./effects/markers";
+import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 // resolveAttack in attack-system.ts is a @deprecated alternative pipeline (kept for test coverage)
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 import { basePipeline, validateActionWithMiddleware } from "./rules/base-rules";
@@ -599,7 +599,7 @@ async function handleUseAbility(
   }
 
   // Check if ability is blocked by a marker (e.g., Garbodor's Garbotoxin)
-  if (sourceCard.markers[ABILITY_BLOCKED] > 0) {
+  if (sourceCard.markers[ABILITY_BLOCKED] > 0 || sourceCard.markers[ABILITY_BLOCKED_TEMP] > 0) {
     return { success: false, error: `${sourceCard.card.name} 的特性被封锁了`, newState: { ...state } };
   }
 

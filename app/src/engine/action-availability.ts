@@ -19,6 +19,7 @@ import {
   cantUseAttackMarker,
   PREVENT_RETREAT_NEXT_TURN,
   ABILITY_BLOCKED,
+  ABILITY_BLOCKED_TEMP,
 } from "./effects/markers";
 
 // ───────────────────────────────────────────────
@@ -118,7 +119,7 @@ export function getAbilityDisabledReason(
   if (card.abilityUsedThisTurn) return "本回合已使用特性";
 
   // Marker check
-  if (card.markers[ABILITY_BLOCKED] > 0) return "特性被封锁";
+  if (card.markers[ABILITY_BLOCKED] > 0 || card.markers[ABILITY_BLOCKED_TEMP] > 0) return "特性被封锁";
 
   // V2: Global ability lock (e.g., Garbotoxin)
   const mods = queryActiveModifiers(state, playerIndex);

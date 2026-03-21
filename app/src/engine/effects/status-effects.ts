@@ -14,7 +14,7 @@
 import { GameState, GameCard, logEvent } from "../game-state";
 import { flipCoin } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
-import { TURN_BASED_MARKERS } from "./markers";
+import { TURN_BASED_MARKERS, DAMAGE_BOOST } from "./markers";
 import { getEffect } from "./effect-registry";
 
 /**
@@ -176,6 +176,12 @@ export function processBetweenTurns(
         }
       }
     }
+  }
+
+  // ─── Clear turn-owner's damage boost marker ───
+  // DAMAGE_BOOST is set by trainer supporters (Kieran, Giovanni's Charisma) and lasts only one turn.
+  if (isTurnOwner && active.markers && active.markers[DAMAGE_BOOST] !== undefined) {
+    delete active.markers[DAMAGE_BOOST];
   }
 
   // ─── Turn-based marker cleanup ───

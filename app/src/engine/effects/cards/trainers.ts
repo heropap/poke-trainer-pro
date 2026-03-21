@@ -486,7 +486,7 @@ const profSadaEffect: NamedEffect = {
       if (target) {
         ctx.attachEnergyFromDiscard(
           (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
-          1,
+          2,
           target
         );
       }

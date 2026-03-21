@@ -553,7 +553,7 @@ function validateMarkerConsistency(
       // Skip well-known markers
       const wellKnown = [
         "CANT_ATTACK_NEXT_TURN", "PREVENT_RETREAT_NEXT_TURN",
-        "PREVENT_ALL_DAMAGE_NEXT_TURN", "VSTAR_USED", "ABILITY_BLOCKED",
+        "PREVENT_ALL_DAMAGE_NEXT_TURN", "VSTAR_USED", "ABILITY_BLOCKED", "ABILITY_BLOCKED_TEMP", "DAMAGE_BOOST",
       ];
       if (!wellKnown.includes(marker) && !marker.startsWith("DAMAGE_REDUCTION:") && !marker.startsWith("CANT_USE_ATTACK:")) {
         result.warnings.push(

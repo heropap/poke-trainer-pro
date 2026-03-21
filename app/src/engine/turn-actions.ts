@@ -28,7 +28,7 @@ import { processBetweenTurns } from "./effects/status-effects";
 import { validateEvolution } from "./middleware/evolution.middleware";
 import { ActionEvent } from "./middleware/types";
 import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
-import { PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED } from "./effects/markers";
+import { PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 import { queryActiveModifiers } from "./effects/modifier-query";
 
 // ───────────────────────────────────────────────
@@ -70,7 +70,7 @@ export function getEffectiveRetreatCost(
   if (player.active) allInPlay.push(player.active);
   allInPlay.push(...player.bench.cards);
   for (const pokemon of allInPlay) {
-    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
     const pokEffect = getEffect(pokemon.cardId, pokemon.card.name);
     if (!pokEffect?.abilities) continue;
     for (const ability of pokEffect.abilities) {
@@ -713,7 +713,7 @@ async function triggerOnEnterAbility(
   playerIndex: 0 | 1,
   pokemon: GameCard
 ): Promise<void> {
-  if (pokemon.markers[ABILITY_BLOCKED] > 0) return;
+  if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) return;
 
   const effect = getEffect(pokemon.cardId, pokemon.card.name);
   if (!effect?.abilities) return;

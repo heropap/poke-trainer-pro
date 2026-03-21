@@ -20,7 +20,7 @@ import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
-import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED } from "./effects/markers";
+import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 import { queryActiveModifiers, isStatusImmune, isEnergyRemovalBlocked } from "./effects/modifier-query";
 
 export interface PlayCardResult {
@@ -832,7 +832,7 @@ export function performAttack(
     if (effectResult.benchDamage) {
       for (const bd of effectResult.benchDamage) {
         // V2: Check bench damage prevention from passive abilities
-        if (bd.target.markers[ABILITY_BLOCKED] <= 0) {
+        if (bd.target.markers[ABILITY_BLOCKED] <= 0 && bd.target.markers[ABILITY_BLOCKED_TEMP] <= 0) {
           const targetEffect = getEffect(bd.target.cardId, bd.target.card.name);
           if (targetEffect?.abilities?.some(a =>
             a.type === "passive" && (a as any).preventBenchDamage

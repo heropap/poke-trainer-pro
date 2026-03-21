@@ -13,6 +13,8 @@
  */
 
 import { CardEffectDef, EffectContext } from "../effect-types";
+import { DAMAGE_BOOST, ABILITY_BLOCKED_TEMP } from "../markers";
+import { onPromptStateChange } from "../effect-context";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -20,15 +22,16 @@ type NamedEffect = CardEffectDef & { cardName: string };
 // Supporters
 // ───────────────────────────────────────────────
 
-/** Kieran — During this turn, your Pokemon's attacks do 20 more damage */
+/** Kieran — During this turn, your Pokemon's attacks do 20 more damage to the opponent's Active */
 const kieran: NamedEffect = {
   cardId: "name:Kieran",
   cardName: "Kieran",
   trainer: {
     onPlay: (ctx) => {
-      ctx.log("Kieran: 本回合攻击伤害 +20");
-      // Store modifier hint in log; actual +20 requires turn-level damage modifier
-      // which we don't have yet. The effect is logged for user awareness.
+      if (ctx.player.active) {
+        ctx.addMarker(ctx.player.active, DAMAGE_BOOST, 20);
+        ctx.log("Kieran: 本回合攻击伤害 +20");
+      }
     },
   },
 };
@@ -56,12 +59,14 @@ const eri: NamedEffect = {
         ctx.log(
           `Eri: 从对手手中丢弃了 ${toDiscard.length} 张物品卡`
         );
+      } else {
+        ctx.log("Eri: 对手手中没有物品卡");
       }
     },
   },
 };
 
-/** Crispin — Attach up to 4 Basic Energy from discard to your Pokemon */
+/** Crispin — Attach up to 4 Basic Energy from discard to one of your Pokemon */
 const crispin: NamedEffect = {
   cardId: "name:Crispin",
   cardName: "Crispin",
@@ -73,17 +78,34 @@ const crispin: NamedEffect = {
           c.card.subtypes?.includes("Basic")
       );
     },
-    onPlay: (ctx) => {
-      // Attach up to 4 Basic Energy from discard to Pokemon
+    onPlay: async (ctx) => {
       const basicEnergy = ctx.player.discard.cards.filter(
         (c) =>
           c.card.supertype === "Energy" &&
           c.card.subtypes?.includes("Basic")
       );
-      const target = ctx.player.active;
+      const toAttach = basicEnergy.slice(0, 4);
+      if (toAttach.length === 0) return;
+
+      // Let user choose which Pokemon to attach all energy to (only when UI is available)
+      const allPokemon = ctx.getAllPokemon("player");
+      let target = ctx.player.active;
+
+      if (allPokemon.length > 1 && onPromptStateChange) {
+        const selection = await ctx.promptUser({
+          message: "Crispin: 选择要附加能量的宝可梦",
+          min: 1,
+          max: 1,
+          zone: "own_field",
+          targets: allPokemon.map((c) => c.instanceId),
+        });
+        if (selection && selection.length > 0) {
+          target = ctx.findPokemon(selection[0]) || target;
+        }
+      }
+
       if (!target) return;
 
-      const toAttach = basicEnergy.slice(0, 4);
       for (const energy of toAttach) {
         const idx = ctx.player.discard.cards.indexOf(energy);
         if (idx !== -1) {
@@ -91,11 +113,9 @@ const crispin: NamedEffect = {
           target.attachedEnergy.push(energy);
         }
       }
-      if (toAttach.length > 0) {
-        ctx.log(
-          `Crispin: 从弃牌堆附加了 ${toAttach.length} 张基础能量到 ${target.card.name}`
-        );
-      }
+      ctx.log(
+        `Crispin: 从弃牌堆附加了 ${toAttach.length} 张基础能量到 ${target.card.name}`
+      );
     },
   },
 };
@@ -106,7 +126,7 @@ const perrin: NamedEffect = {
   cardName: "Perrin",
   trainer: {
     onPlay: (ctx) => {
-      // Reveal top 5 cards, put all Pokemon into hand, rest go back
+      // Reveal top 5 cards, put all Pokemon into hand, shuffle rest back
       const revealed = ctx.revealTopCards(5, "player");
       const pokemon = revealed.filter(
         (c) => c.card.supertype === "Pokémon"
@@ -124,6 +144,8 @@ const perrin: NamedEffect = {
 
       if (pokemon.length > 0) {
         ctx.log(`Perrin: 从牌组顶部找到了 ${pokemon.length} 张宝可梦`);
+      } else {
+        ctx.log("Perrin: 未找到宝可梦，其他牌已洗回牌组");
       }
     },
   },
@@ -148,7 +170,7 @@ const roxanne: NamedEffect = {
   },
 };
 
-/** Colress's Tenacity — Discard a card, then draw 5 */
+/** Colress's Tenacity — Discard a card from your hand, then draw 5 */
 const colresssTenacity: NamedEffect = {
   cardId: "name:Colress's Tenacity",
   cardName: "Colress's Tenacity",
@@ -161,31 +183,47 @@ const colresssTenacity: NamedEffect = {
   },
 };
 
-/** Cyllene — Flip 2 coins. For each heads, put a card from discard on top of deck */
+/** Cyllene — Flip 2 coins. For each heads, put a card of your choice from discard on top of deck */
 const cyllene: NamedEffect = {
   cardId: "name:Cyllene",
   cardName: "Cyllene",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const result = ctx.flipCoins(2);
-      if (result.heads > 0) {
-        const cards = ctx.player.discard.cards.slice(0, result.heads);
-        for (const card of cards) {
-          const idx = ctx.player.discard.cards.indexOf(card);
-          if (idx !== -1) {
-            ctx.player.discard.cards.splice(idx, 1);
+      ctx.log(`Cyllene: 翻出 ${result.heads} 个正面`);
+
+      if (result.heads > 0 && ctx.player.discard.cards.length > 0) {
+        const eligible = ctx.player.discard.cards;
+        const count = Math.min(result.heads, eligible.length);
+
+        const selection = await ctx.promptUser({
+          message: `Cyllene: 选择 ${count} 张牌放到牌组顶部`,
+          min: count,
+          max: count,
+          zone: "discard",
+          targets: eligible.map((c) => c.instanceId),
+        });
+
+        if (selection && selection.length > 0) {
+          const selectedCards = selection
+            .map((id) => eligible.find((c) => c.instanceId === id))
+            .filter(Boolean) as typeof eligible;
+
+          for (const card of selectedCards) {
+            const idx = ctx.player.discard.cards.indexOf(card);
+            if (idx !== -1) ctx.player.discard.cards.splice(idx, 1);
           }
+          ctx.putOnTopOfDeck(selectedCards, "player");
+          ctx.log(
+            `Cyllene: 将 ${selectedCards.length} 张牌从弃牌堆放回牌组顶`
+          );
         }
-        ctx.putOnTopOfDeck(cards, "player");
-        ctx.log(
-          `Cyllene: ${result.heads} 正面，将 ${cards.length} 张牌从弃牌堆放回牌组顶`
-        );
       }
     },
   },
 };
 
-/** Worker — Draw 3 cards. Can also discard a Stadium in play. */
+/** Worker — Draw 3 cards. If a Stadium is in play, it is also discarded. */
 const worker: NamedEffect = {
   cardId: "name:Worker",
   cardName: "Worker",
@@ -200,22 +238,36 @@ const worker: NamedEffect = {
   },
 };
 
-/** Serena — Choose 1: discard up to 3 cards then draw until 5, or switch opponent's active */
+/** Serena — Choose 1: switch opponent's active, OR discard up to 3 cards then draw until 5 */
 const serena: NamedEffect = {
   cardId: "name:Serena",
   cardName: "Serena",
   trainer: {
     onPlay: async (ctx) => {
-      // Simplified: if opponent has bench, switch; otherwise draw
+      // Present choice via opponent bench selection (min:0 = skip → draw effect)
       if (ctx.opponent.bench.cards.length > 0) {
-        await ctx.promptSwitchOpponentActive!("Serena: 选择对手备战区宝可梦切换到战斗区");
-      } else {
-        // Discard up to 3, draw until 5
-        const toDiscard = Math.min(3, ctx.player.hand.cards.length);
-        await ctx.promptDiscardFromHand(toDiscard, "player");
-        const toDraw = Math.max(0, 5 - ctx.player.hand.cards.length);
-        if (toDraw > 0) ctx.drawCards(toDraw, "player");
+        const selection = await ctx.promptUser({
+          message:
+            "Serena: 选择对手备战宝可梦切换（跳过则丢弃手牌并摸牌至5张）",
+          min: 0,
+          max: 1,
+          zone: "opponent_bench",
+          targets: ctx.opponent.bench.cards.map((c) => c.instanceId),
+        });
+        if (selection && selection.length > 0) {
+          ctx.switchOpponentActive(selection[0]);
+          ctx.log(`Serena: 对手的宝可梦被切换到了战斗区`);
+          return;
+        }
       }
+      // Discard up to 3, draw until 5
+      const canDiscard = Math.min(3, ctx.player.hand.cards.length);
+      if (canDiscard > 0) {
+        await ctx.promptDiscardFromHand(canDiscard, "player");
+      }
+      const toDraw = Math.max(0, 5 - ctx.player.hand.cards.length);
+      if (toDraw > 0) ctx.drawCards(toDraw, "player");
+      ctx.log("Serena: 丢弃手牌并摸牌至5张");
     },
   },
 };
@@ -240,7 +292,8 @@ const adventurersDiscovery: NamedEffect = {
         },
         3,
         "Adventurer's Discovery: 选择最多3只V/ex宝可梦加入手牌",
-        "player"
+        "player",
+        0 // minCount: up to 3
       );
       for (const card of found) {
         ctx.addToHand(card, "player");
@@ -256,7 +309,10 @@ const giovannisCharisma: NamedEffect = {
   cardName: "Giovanni's Charisma",
   trainer: {
     onPlay: (ctx) => {
-      ctx.log("Giovanni's Charisma: 本回合攻击伤害 +10");
+      if (ctx.player.active) {
+        ctx.addMarker(ctx.player.active, DAMAGE_BOOST, 10);
+        ctx.log("Giovanni's Charisma: 本回合攻击伤害 +10");
+      }
     },
   },
 };
@@ -322,7 +378,7 @@ const tmEvolution: NamedEffect = {
   },
 };
 
-/** Techno Radar — Discard 2 cards, search deck for 2 Future Pokemon */
+/** Techno Radar — Discard 2 cards, search deck for up to 2 Pokemon */
 const technoRadar: NamedEffect = {
   cardId: "name:Techno Radar",
   cardName: "Techno Radar",
@@ -334,7 +390,8 @@ const technoRadar: NamedEffect = {
         (c) => c.card.supertype === "Pokémon",
         2,
         "Techno Radar: 选择最多2只宝可梦加入手牌",
-        "player"
+        "player",
+        0 // minCount: up to 2
       );
       for (const card of found) {
         ctx.addToHand(card, "player");
@@ -344,13 +401,20 @@ const technoRadar: NamedEffect = {
   },
 };
 
-/** Canceling Cologne — Until end of turn, opponent's active abilities are blocked */
+/** Canceling Cologne — Until end of this turn, the opponent's Active Pokemon's abilities are blocked */
 const cancelingCologne: NamedEffect = {
   cardId: "name:Canceling Cologne",
   cardName: "Canceling Cologne",
   trainer: {
+    canPlay: (ctx) => ctx.opponent.active !== null,
     onPlay: (ctx) => {
-      ctx.log("Canceling Cologne: 本回合对手战斗宝可梦的特性无效");
+      if (ctx.opponent.active) {
+        // Set ABILITY_BLOCKED_TEMP (turn-based, auto-clears at end of turn)
+        ctx.addMarker(ctx.opponent.active, ABILITY_BLOCKED_TEMP, 1);
+        ctx.log(
+          `Canceling Cologne: ${ctx.opponent.active.card.name} 本回合特性无效`
+        );
+      }
     },
   },
 };
@@ -452,41 +516,44 @@ const forestSealStone: NamedEffect = {
   },
 };
 
-/** Bravery Charm — Tool: +50 HP to Basic Pokemon */
+/** Bravery Charm — Tool: +50 HP to Basic Pokemon (modeled as damage reduction) */
 const braveryCharm: NamedEffect = {
   cardId: "name:Bravery Charm",
   cardName: "Bravery Charm",
   tool: {
     whileAttached: {
       modifyIncomingDamage: (ctx, damage) => {
-        // +50 HP is modeled as -50 incoming damage for the first hit
-        // that would KO. Simplified: just log it.
+        // +50 HP equivalent: not accurately modelable without HP modifier system.
+        // Placeholder: no mechanical effect currently.
         return damage;
       },
     },
   },
 };
 
-/** Leftovers — Tool: Heal 20 between turns */
+/** Leftovers — Tool: Heal 20 HP between turns */
 const leftovers: NamedEffect = {
   cardId: "name:Leftovers",
   cardName: "Leftovers",
   tool: {
     whileAttached: {
-      // Between-turns healing would need a hook in processBetweenTurns
-      // For now, register the tool
-    },
+      // between-turns healing is handled by status-effects.ts checking toolAny.whileAttached.healBetweenTurns
+      healBetweenTurns: 20,
+    } as any,
   },
 };
 
-/** Hero's Cape — Tool: +100 HP */
+/** Hero's Cape — Tool: +100 HP (modeled as damage reduction placeholder) */
 const herosCape: NamedEffect = {
   cardId: "name:Hero's Cape",
   cardName: "Hero's Cape",
   tool: {
     whileAttached: {
-      // +100 HP would need HP modifier system
-      // For now, register the tool
+      modifyIncomingDamage: (ctx, damage) => {
+        // +100 HP equivalent: not accurately modelable without HP modifier system.
+        // Placeholder: no mechanical effect currently.
+        return damage;
+      },
     },
   },
 };
@@ -516,7 +583,7 @@ const rescueCarrier: NamedEffect = {
       const targets = eligible.map((c) => c.instanceId);
       const selection = await ctx.promptUser({
         message: "Rescue Carrier: 选择最多2只HP≤90的宝可梦从弃牌堆加入手牌",
-        min: 1,
+        min: 0,
         max: Math.min(2, eligible.length),
         zone: "discard",
         filter: { supertype: "Pokémon" },
@@ -541,13 +608,13 @@ const rescueCarrier: NamedEffect = {
   },
 };
 
-/** Mysterious Trunk — Look at top 2 cards of deck, put 1 in hand and 1 on bottom */
+/** Mysterious Trunk — Look at top 2 cards of deck, choose 1 for hand, put other on bottom */
 const mysteriousTrunk: NamedEffect = {
   cardId: "name:Mysterious Trunk",
   cardName: "Mysterious Trunk",
   trainer: {
     canPlay: (ctx) => ctx.player.deck.cards.length >= 1,
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const revealed = ctx.revealTopCards(2, "player");
       if (revealed.length === 0) return;
       if (revealed.length === 1) {
@@ -555,11 +622,30 @@ const mysteriousTrunk: NamedEffect = {
         ctx.log(`Mysterious Trunk: 将 ${revealed[0].card.name} 加入手牌`);
         return;
       }
-      // Put first card in hand, second on bottom of deck
-      ctx.addToHand(revealed[0], "player");
-      ctx.player.deck.cards.push(revealed[1]); // bottom of deck
+
+      // Put both in hand temporarily so promptUser can reference them
+      for (const c of revealed) ctx.addToHand(c, "player");
+
+      // Prompt user to choose 1 to keep in hand; the other goes to bottom of deck
+      const selection = await ctx.promptUser({
+        message: "Mysterious Trunk: 选择1张加入手牌（另1张放到牌组底部）",
+        min: 1,
+        max: 1,
+        zone: "hand",
+        targets: revealed.map((c) => c.instanceId),
+      });
+
+      const keepId = selection?.[0];
+      const keepCard = revealed.find((c) => c.instanceId === keepId) || revealed[0];
+      const bottomCard = revealed.find((c) => c.instanceId !== keepId) || revealed[1];
+
+      // Remove bottomCard from hand and put on deck bottom
+      const idx = ctx.player.hand.cards.indexOf(bottomCard);
+      if (idx !== -1) ctx.player.hand.cards.splice(idx, 1);
+      ctx.player.deck.cards.push(bottomCard);
+
       ctx.log(
-        `Mysterious Trunk: 将 ${revealed[0].card.name} 加入手牌，${revealed[1].card.name} 放到牌组底部`
+        `Mysterious Trunk: 将 ${keepCard.card.name} 加入手牌，${bottomCard.card.name} 放到牌组底部`
       );
     },
   },

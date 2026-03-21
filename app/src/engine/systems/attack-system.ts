@@ -3,7 +3,7 @@ import { GameState, GameCard, logEvent } from "../game-state";
 import { checkKnockout, takePrizes, checkWinCondition, getPrizeCount } from "../game-actions";
 import { getEffect } from "../effects/effect-registry";
 import { createEffectContext } from "../effects/effect-context";
-import { ABILITY_BLOCKED, PREVENT_ALL_DAMAGE_NEXT_TURN } from "../effects/markers";
+import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP, DAMAGE_BOOST, PREVENT_ALL_DAMAGE_NEXT_TURN } from "../effects/markers";
 
 interface AttackContext {
   state: GameState;
@@ -56,9 +56,10 @@ export function resolveAttack(
   };
 
   // 2. Pipeline Execution
+  applyTrainerDamageBoosts(ctx);   // Trainer boosts (Kieran, Giovanni's Charisma, etc.)
   applyWeaknessAndResistance(ctx);
-  applyPassiveAbilities(ctx);  // Passive ability modifiers
-  applyEffects(ctx);           // Tools, Status, etc.
+  applyPassiveAbilities(ctx);      // Passive ability modifiers
+  applyEffects(ctx);               // Tools, Status, etc.
   applyDamage(ctx, attackerIndex);
 
   // 3. Post-Attack Checks (Event Trigger)
@@ -80,6 +81,19 @@ export function resolveAttack(
 // ───────────────────────────────────────────────
 // Pipeline Steps
 // ───────────────────────────────────────────────
+
+/**
+ * Apply trainer-card damage boosts stored on the attacker (e.g. Kieran +20, Giovanni's Charisma +10).
+ * DAMAGE_BOOST marker is set by trainers and cleared in processBetweenTurns at end of turn.
+ */
+function applyTrainerDamageBoosts(ctx: AttackContext) {
+  const boost = (ctx.attacker.markers[DAMAGE_BOOST] ?? 0);
+  if (boost > 0) {
+    ctx.damage += boost;
+    logEvent(ctx.state, ctx.attackerIndex, "damage" as any,
+      `${ctx.attacker.card.name} 的攻击伤害 +${boost}（训练家效果）`);
+  }
+}
 
 function applyWeaknessAndResistance(ctx: AttackContext) {
   if (ctx.damage === 0) return;
@@ -126,7 +140,7 @@ function applyPassiveAbilities(ctx: AttackContext) {
 
   // Check attacker's passive abilities: modifyDamage (isAttacker = true)
   for (const pokemon of allPokemonByPlayer[attackerIndex]) {
-    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
     const effect = getEffect(pokemon.cardId, pokemon.card.name);
     if (!effect?.abilities) continue;
 
@@ -148,7 +162,7 @@ function applyPassiveAbilities(ctx: AttackContext) {
 
   // Check defender's passive abilities: modifyDamage (isAttacker = false) + modifyIncomingDamage
   for (const pokemon of allPokemonByPlayer[defenderIndex]) {
-    if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+    if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
     const effect = getEffect(pokemon.cardId, pokemon.card.name);
     if (!effect?.abilities) continue;
 

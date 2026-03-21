@@ -14,7 +14,7 @@
 import { GameState, GameCard } from "../game-state";
 import { getEffect } from "./effect-registry";
 import { createEffectContext } from "./effect-context";
-import { ABILITY_BLOCKED } from "./markers";
+import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./markers";
 
 // ───────────────────────────────────────────────
 // Modifier Query Results
@@ -85,7 +85,7 @@ export function queryActiveModifiers(
 
     for (const pokemon of allPokemon) {
       // Skip if ability is blocked on this Pokemon
-      if (pokemon.markers[ABILITY_BLOCKED] > 0) continue;
+      if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
 
       const effect = getEffect(pokemon.cardId, pokemon.card.name);
       if (!effect?.abilities) continue;
@@ -198,7 +198,7 @@ export function isStatusImmune(
   pokemon: GameCard,
   playerIndex: 0 | 1
 ): boolean {
-  if (pokemon.markers[ABILITY_BLOCKED] > 0) return false;
+  if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) return false;
 
   const effect = getEffect(pokemon.cardId, pokemon.card.name);
   if (effect?.abilities) {
@@ -231,7 +231,7 @@ export function isEnergyRemovalBlocked(
   pokemon: GameCard,
   playerIndex: 0 | 1
 ): boolean {
-  if (pokemon.markers[ABILITY_BLOCKED] > 0) return false;
+  if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) return false;
 
   const effect = getEffect(pokemon.cardId, pokemon.card.name);
   if (effect?.abilities) {
