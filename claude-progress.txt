@@ -1706,3 +1706,51 @@ Notes:
   - 战斗区限定特性位置检查: 0/20 → 15/20 有 canActivate
   - 总特性解析: 211 → 233 (+22)
   - 测试: 1264/1264 全部通过 (53 suites), 零回归
+
+=== Session 38 | 2026-03-21 ===
+Feature: V2规则全流程验证 + UI布局修复 + Pokémon Tool bug
+Status: completed
+Notes:
+  自动排查所有问题，全流程跑通，验证卡牌规则。
+
+  发现并修复的问题:
+
+  1. Pokémon Tool卡不可使用 (关键bug):
+     - 根因: computePlayableCardIds()中Pokémon Tool分支嵌套在
+       subtypes.includes("Item")内，但Tool卡subtypes只含"Pokémon Tool"
+       不含"Item"，导致Choice Belt等工具卡永远不可使用
+     - 修复: BattleBoard.tsx提升为独立分支，turn-actions.ts
+       canPlayItem()同步接受Pokémon Tool类型
+
+  2. 布局溢出 — 手牌/活跃区被裁切:
+     - 根因: 玩家区域grid-rows的min-height:auto特性 + justify-end
+       导致内容(~576px)超过网格行分配(~370px)，手牌推到视口外
+     - 修复: 玩家/对手区域添加grid-rows-[minmax(0,1fr)]约束单行高度
+       + overflow-hidden + 子元素shrink + 强制compact模式
+
+  3. V2架构清理 — 去除V1 prop drilling:
+     - 新建action-availability.ts: 集中V2原生查询(攻击/撤退/特性)
+     - ActiveSpot移除canAttack/isFirstTurn/hasAttackedThisTurn props
+     - BenchSpot移除hasAttackedThisTurn，从gameState派生
+     - 英文默认文本全部替换为中文
+
+  V2规则验证通过 (实际对战测试):
+  - 先攻第一回合不能攻击 ✅
+  - 先攻第一回合不能用支持者/Boss's Orders ✅
+  - 能量不足禁用攻击 ✅
+  - 备战区为空不能撤退 ✅
+  - 第一回合不能进化 ✅
+  - 同回合进化后不能再进化 ✅
+  - Pokémon Tool正常装备 ✅
+  - 回合切换/AI行动 ✅
+
+  测试统计: 1352/1352 全部通过 (59 suites), 零回归
+
+=== Session 25 | 2026-03-21 ===
+Feature: UI比例优化 + 技能说明浮窗 + 开牌选牌张数修复
+Status: completed
+Notes: 
+  1. BattleBoard侧栏 120px→80px，拓宽中央对战区
+  2. ActiveSpot攻击/特性/被动按钮增加hover浮窗，显示完整技能文字、费用、伤害，状态原因
+  3. CardSelectionModal全面中文化（跳过/确认选择/搜索卡牌名称），新增进度条显示，min===max时选满300ms自动确认
+  4. effect-context.ts: promptSearchDeck和promptSearchDiscard的min从0改为count，玩家必须选够卡牌数

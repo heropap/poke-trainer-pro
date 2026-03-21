@@ -1,0 +1,11 @@
+{
+  "id": "YYYYMMDD-bug-NNN",
+  "type": "bug-analysis",
+  "title": "",
+  "context": "",
+  "symptoms": "",
+  "reproduction_steps": [],
+  "error_logs": "",
+  "urgency": "high",
+  "created_at": ""
+}

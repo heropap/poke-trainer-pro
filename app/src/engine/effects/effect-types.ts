@@ -77,7 +77,8 @@ export interface EffectContext {
     filter: (card: GameCard) => boolean,
     count: number,
     message: string,
-    who?: "player" | "opponent"
+    who?: "player" | "opponent",
+    minCount?: number
   ): Promise<GameCard[]>;
 
   /**
@@ -88,7 +89,8 @@ export interface EffectContext {
     filter: (card: GameCard) => boolean,
     count: number,
     message: string,
-    who?: "player" | "opponent"
+    who?: "player" | "opponent",
+    minCount?: number
   ): Promise<GameCard[]>;
 
   /**

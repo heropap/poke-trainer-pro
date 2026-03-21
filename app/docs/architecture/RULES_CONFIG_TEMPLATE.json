@@ -1,0 +1,26 @@
+{
+  "$schema": "https://pokemon-tcg-engine.example.com/schemas/card-rule-v1.json",
+  "name": "Pineco - Tackle",
+  "identifier": "sv1-001-pineco-tackle",
+  "version": 1,
+  "category": "pokemon_attack",
+  "trigger": "attack",
+  "conditions": [
+    {
+      "type": "energy_cost",
+      "value": ["Colorless", "Colorless"]
+    }
+  ],
+  "steps": [
+    {
+      "action": "damage",
+      "target": "opponent_active",
+      "amount": 30
+    }
+  ],
+  "meta": {
+    "author": "rule-generator",
+    "createdAt": "2026-03-04T12:00:00Z",
+    "updatedAt": "2026-03-04T12:00:00Z"
+  }
+}

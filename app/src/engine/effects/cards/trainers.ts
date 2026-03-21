@@ -146,20 +146,51 @@ function createEnergySwitch(cardId: string): CardEffectDef {
           allPokemon.some((p) => p.attachedEnergy.length > 0)
         );
       },
-      onPlay: (ctx) => {
-        // Move energy from active to first bench (simplified)
+      onPlay: async (ctx) => {
         const allPokemon = ctx.getAllPokemon("player");
-        const withEnergy = allPokemon.find((p) => p.attachedEnergy.length > 0);
-        const target = allPokemon.find(
-          (p) => p !== withEnergy
-        );
+        const withEnergy = allPokemon.filter((p) => p.attachedEnergy.length > 0);
 
-        if (withEnergy && target && withEnergy.attachedEnergy.length > 0) {
-          ctx.moveEnergy(
-            withEnergy,
-            target,
-            withEnergy.attachedEnergy[0].instanceId
-          );
+        // Step 1: Choose source Pokemon (has energy)
+        let sourceId: string;
+        if (withEnergy.length === 1) {
+          sourceId = withEnergy[0].instanceId;
+        } else {
+          const sel = await ctx.promptUser({
+            message: "Energy Switch: 选择能量来源宝可梦",
+            min: 1, max: 1,
+            zone: "own_field",
+            targets: withEnergy.map(p => p.instanceId),
+          });
+          sourceId = sel[0] ?? withEnergy[0].instanceId;
+        }
+
+        const source = allPokemon.find(p => p.instanceId === sourceId);
+        if (!source || source.attachedEnergy.length === 0) return;
+
+        // Step 2: Choose target Pokemon (must be different)
+        const targets = allPokemon.filter(p => p.instanceId !== sourceId);
+        let targetId: string;
+        if (targets.length === 1) {
+          targetId = targets[0].instanceId;
+        } else {
+          const sel = await ctx.promptUser({
+            message: "Energy Switch: 选择能量转移目标宝可梦",
+            min: 1, max: 1,
+            zone: "own_field",
+            targets: targets.map(p => p.instanceId),
+          });
+          targetId = sel[0] ?? targets[0].instanceId;
+        }
+
+        const target = allPokemon.find(p => p.instanceId === targetId);
+        if (!target) return;
+
+        // Move the first basic energy from source to target
+        const energyToMove = source.attachedEnergy.find(
+          e => e.card.supertype === "Energy" && (e.card.subtypes?.includes("Basic") ?? false)
+        ) ?? source.attachedEnergy[0];
+        if (energyToMove) {
+          ctx.moveEnergy(source, target, energyToMove.instanceId);
         }
       },
     },
@@ -343,7 +374,7 @@ const pennyEffect: NamedEffect = {
       // Must have an active Pokemon and bench to replace it
       return ctx.player.active !== null && ctx.player.bench.cards.length > 0;
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       if (!ctx.player.active) return;
 
       const collected = ctx.pickUpPokemon(ctx.player.active.instanceId, "player");
@@ -353,12 +384,26 @@ const pennyEffect: NamedEffect = {
         ctx.addToHand(c, "player");
       }
 
-      // Auto-promote first bench Pokemon
-      if (ctx.player.bench.cards.length > 0) {
-        const promoted = ctx.player.bench.cards[0];
-        ctx.player.bench.cards.splice(0, 1);
+      // Promote bench Pokemon: auto if only 1, prompt user if multiple
+      if (ctx.player.bench.cards.length === 1) {
+        const promoted = ctx.player.bench.cards.splice(0, 1)[0];
         ctx.player.active = promoted;
         ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+      } else if (ctx.player.bench.cards.length > 1) {
+        const selection = await ctx.promptUser({
+          message: "Penny: 选择一只备战区宝可梦成为主战宝可梦",
+          min: 1,
+          max: 1,
+          zone: "bench",
+          targets: ctx.player.bench.cards.map(c => c.instanceId),
+        });
+        const promotedId = selection[0] ?? ctx.player.bench.cards[0].instanceId;
+        const idx = ctx.player.bench.cards.findIndex(c => c.instanceId === promotedId);
+        if (idx !== -1) {
+          const [promoted] = ctx.player.bench.cards.splice(idx, 1);
+          ctx.player.active = promoted;
+          ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+        }
       }
     },
   },
@@ -424,7 +469,7 @@ const profTuroEffect: NamedEffect = {
     canPlay: (ctx) => {
       return ctx.player.active !== null && ctx.player.bench.cards.length > 0;
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       if (!ctx.player.active) return;
 
       const collected = ctx.pickUpPokemon(ctx.player.active.instanceId, "player");
@@ -432,12 +477,26 @@ const profTuroEffect: NamedEffect = {
         ctx.addToHand(c, "player");
       }
 
-      // Auto-promote first bench Pokemon
-      if (ctx.player.bench.cards.length > 0) {
-        const promoted = ctx.player.bench.cards[0];
-        ctx.player.bench.cards.splice(0, 1);
+      // Promote bench Pokemon: auto if only 1, prompt user if multiple
+      if (ctx.player.bench.cards.length === 1) {
+        const promoted = ctx.player.bench.cards.splice(0, 1)[0];
         ctx.player.active = promoted;
         ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+      } else if (ctx.player.bench.cards.length > 1) {
+        const selection = await ctx.promptUser({
+          message: "Prof. Turo's Scenario: 选择一只备战区宝可梦成为主战宝可梦",
+          min: 1,
+          max: 1,
+          zone: "bench",
+          targets: ctx.player.bench.cards.map(c => c.instanceId),
+        });
+        const promotedId = selection[0] ?? ctx.player.bench.cards[0].instanceId;
+        const idx = ctx.player.bench.cards.findIndex(c => c.instanceId === promotedId);
+        if (idx !== -1) {
+          const [promoted] = ctx.player.bench.cards.splice(idx, 1);
+          ctx.player.active = promoted;
+          ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+        }
       }
     },
   },
@@ -518,7 +577,7 @@ const nightStretcherEffect: NamedEffect = {
   },
 };
 
-/** Buddy-Buddy Poffin — Search deck for 2 Basic Pokemon with 70HP or less, put on bench */
+/** Buddy-Buddy Poffin — Search deck for up to 2 Basic Pokemon with 70HP or less, put on bench */
 const buddyPoffinEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Buddy-Buddy Poffin",
@@ -530,6 +589,7 @@ const buddyPoffinEffect: NamedEffect = {
       const benchSpace = 5 - ctx.player.bench.cards.length;
       const searchCount = Math.min(2, benchSpace);
 
+      // min 0 — user can take fewer than max (up to 2)
       const found = await ctx.promptSearchDeck!(
         (c) => {
           if (c.card.supertype !== "Pokémon") return false;
@@ -538,7 +598,9 @@ const buddyPoffinEffect: NamedEffect = {
           return hp > 0 && hp <= 70;
         },
         searchCount,
-        "Buddy-Buddy Poffin: 选择基础宝可梦 (70HP以下) 放到备战区"
+        "Buddy-Buddy Poffin: 选择最多2只基础宝可梦 (70HP以下) 放到备战区",
+        "player",
+        0
       );
 
       for (const pokemon of found) {
@@ -558,11 +620,13 @@ const superRodEffect: NamedEffect = {
   cardName: "Super Rod",
   trainer: {
     onPlay: async (ctx) => {
-      // Pick up to 3 Pokemon/Energy from discard
+      // Pick up to 3 Pokemon/Energy from discard (min 0 — user can choose fewer)
       const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Pokémon" || c.card.supertype === "Energy",
         3,
-        "Super Rod: 选择最多3张宝可梦/能量洗入牌组"
+        "Super Rod: 选择最多3张宝可梦/能量洗入牌组",
+        "player",
+        0
       );
       if (found.length > 0) {
         ctx.shuffleIntoDeck(found, "player");
@@ -806,16 +870,19 @@ const electricGeneratorEffect: NamedEffect = {
   },
 };
 
-/** Pal Pad — Shuffle 2 Supporters from discard into deck */
+/** Pal Pad — Shuffle up to 2 Supporters from discard into deck */
 const palPadEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Pal Pad",
   trainer: {
     onPlay: async (ctx) => {
+      // min 0 — user can pick fewer than 2 (up to 2)
       const found = await ctx.promptSearchDiscard!(
         (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Supporter"),
         2,
-        "Pal Pad: 选择最多2张支持者洗入牌组"
+        "Pal Pad: 选择最多2张支持者洗入牌组",
+        "player",
+        0
       );
       if (found.length > 0) {
         ctx.shuffleIntoDeck(found, "player");
@@ -1120,12 +1187,50 @@ const energySwitchNameEffect: NamedEffect = {
       const all = ctx.getAllPokemon("player");
       return all.length >= 2 && all.some(p => p.attachedEnergy.length > 0);
     },
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const all = ctx.getAllPokemon("player");
-      const withEnergy = all.find(p => p.attachedEnergy.length > 0);
-      const target = all.find(p => p !== withEnergy);
-      if (withEnergy && target && withEnergy.attachedEnergy.length > 0) {
-        ctx.moveEnergy(withEnergy, target, withEnergy.attachedEnergy[0].instanceId);
+      const withEnergy = all.filter(p => p.attachedEnergy.length > 0);
+
+      // Step 1: Choose source Pokemon
+      let sourceId: string;
+      if (withEnergy.length === 1) {
+        sourceId = withEnergy[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Energy Switch: 选择能量来源宝可梦",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: withEnergy.map(p => p.instanceId),
+        });
+        sourceId = sel[0] ?? withEnergy[0].instanceId;
+      }
+
+      const source = all.find(p => p.instanceId === sourceId);
+      if (!source || source.attachedEnergy.length === 0) return;
+
+      // Step 2: Choose target Pokemon
+      const targets = all.filter(p => p.instanceId !== sourceId);
+      let targetId: string;
+      if (targets.length === 1) {
+        targetId = targets[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Energy Switch: 选择能量转移目标宝可梦",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: targets.map(p => p.instanceId),
+        });
+        targetId = sel[0] ?? targets[0].instanceId;
+      }
+
+      const target = all.find(p => p.instanceId === targetId);
+      if (!target) return;
+
+      const energyToMove = source.attachedEnergy.find(
+        e => e.card.supertype === "Energy" && (e.card.subtypes?.includes("Basic") ?? false)
+      ) ?? source.attachedEnergy[0];
+      if (energyToMove) {
+        ctx.moveEnergy(source, target, energyToMove.instanceId);
       }
     },
   },

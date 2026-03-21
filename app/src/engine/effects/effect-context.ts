@@ -292,10 +292,13 @@ export function createEffectContext(
       filter: (card: GameCard) => boolean,
       count: number,
       message: string,
-      who: "player" | "opponent" = "player"
+      who: "player" | "opponent" = "player",
+      minCount?: number
     ): Promise<GameCard[]> {
       const pIdx = who === "player" ? playerIndex : opponentIndex;
       const p = state.players[pIdx];
+      // minCount defaults to count (exact selection); pass 0 for "up to N" cards
+      const actualMin = minCount !== undefined ? minCount : count;
 
       // Find all matching cards in deck
       const matching = p.deck.cards.filter(filter);
@@ -323,7 +326,7 @@ export function createEffectContext(
         type: "select_cards",
         playerIndex: pIdx as 0 | 1,
         zone: "deck",
-        min: count,
+        min: actualMin,
         max: count,
         message,
         targets: matching.map(c => c.instanceId),
@@ -373,10 +376,13 @@ export function createEffectContext(
       filter: (card: GameCard) => boolean,
       count: number,
       message: string,
-      who: "player" | "opponent" = "player"
+      who: "player" | "opponent" = "player",
+      minCount?: number
     ): Promise<GameCard[]> {
       const pIdx = who === "player" ? playerIndex : opponentIndex;
       const p = state.players[pIdx];
+      // minCount defaults to count (exact selection); pass 0 for "up to N" cards
+      const actualMin = minCount !== undefined ? minCount : count;
 
       // Find all matching cards in discard
       const matching = p.discard.cards.filter(filter);
@@ -404,7 +410,7 @@ export function createEffectContext(
         type: "select_cards",
         playerIndex: pIdx as 0 | 1,
         zone: "discard",
-        min: count,
+        min: actualMin,
         max: count,
         message,
         targets: matching.map(c => c.instanceId),
