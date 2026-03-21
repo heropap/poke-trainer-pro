@@ -74,15 +74,27 @@ const pokemonCenterLady: CardEffectDef = {
   cardName: "Pokémon Center Lady",
   trainer: {
     canPlay: (ctx) => {
-      // Must have a Pokemon that could benefit
-      return ctx.player.active !== null;
+      return ctx.getAllPokemon("player").length > 0;
     },
-    onPlay: (ctx) => {
-      // Heal active Pokemon 60 HP and remove all status
-      if (ctx.player.active) {
-        ctx.heal(60, ctx.player.active);
-        ctx.removeAllStatus(ctx.player.active);
-        ctx.log(`${ctx.player.active.card.name} 恢复了 60 HP 并清除了所有状态异常`);
+    onPlay: async (ctx) => {
+      const allPokemon = ctx.getAllPokemon("player");
+      let targetId: string;
+      if (allPokemon.length === 1) {
+        targetId = allPokemon[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Pokémon Center Lady: 选择一只宝可梦恢复60HP并清除状态",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: allPokemon.map(p => p.instanceId),
+        });
+        targetId = sel[0] ?? allPokemon[0].instanceId;
+      }
+      const target = allPokemon.find(p => p.instanceId === targetId);
+      if (target) {
+        ctx.heal(60, target);
+        ctx.removeAllStatus(target);
+        ctx.log(`${target.card.name} 恢复了 60 HP 并清除了所有状态异常`);
       }
     },
   },
@@ -443,18 +455,39 @@ const laceyEffect: NamedEffect = {
   },
 };
 
-/** Professor Sada's Vitality — Attach a Basic Energy from discard to a Pokemon */
+/** Professor Sada's Vitality — Attach up to 2 Basic Energy from discard to your Pokemon */
 const profSadaEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Professor Sada's Vitality",
   trainer: {
-    onPlay: (ctx) => {
-      // Attach 1 basic energy from discard to active
-      if (ctx.player.active) {
+    canPlay: (ctx) => {
+      // Need a Basic Energy in discard and at least one Pokemon in play
+      const hasEnergy = ctx.player.discard.cards.some(
+        c => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false)
+      );
+      return hasEnergy && ctx.getAllPokemon("player").length > 0;
+    },
+    onPlay: async (ctx) => {
+      const allPokemon = ctx.getAllPokemon("player");
+      // Choose target Pokemon
+      let targetId: string;
+      if (allPokemon.length === 1) {
+        targetId = allPokemon[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Professor Sada's Vitality: 选择一只宝可梦附加能量",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: allPokemon.map(p => p.instanceId),
+        });
+        targetId = sel[0] ?? allPokemon[0].instanceId;
+      }
+      const target = allPokemon.find(p => p.instanceId === targetId);
+      if (target) {
         ctx.attachEnergyFromDiscard(
           (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
           1,
-          ctx.player.active
+          target
         );
       }
     },
@@ -764,17 +797,32 @@ const energySearchEffect: NamedEffect = {
   },
 };
 
-/** Potion — Heal 30 from 1 of your Pokemon */
+/** Potion — Heal 30 from 1 of your Pokemon (any Pokemon, not just Active) */
 const potionEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Potion",
   trainer: {
     canPlay: (ctx) => {
-      return ctx.player.active !== null;
+      return ctx.getAllPokemon("player").length > 0;
     },
-    onPlay: (ctx) => {
-      if (ctx.player.active) {
-        ctx.heal(30, ctx.player.active);
+    onPlay: async (ctx) => {
+      const allPokemon = ctx.getAllPokemon("player");
+      let targetId: string;
+      if (allPokemon.length === 1) {
+        targetId = allPokemon[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Potion: 选择一只宝可梦恢复30HP",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: allPokemon.map(p => p.instanceId),
+        });
+        targetId = sel[0] ?? allPokemon[0].instanceId;
+      }
+      const target = allPokemon.find(p => p.instanceId === targetId);
+      if (target) {
+        ctx.heal(30, target);
+        ctx.log(`${target.card.name} 恢复了 30 HP`);
       }
     },
   },
@@ -801,7 +849,7 @@ const crushingHammerEffect: NamedEffect = {
   },
 };
 
-/** Earthen Vessel — Discard 1 card, search deck for 2 Basic Energy to hand */
+/** Earthen Vessel — Discard 1 card, search deck for up to 2 Basic Energy to hand */
 const earthenVesselEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Earthen Vessel",
@@ -811,10 +859,13 @@ const earthenVesselEffect: NamedEffect = {
     },
     onPlay: async (ctx) => {
       await ctx.promptDiscardFromHand(1, "player");
+      // min=0: "up to 2" Basic Energy — user can take fewer
       const found = await ctx.promptSearchDeck!(
         (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
         2,
-        "Earthen Vessel: 选择最多2张基础能量加入手牌"
+        "Earthen Vessel: 选择最多2张基础能量加入手牌",
+        "player",
+        0
       );
       for (const c of found) ctx.addToHand(c);
       ctx.shuffleDeck("player");
@@ -823,15 +874,15 @@ const earthenVesselEffect: NamedEffect = {
   },
 };
 
-/** Electric Generator — Look at top 5 cards, attach up to 2 Lightning Energy to bench */
+/** Electric Generator — Look at top 5 cards, attach up to 2 Lightning Energy to Benched Pokemon */
 const electricGeneratorEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Electric Generator",
   trainer: {
-    onPlay: (ctx) => {
+    onPlay: async (ctx) => {
       const revealed = ctx.revealTopCards(5, "player");
 
-      // Find Lightning Energy
+      // Find up to 2 Lightning Energy among the revealed cards
       const lightningEnergy: typeof revealed = [];
       const rest: typeof revealed = [];
 
@@ -847,25 +898,52 @@ const electricGeneratorEffect: NamedEffect = {
         }
       }
 
-      // Attach to bench Pokemon (or active if no bench)
-      const targets = ctx.getAllPokemon("player");
-      let targetIdx = 0;
+      // Put all revealed cards back first (before selection)
+      ctx.putOnTopOfDeck([...lightningEnergy, ...rest], "player");
+
+      if (lightningEnergy.length === 0) {
+        ctx.shuffleDeck("player");
+        ctx.log("Electric Generator: 没有找到雷系能量");
+        return;
+      }
+
+      // Targets: bench only (not active)
+      const benchTargets = ctx.player.bench.cards;
+      if (benchTargets.length === 0) {
+        ctx.shuffleDeck("player");
+        ctx.log("Electric Generator: 没有备战宝可梦，能量放回牌组");
+        return;
+      }
+
+      // For each found Lightning Energy, prompt user to pick a bench target
       for (const energy of lightningEnergy) {
-        if (targets.length > 0) {
-          const target = targets[targetIdx % targets.length];
-          target.attachedEnergy.push(energy);
-          ctx.log(`Electric Generator: 将 ${energy.card.name} 附加到 ${target.card.name}`);
-          targetIdx++;
+        let targetId: string;
+        if (benchTargets.length === 1) {
+          targetId = benchTargets[0].instanceId;
         } else {
-          rest.push(energy); // No target, put back
+          const sel = await ctx.promptUser({
+            message: `Electric Generator: 选择将 ${energy.card.name} 附加到哪只备战宝可梦`,
+            min: 0, max: 1,
+            zone: "bench",
+            targets: benchTargets.map(p => p.instanceId),
+          });
+          targetId = sel[0] ?? benchTargets[0].instanceId;
+        }
+
+        const target = benchTargets.find(p => p.instanceId === targetId);
+        if (target) {
+          // Remove from deck (was put back on top), attach to target
+          const deckIdx = ctx.player.deck.cards.findIndex(c => c.instanceId === energy.instanceId);
+          if (deckIdx !== -1) {
+            ctx.player.deck.cards.splice(deckIdx, 1);
+            target.attachedEnergy.push(energy);
+            ctx.log(`Electric Generator: 将 ${energy.card.name} 附加到 ${target.card.name}`);
+          }
         }
       }
 
-      // Put rest back
-      if (rest.length > 0) {
-        ctx.putOnTopOfDeck(rest, "player");
-        ctx.shuffleDeck("player");
-      }
+      // Shuffle deck (non-energy cards remain in deck)
+      ctx.shuffleDeck("player");
     },
   },
 };
@@ -1148,11 +1226,26 @@ const pokemonCenterLadyNameEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Pokémon Center Lady",
   trainer: {
-    canPlay: (ctx) => ctx.player.active !== null,
-    onPlay: (ctx) => {
-      if (ctx.player.active) {
-        ctx.heal(60, ctx.player.active);
-        ctx.removeAllStatus(ctx.player.active);
+    canPlay: (ctx) => ctx.getAllPokemon("player").length > 0,
+    onPlay: async (ctx) => {
+      const allPokemon = ctx.getAllPokemon("player");
+      let targetId: string;
+      if (allPokemon.length === 1) {
+        targetId = allPokemon[0].instanceId;
+      } else {
+        const sel = await ctx.promptUser({
+          message: "Pokémon Center Lady: 选择一只宝可梦恢复60HP并清除状态",
+          min: 1, max: 1,
+          zone: "own_field",
+          targets: allPokemon.map(p => p.instanceId),
+        });
+        targetId = sel[0] ?? allPokemon[0].instanceId;
+      }
+      const target = allPokemon.find(p => p.instanceId === targetId);
+      if (target) {
+        ctx.heal(60, target);
+        ctx.removeAllStatus(target);
+        ctx.log(`${target.card.name} 恢复了 60 HP 并清除了所有状态异常`);
       }
     },
   },
