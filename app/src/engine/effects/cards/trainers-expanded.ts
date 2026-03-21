@@ -424,17 +424,42 @@ const lostVacuum: NamedEffect = {
   cardId: "name:Lost Vacuum",
   cardName: "Lost Vacuum",
   trainer: {
-    canPlay: (ctx) => ctx.player.hand.cards.length >= 1,
+    canPlay: (ctx) => {
+      if (ctx.player.hand.cards.length < 1) return false;
+      // Must have something to remove: a stadium or at least one tool on opponent's Pokémon
+      const hasStadium = !!ctx.getStadium();
+      const allOpponentPokemon = [
+        ctx.opponent.active,
+        ...ctx.opponent.bench.cards,
+      ].filter(Boolean);
+      const hasTools = allOpponentPokemon.some(p => p!.attachedTools.length > 0);
+      return hasStadium || hasTools;
+    },
     onPlay: (ctx) => {
       ctx.discardFromHand(1, "player");
-      // Remove stadium if exists (simplified: Lost Zone = discard)
-      if (ctx.getStadium()) {
+
+      // Collect all opponent tools (active first, then bench)
+      const allOpponentPokemon = [
+        ctx.opponent.active,
+        ...ctx.opponent.bench.cards,
+      ].filter(Boolean);
+      const pokemonWithTools = allOpponentPokemon.filter(p => p!.attachedTools.length > 0);
+
+      const hasStadium = !!ctx.getStadium();
+      const hasTools = pokemonWithTools.length > 0;
+
+      // If only stadium: remove it; if only tools: remove first tool; if both: remove stadium
+      // (proper user choice between stadium vs tool requires choose_option prompt — future work)
+      if (hasStadium && !hasTools) {
         ctx.removeStadium();
-      } else if (ctx.opponent.active && ctx.opponent.active.attachedTools.length > 0) {
-        // Remove opponent's active tool
-        const tool = ctx.opponent.active.attachedTools.pop()!;
+      } else if (hasTools) {
+        // Remove the first available tool (active Pokémon's tool takes priority)
+        const target = pokemonWithTools[0]!;
+        const tool = target.attachedTools.pop()!;
         ctx.opponent.discard.cards.push(tool);
-        ctx.log(`Lost Vacuum: 移除了 ${tool.card.name}`);
+        ctx.log(`Lost Vacuum: 移除了 ${target.card.name} 的道具 ${tool.card.name}`);
+      } else if (hasStadium) {
+        ctx.removeStadium();
       }
     },
   },

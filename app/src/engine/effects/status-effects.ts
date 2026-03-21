@@ -194,8 +194,14 @@ export function processBetweenTurns(
 
   // ─── Clear turn-owner's damage boost marker ───
   // DAMAGE_BOOST is set by trainer supporters (Kieran, Giovanni's Charisma) and lasts only one turn.
-  if (isTurnOwner && active.markers && active.markers[DAMAGE_BOOST] !== undefined) {
-    delete active.markers[DAMAGE_BOOST];
+  // Must clear from ALL Pokémon (active + bench) in case the active retreated after Kieran was played.
+  if (isTurnOwner) {
+    const allPlayerPokemon = [active, ...player.bench.cards].filter(Boolean) as GameCard[];
+    for (const p of allPlayerPokemon) {
+      if (p.markers && p.markers[DAMAGE_BOOST] !== undefined) {
+        delete p.markers[DAMAGE_BOOST];
+      }
+    }
   }
 
   // ─── Turn-based marker cleanup ───
