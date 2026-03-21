@@ -14,7 +14,8 @@ import {
   drawMultiple,
   addCards,
   addToBottom,
-  isZoneEmpty
+  isZoneEmpty,
+  shuffleZone
 } from "./zones";
 import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
@@ -848,6 +849,8 @@ export function performAttack(
     if (effectResult.benchDamage) {
       for (const bd of effectResult.benchDamage) {
         // V2: Check bench damage prevention from passive abilities
+        // Check 1: target's own abilities
+        let benchDamageBlocked = false;
         if (bd.target.markers[ABILITY_BLOCKED] <= 0 && bd.target.markers[ABILITY_BLOCKED_TEMP] <= 0) {
           const targetEffect = getEffect(bd.target.cardId, bd.target.card.name);
           if (targetEffect?.abilities?.some(a =>
@@ -855,9 +858,31 @@ export function performAttack(
           )) {
             logEvent(state, playerIndex, "ability" as any,
               `${bd.target.card.name} 的特性阻挡了板凳伤害!`);
-            continue;
+            benchDamageBlocked = true;
           }
         }
+        // Check 2: field-wide bench protection (e.g., Manaphy's Wave Veil)
+        // Any allied Pokemon with preventBenchDamage protects ALL bench Pokemon
+        if (!benchDamageBlocked) {
+          const allAlliedPokemon = [
+            defender.active,
+            ...defender.bench.cards,
+          ].filter(Boolean) as GameCard[];
+          for (const ally of allAlliedPokemon) {
+            if (ally === bd.target) continue; // already checked above
+            if (ally.markers[ABILITY_BLOCKED] > 0 || ally.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
+            const allyEffect = getEffect(ally.cardId, ally.card.name);
+            if (allyEffect?.abilities?.some(a =>
+              a.type === "passive" && (a as any).preventBenchDamage
+            )) {
+              logEvent(state, playerIndex, "ability" as any,
+                `${ally.card.name} 的特性 保护了 ${bd.target.card.name} 免受板凳伤害!`);
+              benchDamageBlocked = true;
+              break;
+            }
+          }
+        }
+        if (benchDamageBlocked) continue;
         bd.target.damageCounters += bd.damage / 10;
         logEvent(state, playerIndex, "damage",
           `${attacker.active!.card.name} 的效果对 ${bd.target.card.name} 造成了 ${bd.damage} 点伤害`);
@@ -918,7 +943,8 @@ export function performAttack(
   const prizeCountForKO = defenderActiveBeforeKO ? getPrizeCount(defenderActiveBeforeKO) : 1;
 
   if (defenderActiveBeforeKO && checkKnockout(state, defenderIndex, "active")) {
-    takePrizes(state, playerIndex, prizeCountForKO);
+    const extraPrize = effectResult?.extraPrize ?? 0;
+    takePrizes(state, playerIndex, prizeCountForKO + extraPrize);
 
     if (checkWinCondition(state)) {
       return { success: true, gameEnded: true };
@@ -963,6 +989,34 @@ export function performAttack(
           return { success: true, gameEnded: true };
         }
       }
+    }
+  }
+
+  // 9. Shuffle self into deck (e.g., Lumineon V "Aqua Return")
+  if (effectResult?.shuffleSelf && attacker.active) {
+    const pokemon = attacker.active;
+    // Move all attached energy + tools to deck
+    while (pokemon.attachedEnergy.length > 0) {
+      const e = pokemon.attachedEnergy.pop()!;
+      attacker.deck.cards.push(e);
+    }
+    while (pokemon.attachedTools.length > 0) {
+      const t = pokemon.attachedTools.pop()!;
+      attacker.deck.cards.push(t);
+    }
+    // Move Pokemon itself to deck
+    attacker.deck.cards.push(pokemon);
+    attacker.active = null;
+    shuffleZone(attacker.deck);
+    logEvent(state, playerIndex, "use_trainer",
+      `${pokemon.card.name} 和所有附加卡牌洗入了牌组`);
+
+    // Promote bench Pokemon
+    if (!isZoneEmpty(attacker.bench)) {
+      if (attacker.bench.cards.length === 1) {
+        autoPromoteBench(state, playerIndex);
+      }
+      // Multiple bench: UI will prompt selection
     }
   }
 

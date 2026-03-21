@@ -325,6 +325,10 @@ export interface AttackResult {
   preventRetreat?: boolean;
   /** Energy cards to discard from the attacker */
   discardEnergy?: number;
+  /** Take extra Prize cards on KO (e.g., Iron Hands ex "Amp You Very Much" +1) */
+  extraPrize?: number;
+  /** Shuffle the attacker and all attached cards into the deck after attack (e.g., Lumineon V "Aqua Return") */
+  shuffleSelf?: boolean;
 }
 
 export interface AttackEffect {

@@ -140,13 +140,17 @@ const stonjourner: CardEffectDef = {
     {
       name: "Stony Kick",
       onAttack: (ctx, baseDamage) => {
-        // Pick first bench Pokemon (simplified)
+        // "This attack also does 20 damage to 1 of your opponent's Benched Pokémon."
+        // Auto-select: target bench Pokemon closest to KO
         const benchDamage: AttackResult["benchDamage"] = [];
         if (ctx.opponent.bench.cards.length > 0) {
-          benchDamage.push({
-            target: ctx.opponent.bench.cards[0],
-            damage: 20,
-          });
+          const bench = ctx.opponent.bench.cards;
+          const target = bench.reduce((best, curr) => {
+            const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
+            const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
+            return currRemaining < bestRemaining ? curr : best;
+          }, bench[0]);
+          benchDamage.push({ target, damage: 20 });
         }
         return {
           damage: baseDamage,

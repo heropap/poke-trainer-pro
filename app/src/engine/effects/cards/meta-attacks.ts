@@ -62,8 +62,9 @@ const pidgeotEx: NamedEffect = {
     {
       name: "Blustery Wind",
       onAttack: (ctx, baseDamage) => {
-        // May discard a Stadium in play
-        if (ctx.getStadium()) {
+        // "You may discard a Stadium in play" — optional.
+        // Auto-discard if opponent owns the stadium (strategically correct).
+        if (ctx.state.stadium && ctx.state.stadium.owner !== ctx.playerIndex) {
           ctx.removeStadium();
         }
         return { damage: baseDamage };
@@ -174,13 +175,18 @@ const ironThornsEx: NamedEffect = {
     {
       name: "Volt Cyclone",
       onAttack: (ctx, baseDamage) => {
-        // Move an Energy from this Pokemon to a Benched Pokemon
+        // "Move an Energy from this Pokémon to 1 of your Benched Pokémon."
+        // Auto-select: pick bench Pokemon with fewest attached energy (needs it most)
         if (
           ctx.source.attachedEnergy.length > 0 &&
           ctx.player.bench.cards.length > 0
         ) {
+          const bench = ctx.player.bench.cards;
+          const target = bench.reduce((best, curr) =>
+            curr.attachedEnergy.length < best.attachedEnergy.length ? curr : best
+          , bench[0]);
           const energy = ctx.source.attachedEnergy[0];
-          ctx.moveEnergy(ctx.source, ctx.player.bench.cards[0], energy.instanceId);
+          ctx.moveEnergy(ctx.source, target, energy.instanceId);
         }
         return { damage: baseDamage };
       },
@@ -200,9 +206,14 @@ const roaringMoonEx: NamedEffect = {
       name: "Frenzied Gouging",
       onAttack: (ctx, _baseDamage) => {
         // Instant KO on defender + 200 self damage
-        const defenderHp = parseInt(ctx.opponent.active?.card.hp || "0");
-        const currentDamage =
-          (ctx.opponent.active?.damageCounters ?? 0) * 10;
+        // Must account for HP-boosting tools (Bravery Charm +50, Hero's Cape +100)
+        const defender = ctx.opponent.active;
+        let defenderHp = parseInt(defender?.card.hp || "0");
+        for (const tool of (defender?.attachedTools || [])) {
+          if (tool.card.name === "Bravery Charm") defenderHp += 50;
+          if (tool.card.name === "Hero's Cape") defenderHp += 100;
+        }
+        const currentDamage = (defender?.damageCounters ?? 0) * 10;
         const damageNeeded = defenderHp - currentDamage;
 
         return {
@@ -280,13 +291,9 @@ const ironHandsEx: NamedEffect = {
     {
       name: "Amp You Very Much",
       onAttack: (ctx, baseDamage) => {
-        // If KO, take 1 more Prize card
-        // We log this as a hint; the actual extra prize logic would need
-        // a post-KO hook. For now, add to event log.
-        ctx.log(
-          "Amp You Very Much: 如果击倒对手宝可梦，多拿一张奖励卡"
-        );
-        return { damage: baseDamage };
+        // "If this attack Knocks Out your opponent's Active Pokémon, take 1 more Prize card."
+        ctx.log("Amp You Very Much: 如果击倒对手宝可梦，多拿一张奖励卡");
+        return { damage: baseDamage, extraPrize: 1 };
       },
     },
   ],
@@ -475,9 +482,9 @@ const lumineonV: NamedEffect = {
     {
       name: "Aqua Return",
       onAttack: (ctx, baseDamage) => {
-        // Shuffle this Pokemon and all attached cards into deck
+        // "Shuffle this Pokémon and all attached cards into your deck."
         ctx.log("Aqua Return: 将此宝可梦和附加卡牌洗入牌组");
-        return { damage: baseDamage };
+        return { damage: baseDamage, shuffleSelf: true };
       },
     },
   ],
@@ -491,24 +498,31 @@ const radiantGreninja: NamedEffect = {
     {
       name: "Moonlight Shuriken",
       onAttack: (ctx, _baseDamage) => {
-        // Discard 2 Energy from this Pokemon, then put 9 damage counters on
-        // opponent's Pokemon in any way (simplified: 90 to active)
-        let discarded = 0;
-        while (
-          ctx.source.attachedEnergy.length > 0 &&
-          discarded < 2
-        ) {
+        // "Discard 2 Energy from this Pokémon. This attack does 90 damage
+        //  to 2 of your opponent's Pokémon."
+        // Discard exactly 2 energy
+        const toDiscard = Math.min(2, ctx.source.attachedEnergy.length);
+        for (let i = 0; i < toDiscard; i++) {
           const energy = ctx.source.attachedEnergy.pop()!;
           ctx.player.discard.cards.push(energy);
-          discarded++;
         }
-        return { damage: 90 };
+        // 90 damage to active + 90 to first bench target (auto-select)
+        const benchDamage: AttackResult["benchDamage"] = [];
+        if (ctx.opponent.bench.cards.length > 0) {
+          // Auto-select: target bench Pokemon with most existing damage (closest to KO)
+          const bench = ctx.opponent.bench.cards;
+          const target = bench.reduce((best, curr) =>
+            curr.damageCounters > best.damageCounters ? curr : best
+          , bench[0]);
+          benchDamage.push({ target, damage: 90 });
+        }
+        return { damage: 90, benchDamage };
       },
     },
   ],
 };
 
-// Manaphy — Wave Veil (ability: bench takes no damage)
+// Manaphy — Wave Veil (ability: bench takes no damage from attacks)
 const manaphy: NamedEffect = {
   cardId: "name:Manaphy",
   cardName: "Manaphy",
@@ -518,6 +532,13 @@ const manaphy: NamedEffect = {
       onAttack: (_ctx, baseDamage) => {
         return { damage: baseDamage };
       },
+    },
+  ],
+  abilities: [
+    {
+      name: "Wave Veil",
+      type: "passive" as const,
+      preventBenchDamage: true,
     },
   ],
 };
@@ -536,6 +557,20 @@ const bibarel: NamedEffect = {
       },
     },
   ],
+  abilities: [
+    {
+      name: "Industrious Incisors",
+      type: "activated" as const,
+      canActivate: (ctx) => ctx.player.hand.cards.length < 5,
+      onActivate: (ctx) => {
+        const toDraw = 5 - ctx.player.hand.cards.length;
+        if (toDraw > 0) {
+          ctx.drawCards(toDraw, "player");
+          ctx.log(`Industrious Incisors: 抽牌直到手牌达到 5 张 (抽了 ${toDraw} 张)`);
+        }
+      },
+    },
+  ],
 };
 
 // Hawlucha — Big Match (30+ bench damage)
@@ -546,13 +581,17 @@ const hawlucha: NamedEffect = {
     {
       name: "Big Match",
       onAttack: (ctx, baseDamage) => {
+        // "This attack also does 30 damage to 1 of your opponent's Benched Pokémon."
         const benchDamage: AttackResult["benchDamage"] = [];
-        // Also does 30 to benched Pokemon
         if (ctx.opponent.bench.cards.length > 0) {
-          benchDamage.push({
-            target: ctx.opponent.bench.cards[0],
-            damage: 30,
-          });
+          // Auto-select: target bench Pokemon closest to KO
+          const bench = ctx.opponent.bench.cards;
+          const target = bench.reduce((best, curr) => {
+            const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
+            const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
+            return currRemaining < bestRemaining ? curr : best;
+          }, bench[0]);
+          benchDamage.push({ target, damage: 30 });
         }
         return { damage: baseDamage, benchDamage };
       },
@@ -564,7 +603,7 @@ const hawlucha: NamedEffect = {
 // More common attack patterns
 // ───────────────────────────────────────────────
 
-// Squawkabilly ex — Squawk and Seize (ability: discard hand, draw 6)
+// Squawkabilly ex — Squawk and Seize (ability: discard hand, draw 6 — once per game)
 const squawkabillyEx: NamedEffect = {
   cardId: "name:Squawkabilly ex",
   cardName: "Squawkabilly ex",
@@ -572,24 +611,45 @@ const squawkabillyEx: NamedEffect = {
     {
       name: "Motivate",
       onAttack: (ctx, baseDamage) => {
-        // Attach up to 2 Basic Energy from discard to benched Pokemon
+        // "Attach up to 2 Basic Energy cards from your discard pile to 1 of your Benched Pokémon."
+        // Auto-select: bench Pokemon with fewest energy (needs it most)
+        if (ctx.player.bench.cards.length === 0) return { damage: baseDamage };
+        const bench = ctx.player.bench.cards;
+        const target = bench.reduce((best, curr) =>
+          curr.attachedEnergy.length < best.attachedEnergy.length ? curr : best
+        , bench[0]);
         const basicEnergy = ctx.player.discard.cards.filter(
-          (c) => c.card.supertype === "Energy" && c.card.subtypes?.includes("Basic")
+          (c) => c.card.supertype === "Energy" &&
+                 (c.card.subtypes?.includes("Basic") ?? false)
         );
         let attached = 0;
         for (const energy of basicEnergy) {
           if (attached >= 2) break;
-          if (ctx.player.bench.cards.length > 0) {
-            const target = ctx.player.bench.cards[0];
-            const idx = ctx.player.discard.cards.indexOf(energy);
-            if (idx !== -1) {
-              ctx.player.discard.cards.splice(idx, 1);
-              target.attachedEnergy.push(energy);
-              attached++;
-            }
+          const idx = ctx.player.discard.cards.indexOf(energy);
+          if (idx !== -1) {
+            ctx.player.discard.cards.splice(idx, 1);
+            target.attachedEnergy.push(energy);
+            attached++;
           }
         }
         return { damage: baseDamage };
+      },
+    },
+  ],
+  abilities: [
+    {
+      name: "Squawk and Seize",
+      type: "activated" as const,
+      canActivate: (ctx) => {
+        // Once per game (not once per turn)
+        return !ctx.source.markers["SQUAWK_AND_SEIZE_USED"];
+      },
+      onActivate: (ctx) => {
+        // Discard hand and draw 6
+        ctx.discardHand("player");
+        ctx.drawCards(6, "player");
+        ctx.addMarker(ctx.source, "SQUAWK_AND_SEIZE_USED");
+        ctx.log("Squawk and Seize: 弃掉全部手牌，抽 6 张牌");
       },
     },
   ],
@@ -648,8 +708,27 @@ const fezandipitiEx: NamedEffect = {
     {
       name: "Cruel Arrow",
       onAttack: (ctx, _baseDamage) => {
-        // Put 6 damage counters on opponent's Pokemon (simplified: 60 to active)
-        return { damage: 60 };
+        // "Put 6 damage counters on 1 of your opponent's Pokémon."
+        // This bypasses weakness/resistance (damage counters, not attack damage).
+        // Auto-select: target the opponent Pokemon closest to KO.
+        const allOpponent = [
+          ctx.opponent.active,
+          ...ctx.opponent.bench.cards,
+        ].filter(Boolean) as typeof ctx.opponent.bench.cards;
+
+        if (allOpponent.length > 0) {
+          // Pick target closest to KO (highest damageCounters relative to HP)
+          const target = allOpponent.reduce((best, curr) => {
+            const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
+            const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
+            return currRemaining < bestRemaining ? curr : best;
+          }, allOpponent[0]);
+          // Place damage counters directly (not attack damage — bypasses W/R)
+          target.damageCounters += 6;
+          ctx.log(`Cruel Arrow: 在 ${target.card.name} 上放置了 6 个伤害指示物`);
+        }
+        // Return 0 damage — all damage is via counters, not attack damage
+        return { damage: 0 };
       },
     },
   ],
