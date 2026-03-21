@@ -1008,7 +1008,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                  }}
                  onCardContextMenu={handleCardContextMenu}
                  isAttacking={attackingPlayer === myIndex}
-                 compact
+                 compact={isMobile}
                />
              </div>
 
@@ -1048,7 +1048,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                        setSelectedBenchId(null);
                      }}
                      onCardContextMenu={handleCardContextMenu}
-                     compact
+                     compact={isMobile}
                    />
                  );
                })}
@@ -1067,7 +1067,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                  onMenuAction={handleMenuAction}
                  onMenuCancel={cancelSelection}
                  onCardContextMenu={handleCardContextMenu}
-                 compact
+                 compact={isMobile}
                />
              </div>
           </div>

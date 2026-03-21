@@ -69,7 +69,8 @@ export function ActiveSpot({
     ? "h-[150px] w-[108px]"
     : "h-[220px] w-[160px]";
   const cardScale = compact ? 0.65 : 1.0;
-  const attackBtnClass = compact ? "w-[120px]" : "w-[180px]";
+  // Desktop: wider panel so children can read full attack names
+  const attackBtnClass = compact ? "w-[130px]" : "w-[200px]";
   const { setNodeRef, isOver } = useDroppable({
     id: isOpponent ? "opponent-active" : "active-spot",
     disabled: isOpponent
@@ -206,7 +207,7 @@ export function ActiveSpot({
 
       {/* Action Buttons (Attack + Retreat) — right side on desktop, below on mobile */}
       {!isOpponent && card && showActions && (
-        <div className={`flex ${compact ? attackBtnClass : "w-[160px]"} flex-col gap-1`}>
+        <div className={`flex ${compact ? attackBtnClass : "w-[200px]"} flex-col gap-1.5`}>
           {/* Ability Buttons */}
           {card.card.abilities?.map((ability, i) => {
             // Only show activated abilities (passive/on_enter are automatic)
@@ -226,15 +227,17 @@ export function ActiveSpot({
                   disabled={!isUsable}
                   onMouseEnter={() => setHoveredAbility(ability.name)}
                   onMouseLeave={() => setHoveredAbility(null)}
-                  className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
+                  className={`w-full rounded-lg px-3 font-bold text-white transition-colors ${
+                    compact ? "py-1 text-[10px]" : "py-2 text-sm"
+                  } ${
                     isUsable
-                      ? "cursor-pointer bg-cyan-600 hover:bg-cyan-500"
+                      ? "cursor-pointer bg-cyan-600 hover:bg-cyan-500 active:bg-cyan-700"
                       : "cursor-not-allowed bg-zinc-600 opacity-60"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-cyan-200 text-[9px] shrink-0">✨</span>
-                    <span className="mx-1 flex-1 truncate text-left">{ability.name}</span>
+                    <span className={`mx-1 flex-1 text-left leading-tight ${compact ? "truncate" : "break-words min-w-0"}`}>{ability.name}</span>
                     <span className="shrink-0 text-[9px] text-cyan-200">{ability.type === "Ability" ? "特性" : ability.type}</span>
                   </div>
                   {disabledReason && (
@@ -275,9 +278,11 @@ export function ActiveSpot({
                   disabled={!isUsable}
                   onMouseEnter={() => setHoveredAttack(attack.name)}
                   onMouseLeave={() => setHoveredAttack(null)}
-                  className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
+                  className={`w-full rounded-lg px-3 font-bold text-white transition-colors ${
+                    compact ? "py-1.5 text-[10px]" : "py-2.5 text-sm"
+                  } ${
                     isUsable
-                      ? "cursor-pointer bg-red-600 hover:bg-red-500"
+                      ? "cursor-pointer bg-red-600 hover:bg-red-500 active:bg-red-700 shadow-md"
                       : "cursor-not-allowed bg-zinc-600 opacity-60"
                   }`}
                 >
@@ -295,8 +300,8 @@ export function ActiveSpot({
                         <span className="text-[9px] text-zinc-300">免费</span>
                       )}
                     </div>
-                    {/* Attack name and damage */}
-                    <span className="mx-1 flex-1 truncate text-left">{attack.name}</span>
+                    {/* Attack name and damage — never truncate, children need to read it */}
+                    <span className={`mx-1 flex-1 text-left leading-tight ${compact ? "truncate" : "break-words min-w-0"}`}>{attack.name}</span>
                     {/* Effect source indicator */}
                     {(() => {
                       const src = getEffectSource(card.cardId, card.card.name);
@@ -403,9 +408,11 @@ export function ActiveSpot({
           <button
             onClick={() => canRetreatNow && onRetreat?.()}
             disabled={!canRetreatNow}
-            className={`w-full rounded px-2 py-1 text-xs font-bold transition-colors ${
+            className={`w-full rounded-lg px-3 font-bold transition-colors ${
+              compact ? "py-1 text-[10px]" : "py-2 text-sm"
+            } ${
               canRetreatNow
-                ? "cursor-pointer bg-blue-600 text-white hover:bg-blue-500"
+                ? "cursor-pointer bg-blue-600 text-white hover:bg-blue-500 shadow-md"
                 : "cursor-not-allowed bg-zinc-700 text-zinc-400 opacity-60"
             }`}
             title={retreatDisabledReason || `撤退费用: ${retreatCost}`}
