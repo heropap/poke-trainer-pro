@@ -1139,7 +1139,7 @@ describe("Play Card Edge Cases", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(state.players[0].active?.card.name).toBe("Bulbasaur");
+    expect(state.players[0].active!.card.name).toBe("Bulbasaur");
   });
 
   it("plays basic Pokemon to bench if active is occupied", async () => {

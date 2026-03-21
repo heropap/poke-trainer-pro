@@ -1144,6 +1144,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         {/* Card Selection Modal (Prompt) */}
         {gameState.prompt && gameState.prompt.type === "select_cards" && gameState.prompt.playerIndex === myIndex && (
           <CardSelectionModal
+            key={gameState.prompt.id}
             prompt={gameState.prompt}
             gameState={gameState}
             onConfirm={(selectedIds) => onAction?.({ type: "select_cards_response", selectedIds })}
