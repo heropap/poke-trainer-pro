@@ -85,6 +85,10 @@ export function ActiveSpot({
   // Evolution stack tooltip
   const [showEvoStack, setShowEvoStack] = React.useState(false);
 
+  // Hover tooltip state for attacks and abilities
+  const [hoveredAttack, setHoveredAttack] = React.useState<string | null>(null);
+  const [hoveredAbility, setHoveredAbility] = React.useState<string | null>(null);
+
   // Derive turn state from gameState (V2 pattern — no V1 prop drilling)
   const hasAttacked = gameState.turnStatus.hasAttacked;
 
@@ -213,30 +217,48 @@ export function ActiveSpot({
 
             const disabledReason = getAbilityDisabledReason(gameState, playerIndex, card, ability.name);
             const isUsable = !disabledReason;
+            const isHovered = hoveredAbility === ability.name;
 
             return (
-              <button
-                key={`ability-${i}`}
-                onClick={() => isUsable && onUseAbility?.(card.instanceId, ability.name)}
-                disabled={!isUsable}
-                className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
-                  isUsable
-                    ? "cursor-pointer bg-cyan-600 hover:bg-cyan-500"
-                    : "cursor-not-allowed bg-zinc-600 opacity-60"
-                }`}
-                title={disabledReason || `${ability.name}: ${ability.text}`}
-              >
-                <div className="flex items-center justify-between gap-1">
-                  <span className="text-cyan-200 text-[9px] shrink-0">✨</span>
-                  <span className="mx-1 flex-1 truncate text-left">{ability.name}</span>
-                  <span className="shrink-0 text-[9px] text-cyan-200">{ability.type === "Ability" ? "特性" : ability.type}</span>
-                </div>
-                {disabledReason && (
-                  <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
-                    ⚠ {disabledReason}
+              <div key={`ability-${i}`} className="relative">
+                <button
+                  onClick={() => isUsable && onUseAbility?.(card.instanceId, ability.name)}
+                  disabled={!isUsable}
+                  onMouseEnter={() => setHoveredAbility(ability.name)}
+                  onMouseLeave={() => setHoveredAbility(null)}
+                  className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
+                    isUsable
+                      ? "cursor-pointer bg-cyan-600 hover:bg-cyan-500"
+                      : "cursor-not-allowed bg-zinc-600 opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-cyan-200 text-[9px] shrink-0">✨</span>
+                    <span className="mx-1 flex-1 truncate text-left">{ability.name}</span>
+                    <span className="shrink-0 text-[9px] text-cyan-200">{ability.type === "Ability" ? "特性" : ability.type}</span>
+                  </div>
+                  {disabledReason && (
+                    <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
+                      ⚠ {disabledReason}
+                    </div>
+                  )}
+                </button>
+                {/* Floating tooltip */}
+                {isHovered && (
+                  <div className="absolute right-full top-0 mr-2 z-50 w-52 rounded-lg bg-zinc-800 border border-cyan-700/50 p-3 shadow-2xl pointer-events-none animate-in fade-in duration-150">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-cyan-300 text-[10px] font-bold">✨ 特性</span>
+                      <span className="text-white text-xs font-bold">{ability.name}</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">{ability.text || "（无说明）"}</p>
+                    {disabledReason && (
+                      <div className="mt-2 rounded bg-red-900/40 px-2 py-1 text-[10px] text-red-400">
+                        ⚠ {disabledReason}
+                      </div>
+                    )}
                   </div>
                 )}
-              </button>
+              </div>
             );
           })}
 
@@ -244,51 +266,83 @@ export function ActiveSpot({
           {card.card.attacks?.map((attack, i) => {
             const disabledReason = getAttackDisabledReason(gameState, playerIndex, card, attack.name);
             const isUsable = !disabledReason;
+            const isHovered = hoveredAttack === attack.name;
 
             return (
-              <button
-                key={i}
-                onClick={() => isUsable && onAttack?.(attack.name)}
-                disabled={!isUsable}
-                className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
-                  isUsable
-                    ? "cursor-pointer bg-red-600 hover:bg-red-500"
-                    : "cursor-not-allowed bg-zinc-600 opacity-60"
-                }`}
-                title={disabledReason || `${attack.name}: ${attack.damage || "0"} 伤害 | 花费: ${attack.cost?.join(", ") || "免费"}`}
-              >
-                <div className="flex items-center justify-between gap-1">
-                  {/* Energy cost dots */}
-                  <div className="flex shrink-0 items-center gap-0.5">
-                    {attack.cost && attack.cost.length > 0 ? (
-                      attack.cost.map((type, j) => (
-                        <div
-                          key={j}
-                          className={`h-3 w-3 rounded-full ${COST_DOT_COLORS[type] || "bg-zinc-400"}`}
-                        />
-                      ))
-                    ) : (
-                      <span className="text-[9px] text-zinc-300">免费</span>
+              <div key={i} className="relative">
+                <button
+                  onClick={() => isUsable && onAttack?.(attack.name)}
+                  disabled={!isUsable}
+                  onMouseEnter={() => setHoveredAttack(attack.name)}
+                  onMouseLeave={() => setHoveredAttack(null)}
+                  className={`w-full rounded px-2 py-1.5 text-xs font-bold text-white transition-colors ${
+                    isUsable
+                      ? "cursor-pointer bg-red-600 hover:bg-red-500"
+                      : "cursor-not-allowed bg-zinc-600 opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    {/* Energy cost dots */}
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {attack.cost && attack.cost.length > 0 ? (
+                        attack.cost.map((type, j) => (
+                          <div
+                            key={j}
+                            className={`h-3 w-3 rounded-full ${COST_DOT_COLORS[type] || "bg-zinc-400"}`}
+                          />
+                        ))
+                      ) : (
+                        <span className="text-[9px] text-zinc-300">免费</span>
+                      )}
+                    </div>
+                    {/* Attack name and damage */}
+                    <span className="mx-1 flex-1 truncate text-left">{attack.name}</span>
+                    {/* Effect source indicator */}
+                    {(() => {
+                      const src = getEffectSource(card.cardId, card.card.name);
+                      const dotColor = !src ? "bg-red-500" : (src === "L1" || src === "L2") ? "bg-green-500" : "bg-yellow-400";
+                      const dotTip = !src ? "未实现" : (src === "L1" || src === "L2") ? "手写效果" : "自动解析";
+                      return <span className={`ml-0.5 inline-flex h-[6px] w-[6px] shrink-0 rounded-full ${dotColor}`} title={dotTip} />;
+                    })()}
+                    <span className="shrink-0 text-yellow-300">{attack.damage || "0"}</span>
+                  </div>
+                  {/* Disabled reason badge */}
+                  {disabledReason && (
+                    <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
+                      ⚠ {disabledReason}
+                    </div>
+                  )}
+                </button>
+                {/* Floating tooltip */}
+                {isHovered && (
+                  <div className="absolute right-full top-0 mr-2 z-50 w-56 rounded-lg bg-zinc-800 border border-zinc-600 p-3 shadow-2xl pointer-events-none animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-white text-xs font-bold">{attack.name}</span>
+                      <span className="text-yellow-300 text-xs font-bold">{attack.damage || "0"} 伤害</span>
+                    </div>
+                    {/* Cost */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="text-[10px] text-zinc-400">费用：</span>
+                      {attack.cost && attack.cost.length > 0 ? (
+                        attack.cost.map((type, j) => (
+                          <div key={j} className={`h-3.5 w-3.5 rounded-full ${COST_DOT_COLORS[type] || "bg-zinc-400"}`} title={type} />
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-green-400">免费</span>
+                      )}
+                    </div>
+                    {/* Attack text */}
+                    {attack.text && (
+                      <p className="text-[11px] text-zinc-300 leading-relaxed border-t border-zinc-700 pt-2 mt-1">{attack.text}</p>
+                    )}
+                    {disabledReason && (
+                      <div className="mt-2 rounded bg-red-900/40 px-2 py-1 text-[10px] text-red-400">
+                        ⚠ {disabledReason}
+                      </div>
                     )}
                   </div>
-                  {/* Attack name and damage */}
-                  <span className="mx-1 flex-1 truncate text-left">{attack.name}</span>
-                  {/* Effect source indicator */}
-                  {(() => {
-                    const src = getEffectSource(card.cardId, card.card.name);
-                    const dotColor = !src ? "bg-red-500" : (src === "L1" || src === "L2") ? "bg-green-500" : "bg-yellow-400";
-                    const dotTip = !src ? "未实现" : (src === "L1" || src === "L2") ? "手写效果" : "自动解析";
-                    return <span className={`ml-0.5 inline-flex h-[6px] w-[6px] shrink-0 rounded-full ${dotColor}`} title={dotTip} />;
-                  })()}
-                  <span className="shrink-0 text-yellow-300">{attack.damage || "0"}</span>
-                </div>
-                {/* Disabled reason badge */}
-                {disabledReason && (
-                  <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
-                    ⚠ {disabledReason}
-                  </div>
                 )}
-              </button>
+              </div>
             );
           })}
 
@@ -297,9 +351,25 @@ export function ActiveSpot({
             const effect = getEffect(card.cardId, card.card.name);
             const abilityEffect = effect?.abilities?.find(a => a.name === ability.name);
             if (!abilityEffect || abilityEffect.type !== "passive") return null;
+            const isHovered = hoveredAbility === `passive-${ability.name}`;
             return (
-              <div key={`passive-${i}`} className="rounded bg-cyan-900/40 px-2 py-0.5 text-[9px] text-cyan-300 border border-cyan-800/50 truncate" title={ability.text}>
-                🛡 {ability.name} <span className="text-cyan-500">(被动)</span>
+              <div key={`passive-${i}`} className="relative">
+                <div
+                  className="rounded bg-cyan-900/40 px-2 py-0.5 text-[9px] text-cyan-300 border border-cyan-800/50 cursor-help"
+                  onMouseEnter={() => setHoveredAbility(`passive-${ability.name}`)}
+                  onMouseLeave={() => setHoveredAbility(null)}
+                >
+                  🛡 {ability.name} <span className="text-cyan-500">(被动)</span>
+                </div>
+                {isHovered && ability.text && (
+                  <div className="absolute right-full top-0 mr-2 z-50 w-52 rounded-lg bg-zinc-800 border border-cyan-700/50 p-3 shadow-2xl pointer-events-none animate-in fade-in duration-150">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="text-cyan-300 text-[10px] font-bold">🛡 被动</span>
+                      <span className="text-white text-xs font-bold">{ability.name}</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-300 leading-relaxed">{ability.text}</p>
+                  </div>
+                )}
               </div>
             );
           })}

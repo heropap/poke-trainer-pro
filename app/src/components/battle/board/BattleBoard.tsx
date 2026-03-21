@@ -820,7 +820,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         }}
       >
         {/* ─── ROW 1: OPPONENT ZONE ─── */}
-        <div className={`grid w-full grid-cols-[120px_1fr_120px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-900/50 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"}`}>
+        <div className={`grid w-full grid-cols-[80px_1fr_80px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-900/50 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"}`}>
           {/* Top Left: Discard/Deck/Lost (Opponent Right) */}
           <div className="flex flex-col items-center justify-start gap-4 pt-12">
              <DiscardPile cards={opponent.discard.cards} label="弃牌堆" onClick={() => opponent.discard.cards.length > 0 && setBrowsingZone({ title: `${opponent.name} 弃牌堆`, cards: opponent.discard.cards })} />
@@ -875,7 +875,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         {/* ─── ROW 2: MIDDLE ZONE ─── */}
         <div className="relative flex w-full items-center justify-between border-y border-zinc-800 bg-zinc-950/80 px-4 py-2 shadow-inner z-30">
            {/* Left: Stadium */}
-           <div className="w-[120px] flex justify-center">
+           <div className="w-[80px] flex justify-center">
              <StadiumSpot
                card={gameState.stadium ? gameState.stadium.card : null}
                onClick={() => gameState.stadium && setViewingCard(gameState.stadium.card)}
@@ -977,7 +977,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         {/* ─── ROW 3: PLAYER ZONE ─── */}
         <div
           ref={playerField.setNodeRef}
-          className={`grid w-full grid-cols-[120px_1fr_120px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-800/20 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "ring-2 ring-blue-500/30" : ""}`}
+          className={`grid w-full grid-cols-[80px_1fr_80px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-800/20 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "ring-2 ring-blue-500/30" : ""}`}
         >
           {/* Left: Prizes (Player Left) */}
           <div className="flex flex-col items-center justify-center pb-8">
