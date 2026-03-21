@@ -13,7 +13,7 @@
 
 import { GameState, GameCard, logEvent } from "../game-state";
 import { flipCoin } from "./coin";
-import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
+import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition, getEffectiveHp } from "../game-actions";
 import { TURN_BASED_MARKERS, DAMAGE_BOOST } from "./markers";
 import { getEffect } from "./effect-registry";
 
@@ -71,7 +71,7 @@ export function processBetweenTurns(
     );
 
     // Check KO from poison
-    const hp = parseInt(active.card.hp || "0", 10);
+    const hp = getEffectiveHp(active);
     if (hp > 0 && active.damageCounters * 10 >= hp) {
       const opponentIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;
       const prizeCount = getPrizeCount(active);
@@ -105,7 +105,7 @@ export function processBetweenTurns(
     }
 
     // Check KO from burn
-    const hp = parseInt(active.card.hp || "0", 10);
+    const hp = getEffectiveHp(active);
     if (hp > 0 && active.damageCounters * 10 >= hp) {
       const opponentIndex = (playerIndex === 0 ? 1 : 0) as 0 | 1;
       const prizeCount = getPrizeCount(active);
@@ -160,19 +160,33 @@ export function processBetweenTurns(
         }
       }
     }
-    // Also check attached tools for between-turns healing
+    // Also check attached tools for between-turns healing (e.g., Leftovers)
     for (const tool of active.attachedTools) {
       const toolEffect = getEffect(tool.cardId, tool.card.name);
-      if (toolEffect?.tool) {
-        const toolAny = toolEffect.tool as any;
-        if (toolAny.whileAttached?.healBetweenTurns && active.damageCounters > 0) {
-          const healAmount = toolAny.whileAttached.healBetweenTurns;
-          const countersToHeal = Math.min(healAmount / 10, active.damageCounters);
-          if (countersToHeal > 0) {
-            active.damageCounters -= countersToHeal;
-            logEvent(state, playerIndex, "ability" as any,
-              `${tool.card.name} 为 ${active.card.name} 回复了 ${countersToHeal * 10} 点HP`);
-          }
+      const healAmount = toolEffect?.tool?.whileAttached?.healBetweenTurns;
+      if (healAmount && active.damageCounters > 0) {
+        const countersToHeal = Math.min(healAmount / 10, active.damageCounters);
+        if (countersToHeal > 0) {
+          active.damageCounters -= countersToHeal;
+          logEvent(state, playerIndex, "ability" as any,
+            `${tool.card.name} 为 ${active.card.name} 回复了 ${countersToHeal * 10} 点HP`);
+        }
+      }
+    }
+  }
+
+  // ─── Tool between-turns healing on bench Pokémon ───
+  for (const benchCard of player.bench.cards) {
+    if (benchCard.damageCounters <= 0 || benchCard.attachedTools.length === 0) continue;
+    for (const tool of benchCard.attachedTools) {
+      const toolEffect = getEffect(tool.cardId, tool.card.name);
+      const healAmount = toolEffect?.tool?.whileAttached?.healBetweenTurns;
+      if (healAmount && benchCard.damageCounters > 0) {
+        const countersToHeal = Math.min(healAmount / 10, benchCard.damageCounters);
+        if (countersToHeal > 0) {
+          benchCard.damageCounters -= countersToHeal;
+          logEvent(state, playerIndex, "ability" as any,
+            `${tool.card.name} 为 ${benchCard.card.name} 回复了 ${countersToHeal * 10} 点HP`);
         }
       }
     }

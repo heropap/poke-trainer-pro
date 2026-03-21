@@ -10,7 +10,7 @@
 import { GameState, GameCard, Player, StatusCondition, logEvent } from "../game-state";
 import { removeCard, addToBottom, addToTop, shuffleZone, findCard, drawMultiple } from "../zones";
 import { flipCoin as coinFlip, flipCoins as coinFlips } from "./coin";
-import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
+import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition, getEffectiveHp } from "../game-actions";
 import { EffectContext } from "./effect-types";
 import { isStatusImmune, isEnergyRemovalBlocked } from "./modifier-query";
 
@@ -1032,7 +1032,7 @@ export function createEffectContext(
       );
 
       // Check KO from placed damage counters
-      const hp = parseInt(target.card.hp || "0", 10);
+      const hp = getEffectiveHp(target);
       if (hp > 0 && target.damageCounters * 10 >= hp) {
         // Find which player owns the target
         for (let pi = 0; pi < 2; pi++) {
@@ -1136,7 +1136,7 @@ export function createEffectContext(
       }
 
       // Check if devolve caused KO (damage exceeds new HP)
-      const newHp = parseInt(target.card.hp || "0", 10);
+      const newHp = getEffectiveHp(target);
       if (newHp > 0 && target.damageCounters * 10 >= newHp) {
         for (let pi = 0; pi < 2; pi++) {
           const p = state.players[pi as 0 | 1];

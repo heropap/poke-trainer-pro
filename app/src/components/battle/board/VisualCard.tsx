@@ -152,7 +152,14 @@ export function VisualCard({
   const width = 150 * scale;
   const height = 210 * scale;
 
-  const hp = card.card.hp ? parseInt(card.card.hp, 10) : 0;
+  // Tool HP bonuses (Bravery Charm +50, Hero's Cape +100)
+  const toolHpBonus = card.attachedTools.reduce((sum, tool) => {
+    const name = tool.card.name;
+    if (name === "Bravery Charm") return sum + 50;
+    if (name === "Hero's Cape") return sum + 100;
+    return sum;
+  }, 0);
+  const hp = card.card.hp ? parseInt(card.card.hp, 10) + toolHpBonus : 0;
   const currentHp = hp > 0 ? hp - card.damageCounters * 10 : 0;
   const hpPercentage = hp > 0 ? (currentHp / hp) * 100 : 0;
 

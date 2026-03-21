@@ -394,6 +394,16 @@ export interface ToolEffect {
     modifyRetreatCost?: (ctx: EffectContext, currentCost: number) => number;
     /** Modify incoming damage */
     modifyIncomingDamage?: (ctx: EffectContext, damage: number) => number;
+    /**
+     * Flat HP bonus while this tool is attached (e.g., Bravery Charm +50, Hero's Cape +100).
+     * Added to the Pokemon's printed HP for KO and heal-cap calculations.
+     */
+    modifyHp?: number;
+    /**
+     * Heal this many HP at the end of each turn (between-turns healing).
+     * e.g., Leftovers heals 20 HP per turn.
+     */
+    healBetweenTurns?: number;
   };
 }
 

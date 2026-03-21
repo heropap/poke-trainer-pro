@@ -66,7 +66,9 @@ export function SelectPokemonModal({ prompt, gameState, myIndex, onConfirm }: Se
         <div className="mt-4 grid grid-cols-2 gap-2">
           {filtered.map((pokemon) => {
             const isSelected = selected.has(pokemon.instanceId);
-            const hp = pokemon.card.hp ? parseInt(pokemon.card.hp) : 0;
+            const toolBonus = pokemon.attachedTools.reduce((s, t) =>
+              s + (t.card.name === "Bravery Charm" ? 50 : t.card.name === "Hero's Cape" ? 100 : 0), 0);
+            const hp = (pokemon.card.hp ? parseInt(pokemon.card.hp) : 0) + toolBonus;
             const currentHp = hp - pokemon.damageCounters * 10;
             return (
               <button

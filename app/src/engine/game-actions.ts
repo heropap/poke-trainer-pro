@@ -30,6 +30,22 @@ export interface PlayCardResult {
 }
 
 /**
+ * Get the effective max HP for a Pokémon, including bonuses from attached tools.
+ * Tools like Bravery Charm (+50) and Hero's Cape (+100) increase effective HP.
+ * This value is used for KO checks and heal-cap calculations.
+ */
+export function getEffectiveHp(card: GameCard): number {
+  const base = parseInt(card.card.hp || "0", 10);
+  let bonus = 0;
+  for (const tool of card.attachedTools) {
+    const toolEffect = getEffect(tool.cardId, tool.card.name);
+    const hpMod = toolEffect?.tool?.whileAttached?.modifyHp;
+    if (typeof hpMod === "number") bonus += hpMod;
+  }
+  return base + bonus;
+}
+
+/**
  * Validates if a card can be played to the active spot
  */
 export function canPlayActive(
@@ -506,7 +522,7 @@ export function checkKnockout(
 
   if (!card) return false;
 
-  const hp = parseInt(card.card.hp || "0", 10);
+  const hp = getEffectiveHp(card);
   if (hp > 0 && card.damageCounters * 10 >= hp) {
     // KO!
     logEvent(state, playerIndex, "knockout", `${card.card.name} 被击倒了!`);
@@ -730,7 +746,7 @@ export function performAttack(
       attacker.active!.damageCounters += 3;
 
       // Check self-KO from confusion damage
-      const selfHp = parseInt(attacker.active!.card.hp || "0", 10);
+      const selfHp = getEffectiveHp(attacker.active!);
       if (selfHp > 0 && attacker.active!.damageCounters * 10 >= selfHp) {
         const selfPrize = getPrizeCount(attacker.active!);
         if (checkKnockout(state, playerIndex, "active")) {
@@ -923,7 +939,7 @@ export function performAttack(
   if (effectResult?.benchDamage) {
     for (let i = defender.bench.cards.length - 1; i >= 0; i--) {
       const benchCard = defender.bench.cards[i];
-      const hp = parseInt(benchCard.card.hp || "0", 10);
+      const hp = getEffectiveHp(benchCard);
       if (hp > 0 && benchCard.damageCounters * 10 >= hp) {
         const benchPrize = getPrizeCount(benchCard);
         if (checkKnockout(state, defenderIndex, "bench", i)) {
@@ -938,7 +954,7 @@ export function performAttack(
 
   // Check KO on self (from self damage)
   if (effectResult?.selfDamage && attacker.active) {
-    const selfHp = parseInt(attacker.active.card.hp || "0", 10);
+    const selfHp = getEffectiveHp(attacker.active);
     if (selfHp > 0 && attacker.active.damageCounters * 10 >= selfHp) {
       const selfPrize = getPrizeCount(attacker.active);
       if (checkKnockout(state, playerIndex, "active")) {

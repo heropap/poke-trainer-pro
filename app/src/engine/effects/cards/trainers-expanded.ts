@@ -516,17 +516,14 @@ const forestSealStone: NamedEffect = {
   },
 };
 
-/** Bravery Charm — Tool: +50 HP to Basic Pokemon (modeled as damage reduction) */
+/** Bravery Charm — Tool: +50 HP to Basic Pokemon */
 const braveryCharm: NamedEffect = {
   cardId: "name:Bravery Charm",
   cardName: "Bravery Charm",
   tool: {
     whileAttached: {
-      modifyIncomingDamage: (ctx, damage) => {
-        // +50 HP equivalent: not accurately modelable without HP modifier system.
-        // Placeholder: no mechanical effect currently.
-        return damage;
-      },
+      /** +50 HP: raises the effective HP used for KO checks */
+      modifyHp: 50,
     },
   },
 };
@@ -537,23 +534,20 @@ const leftovers: NamedEffect = {
   cardName: "Leftovers",
   tool: {
     whileAttached: {
-      // between-turns healing is handled by status-effects.ts checking toolAny.whileAttached.healBetweenTurns
+      /** Heal 20 HP at the end of each turn via status-effects.ts */
       healBetweenTurns: 20,
-    } as any,
+    },
   },
 };
 
-/** Hero's Cape — Tool: +100 HP (modeled as damage reduction placeholder) */
+/** Hero's Cape — Tool: +100 HP */
 const herosCape: NamedEffect = {
   cardId: "name:Hero's Cape",
   cardName: "Hero's Cape",
   tool: {
     whileAttached: {
-      modifyIncomingDamage: (ctx, damage) => {
-        // +100 HP equivalent: not accurately modelable without HP modifier system.
-        // Placeholder: no mechanical effect currently.
-        return damage;
-      },
+      /** +100 HP: raises the effective HP used for KO checks */
+      modifyHp: 100,
     },
   },
 };
