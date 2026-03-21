@@ -7,14 +7,14 @@
  * - Playing a new stadium discards the old one
  * - Can't play a stadium with the same name as the one in play
  * - Both players can use the stadium's effect
- * - One stadium per turn
+ * - One stadium use per turn per player (tracked by turnStatus.hasUsedStadium)
  *
  * Implemented stadiums:
- * - Beach Court: Basic Pokemon retreat cost -1
- * - Artazon: Search deck for non-Rule Box Basic Pokemon
- * - Iono's Palace: Discard opponent's hand and draw to match
- * - Academy at Night: Put a card from hand on top of deck
- * - Mesagoza: Discard hand and draw 5
+ * - Beach Court: Basic Pokemon retreat cost -1 (passive/continuous)
+ * - Artazon: Search deck for non-Rule Box Basic Pokemon (activated)
+ * - Iono's Palace: Opponent shuffles hand, draws equal to player's hand size (activated)
+ * - Academy at Night: Put a card from hand on top of deck (activated)
+ * - Mesagoza: Discard hand and draw 5 (activated)
  */
 
 import { CardEffectDef } from "../effect-types";
@@ -36,9 +36,6 @@ const beachCourt: CardEffectDef & { cardName: string } = {
     /**
      * Stadium modifier: Basic Pokemon retreat cost -1.
      * Called by getEffectiveRetreatCost() when a stadium is in play.
-     * @param ctx - Effect context
-     * @param currentCost - Current retreat cost
-     * @param card - The Pokemon retreating
      */
     modifyRetreatCost: (_ctx: any, currentCost: number, card: any) => {
       if (card?.card?.subtypes?.includes("Basic")) {
@@ -61,10 +58,50 @@ const artazon: CardEffectDef & { cardName: string } = {
   cardName: "Artazon",
   trainer: {
     onPlay: () => {
-      // Artazon is a persistent effect — activation is voluntary each turn.
-      // The onPlay does nothing; the effect is used via use_ability on the stadium.
+      // Persistent effect — activation is voluntary each turn via use_stadium action
     },
   },
+  abilities: [
+    {
+      name: "Artazon",
+      type: "activated" as const,
+      canActivate: (ctx) => {
+        // Must have bench space and Basic non-Rule Box Pokemon in deck
+        const benchSpace = 5 - ctx.player.bench.cards.length;
+        if (benchSpace <= 0) return false;
+        return ctx.player.deck.cards.some(
+          (c) =>
+            c.card.supertype === "Pokémon" &&
+            c.card.subtypes.includes("Basic") &&
+            !c.card.subtypes.some((s: string) =>
+              s.includes("ex") || s.includes("V") || s.includes("VSTAR") || s.includes("VMAX")
+            )
+        );
+      },
+      onActivate: async (ctx) => {
+        const found = await ctx.promptSearchDeck!(
+          (c) =>
+            c.card.supertype === "Pokémon" &&
+            c.card.subtypes.includes("Basic") &&
+            !c.card.subtypes.some((s: string) =>
+              s.includes("ex") || s.includes("V") || s.includes("VSTAR") || s.includes("VMAX")
+            ),
+          1,
+          "Artazon: 从牌组选择一只没有规则框的基础宝可梦放到备战区",
+          "player",
+          0 // min 0 — can cancel
+        );
+        for (const pokemon of found) {
+          pokemon.playedThisTurn = true;
+          ctx.player.bench.cards.push(pokemon);
+        }
+        ctx.shuffleDeck("player");
+        if (found.length > 0) {
+          ctx.log(`Artazon: 从牌组搜索了 ${found[0].card.name} 放到备战区`);
+        }
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────
@@ -73,16 +110,38 @@ const artazon: CardEffectDef & { cardName: string } = {
 // Once during each player's turn, that player may reveal their hand.
 // If they do, their opponent shuffles their hand into their deck and
 // draws a number of cards equal to the number of cards the player revealed.
-// (Simplified: shuffle opponent's hand, draw equal to player's hand size)
 
 const ionosPalace: CardEffectDef & { cardName: string } = {
   cardId: "name:Iono's Palace",
   cardName: "Iono's Palace",
   trainer: {
     onPlay: () => {
-      // Persistent effect — activation is voluntary each turn
+      // Persistent effect — activation is voluntary each turn via use_stadium action
     },
   },
+  abilities: [
+    {
+      name: "Iono's Palace",
+      type: "activated" as const,
+      canActivate: (ctx) => {
+        // Need cards in hand to reveal
+        return ctx.player.hand.cards.length > 0;
+      },
+      onActivate: (ctx) => {
+        // Reveal hand (implied), opponent shuffles hand into deck and draws equal to revealed count
+        const revealedCount = ctx.player.hand.cards.length;
+        // Shuffle opponent's hand into deck
+        while (ctx.opponent.hand.cards.length > 0) {
+          const card = ctx.opponent.hand.cards.pop()!;
+          ctx.opponent.deck.cards.push(card);
+        }
+        ctx.shuffleDeck("opponent");
+        // Opponent draws equal to player's revealed hand
+        ctx.drawCards(revealedCount, "opponent");
+        ctx.log(`Iono's Palace: 对手洗回手牌，抽了 ${revealedCount} 张`);
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────
@@ -96,9 +155,37 @@ const academyAtNight: CardEffectDef & { cardName: string } = {
   cardName: "Academy at Night",
   trainer: {
     onPlay: () => {
-      // Persistent effect — activation is voluntary each turn
+      // Persistent effect — activation is voluntary each turn via use_stadium action
     },
   },
+  abilities: [
+    {
+      name: "Academy at Night",
+      type: "activated" as const,
+      canActivate: (ctx) => ctx.player.hand.cards.length > 0,
+      onActivate: async (ctx) => {
+        // Put a card from hand on top of deck
+        const targets = ctx.player.hand.cards.map((c) => c.instanceId);
+        const selection = await ctx.promptUser({
+          message: "Academy at Night: 选择一张手牌放到牌组顶部",
+          min: 1,
+          max: 1,
+          zone: "hand",
+          targets,
+        });
+        if (selection && selection.length > 0) {
+          const card = ctx.player.hand.cards.find((c) => c.instanceId === selection[0]);
+          if (card) {
+            const idx = ctx.player.hand.cards.indexOf(card);
+            ctx.player.hand.cards.splice(idx, 1);
+            // Add to top of deck (unshift = top)
+            ctx.player.deck.cards.unshift(card);
+            ctx.log(`Academy at Night: 将 ${card.card.name} 放到了牌组顶部`);
+          }
+        }
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────
@@ -112,9 +199,22 @@ const mesagoza: CardEffectDef & { cardName: string } = {
   cardName: "Mesagoza",
   trainer: {
     onPlay: () => {
-      // Persistent effect — activation is voluntary each turn
+      // Persistent effect — activation is voluntary each turn via use_stadium action
     },
   },
+  abilities: [
+    {
+      name: "Mesagoza",
+      type: "activated" as const,
+      canActivate: () => true, // Always activatable (even with empty hand — discard 0, draw 5)
+      onActivate: (ctx) => {
+        const discarded = ctx.player.hand.cards.length;
+        ctx.discardHand("player");
+        ctx.drawCards(5, "player");
+        ctx.log(`Mesagoza: 弃掉 ${discarded} 张手牌，抽了 5 张`);
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────

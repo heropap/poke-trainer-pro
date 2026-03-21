@@ -141,6 +141,7 @@ function setupGame(opts: {
     hasPlayedStadium: false,
     hasRetreated: false,
     hasAttacked: false,
+    hasUsedStadium: false,
     p1VstarUsed: false,
     p2VstarUsed: false,
   };

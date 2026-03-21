@@ -51,6 +51,7 @@ export function adaptGameState(external: ExternalState): GameState {
       hasPlayedStadium: false,
       hasRetreated: false,
       hasAttacked: phase === GamePhase.ATTACK || phase === GamePhase.BETWEEN_TURNS,
+      hasUsedStadium: false,
       p1VstarUsed: false,
       p2VstarUsed: false,
     },

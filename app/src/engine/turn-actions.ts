@@ -877,6 +877,7 @@ export function endTurn(state: GameState): ActionResult {
     hasPlayedStadium: false,
     hasRetreated: false,
     hasAttacked: false,
+    hasUsedStadium: false,
     p1VstarUsed: state.turnStatus.p1VstarUsed,
     p2VstarUsed: state.turnStatus.p2VstarUsed,
   };

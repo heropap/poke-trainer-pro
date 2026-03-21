@@ -297,6 +297,7 @@ export function mapRyuuStateToUI(ryuuState: RyuuState, gameId?: string): GameSta
       hasPlayedStadium: ryuuState.players[activePlayerIndex]?.stadiumPlayedTurn >= ryuuState.turn,
       hasRetreated: ryuuState.players[activePlayerIndex]?.retreatedTurn >= ryuuState.turn,
       hasAttacked: phase === GamePhase.ATTACK || phase === GamePhase.BETWEEN_TURNS,
+      hasUsedStadium: false,
       p1VstarUsed: false,
       p2VstarUsed: false,
     },

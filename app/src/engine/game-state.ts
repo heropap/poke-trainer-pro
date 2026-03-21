@@ -114,7 +114,8 @@ export interface TurnState {
   hasPlayedStadium: boolean;
   hasRetreated: boolean;
   hasAttacked: boolean;
-  
+  hasUsedStadium: boolean;
+
   // VSTAR/GX tracking (Persists across turns)
   p1VstarUsed: boolean;
   p2VstarUsed: boolean;
@@ -363,6 +364,7 @@ export function createGameState(
       hasPlayedStadium: false,
       hasRetreated: false,
       hasAttacked: false,
+      hasUsedStadium: false,
       p1VstarUsed: false,
       p2VstarUsed: false,
     },

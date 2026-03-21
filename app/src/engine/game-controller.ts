@@ -64,6 +64,7 @@ export interface GameAction {
     | "promote"
     | "concede"
     | "use_ability"
+    | "use_stadium"
     | "manual_override"
     | "select_cards_response"
     | "prompt_response";
@@ -181,6 +182,9 @@ export function processAction(
         break;
       case "use_ability":
         result = await handleUseAbility(state, playerIndex, action);
+        break;
+      case "use_stadium":
+        result = await handleUseStadium(state, playerIndex, action);
         break;
       case "manual_override": {
         if (!action.overrideType) {
@@ -626,6 +630,61 @@ async function handleUseAbility(
   }
 
   sourceCard.abilityUsedThisTurn = true;
+
+  return { success: true, newState: { ...state } };
+}
+
+// ───────────────────────────────────────────────
+// Use Stadium: activate the stadium's per-turn effect
+// ───────────────────────────────────────────────
+
+async function handleUseStadium(
+  state: GameState,
+  playerIndex: 0 | 1,
+  action: GameAction
+): Promise<ActionResult> {
+  if (state.phase !== GamePhase.MAIN) {
+    return { success: false, error: "只能在主阶段使用球场效果", newState: { ...state } };
+  }
+
+  if (!state.stadium) {
+    return { success: false, error: "场上没有球场卡", newState: { ...state } };
+  }
+
+  if (state.turnStatus.hasUsedStadium) {
+    return { success: false, error: "本回合已使用过球场效果", newState: { ...state } };
+  }
+
+  const stadiumCard = state.stadium.card;
+  const stadiumEffect = getEffect(stadiumCard.cardId, stadiumCard.card.name);
+
+  if (!stadiumEffect?.abilities || stadiumEffect.abilities.length === 0) {
+    return { success: false, error: `${stadiumCard.card.name} 没有可使用的效果`, newState: { ...state } };
+  }
+
+  const abilityEffect = stadiumEffect.abilities.find(a => a.type === "activated");
+  if (!abilityEffect) {
+    return { success: false, error: `${stadiumCard.card.name} 没有可主动使用的效果`, newState: { ...state } };
+  }
+
+  const ctx = createEffectContext(state, playerIndex, stadiumCard);
+
+  // Check activation condition
+  if (abilityEffect.canActivate && !abilityEffect.canActivate(ctx)) {
+    return { success: false, error: `${stadiumCard.card.name} 当前无法使用`, newState: { ...state } };
+  }
+
+  // Execute the stadium ability
+  logEvent(state, playerIndex, "use_ability",
+    `${state.players[playerIndex].name} 使用了球场 ${stadiumCard.card.name} 的效果`,
+    { cardName: stadiumCard.card.name, abilityName: abilityEffect.name }
+  );
+
+  if (abilityEffect.onActivate) {
+    await abilityEffect.onActivate(ctx);
+  }
+
+  state.turnStatus.hasUsedStadium = true;
 
   return { success: true, newState: { ...state } };
 }
