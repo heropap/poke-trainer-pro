@@ -31,9 +31,22 @@ const beachCourt: CardEffectDef & { cardName: string } = {
   trainer: {
     onPlay: () => {
       // Beach Court has a continuous effect (retreat cost reduction)
-      // handled by the retreat logic checking the stadium
+      // The modifyRetreatCost below is queried by turn-actions.ts getEffectiveRetreatCost()
     },
-  },
+    /**
+     * Stadium modifier: Basic Pokemon retreat cost -1.
+     * Called by getEffectiveRetreatCost() when a stadium is in play.
+     * @param ctx - Effect context
+     * @param currentCost - Current retreat cost
+     * @param card - The Pokemon retreating
+     */
+    modifyRetreatCost: (_ctx: any, currentCost: number, card: any) => {
+      if (card?.card?.subtypes?.includes("Basic")) {
+        return currentCost - 1;
+      }
+      return currentCost;
+    },
+  } as any,
 };
 
 // ───────────────────────────────────────────────

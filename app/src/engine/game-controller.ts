@@ -45,7 +45,7 @@ import {
 import { getEffect } from "./effects/effect-registry";
 import { createEffectContext, pendingPrompts } from "./effects/effect-context";
 import { ABILITY_BLOCKED } from "./effects/markers";
-import { resolveAttack } from "./systems/attack-system"; // New pipeline
+// resolveAttack in attack-system.ts is a @deprecated alternative pipeline (kept for test coverage)
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 import { basePipeline, validateActionWithMiddleware } from "./rules/base-rules";
 import { ValidationResult } from "./interfaces/validation";
@@ -110,12 +110,15 @@ function validateAction(state: GameState, action: GameAction, playerIndex: 0 | 1
     return { valid: true };
   }
 
-  // 2. Base Pipeline
+  // 2. Middleware Pipeline (primary — covers all V2-aware rules)
   const middlewareResult = validateActionWithMiddleware(state, action, playerIndex);
-  if (middlewareResult && !middlewareResult.valid) {
-    return middlewareResult;
+  if (middlewareResult) {
+    // Middleware handled this action type — use its result
+    return middlewareResult.valid ? { valid: true } : middlewareResult;
   }
 
+  // 3. Fallback to basePipeline for action types not covered by middleware
+  // (e.g., promote, concede, manual_override, select_cards_response)
   return basePipeline(state, action, playerIndex);
 }
 

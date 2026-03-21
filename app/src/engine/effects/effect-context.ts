@@ -12,6 +12,7 @@ import { removeCard, addToBottom, addToTop, shuffleZone, findCard, drawMultiple 
 import { flipCoin as coinFlip, flipCoins as coinFlips } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
 import { EffectContext } from "./effect-types";
+import { isStatusImmune, isEnergyRemovalBlocked } from "./modifier-query";
 
 /**
  * Global store for pending prompt resolvers.
@@ -616,6 +617,22 @@ export function createEffectContext(
     // ─── Status Conditions ───
 
     applyStatus(target: GameCard, status: StatusCondition): void {
+      // V2: Check status immunity from passive abilities/tools
+      let targetPi: 0 | 1 = playerIndex;
+      for (let pi = 0; pi < 2; pi++) {
+        const p = state.players[pi as 0 | 1];
+        if (p.active?.instanceId === target.instanceId ||
+            p.bench.cards.some(c => c.instanceId === target.instanceId)) {
+          targetPi = pi as 0 | 1;
+          break;
+        }
+      }
+      if (isStatusImmune(state, target, targetPi)) {
+        logEvent(state, playerIndex, "ability" as any,
+          `${target.card.name} 的特性免疫了 ${statusToText(status)} 状态!`);
+        return;
+      }
+
       // Some statuses are mutually exclusive (asleep, confused, paralyzed)
       if (status === "asleep" || status === "confused" || status === "paralyzed") {
         // Remove any existing mutually exclusive status
@@ -993,6 +1010,247 @@ export function createEffectContext(
       );
 
       return true;
+    },
+
+    // ─── V2 Action Support Methods ───
+
+    placeDamageCounters(amount: number, target: GameCard): void {
+      if (amount <= 0) return;
+      const counters = Math.floor(amount / 10);
+      if (counters <= 0) return;
+      target.damageCounters += counters;
+
+      logEvent(state, playerIndex, "damage",
+        `${source.card.name} 的效果在 ${target.card.name} 上放置了 ${counters} 个伤害标记`,
+        { counters, targetName: target.card.name }
+      );
+
+      // Check KO from placed damage counters
+      const hp = parseInt(target.card.hp || "0", 10);
+      if (hp > 0 && target.damageCounters * 10 >= hp) {
+        // Find which player owns the target
+        for (let pi = 0; pi < 2; pi++) {
+          const p = state.players[pi as 0 | 1];
+          if (p.active?.instanceId === target.instanceId) {
+            const attackerIdx = (pi === 0 ? 1 : 0) as 0 | 1;
+            const prizeCount = getPrizeCount(target);
+            if (checkKnockout(state, pi as 0 | 1, "active")) {
+              takePrizes(state, attackerIdx, prizeCount);
+              checkWinCondition(state);
+            }
+            break;
+          }
+          const benchIdx = p.bench.cards.findIndex(c => c.instanceId === target.instanceId);
+          if (benchIdx !== -1) {
+            const attackerIdx = (pi === 0 ? 1 : 0) as 0 | 1;
+            const prizeCount = getPrizeCount(target);
+            if (checkKnockout(state, pi as 0 | 1, "bench", benchIdx)) {
+              takePrizes(state, attackerIdx, prizeCount);
+              checkWinCondition(state);
+            }
+            break;
+          }
+        }
+      }
+    },
+
+    moveDamageCounters(count: number, from: GameCard, to: GameCard): void {
+      const actual = Math.min(count, from.damageCounters);
+      if (actual <= 0) return;
+      from.damageCounters -= actual;
+      to.damageCounters += actual;
+
+      logEvent(state, playerIndex, "damage",
+        `将 ${actual} 个伤害标记从 ${from.card.name} 移到 ${to.card.name}`,
+        { counters: actual, fromName: from.card.name, toName: to.card.name }
+      );
+    },
+
+    moveToLostZone(card: GameCard, who: "player" | "opponent" = "player"): void {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      p.lostZone.cards.push(card);
+
+      logEvent(state, playerIndex, "use_trainer" as any,
+        `${card.card.name} 被放逐到放逐区`,
+        { cardName: card.card.name }
+      );
+    },
+
+    moveToLostZoneMultiple(cards: GameCard[], who: "player" | "opponent" = "player"): void {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      for (const card of cards) {
+        p.lostZone.cards.push(card);
+      }
+
+      if (cards.length > 0) {
+        logEvent(state, playerIndex, "use_trainer" as any,
+          `${cards.length} 张牌被放逐到放逐区`,
+          { count: cards.length }
+        );
+      }
+    },
+
+    devolve(target: GameCard, destination: "hand" | "discard" = "discard"): GameCard | null {
+      if (!target.evolutionStack || target.evolutionStack.length === 0) return null;
+
+      // The current top card is the evolution to remove
+      const removedCard: GameCard = {
+        instanceId: target.instanceId + "-devo",
+        cardId: target.cardId,
+        card: target.card,
+        damageCounters: 0,
+        attachedEnergy: [],
+        attachedTools: [],
+        statusConditions: [],
+        playedThisTurn: false,
+        evolvedThisTurn: false,
+        abilityUsedThisTurn: false,
+        markers: {},
+        evolutionStack: [],
+      };
+
+      // Restore previous stage
+      const prev = target.evolutionStack.pop()!;
+      target.cardId = prev.cardId;
+      target.card = prev.card;
+
+      // Find owner and send removed card to destination
+      for (let pi = 0; pi < 2; pi++) {
+        const p = state.players[pi as 0 | 1];
+        const owns = p.active?.instanceId === target.instanceId ||
+          p.bench.cards.some(c => c.instanceId === target.instanceId);
+        if (owns) {
+          if (destination === "hand") {
+            p.hand.cards.push(removedCard);
+          } else {
+            addToBottom(p.discard, removedCard);
+          }
+          break;
+        }
+      }
+
+      // Check if devolve caused KO (damage exceeds new HP)
+      const newHp = parseInt(target.card.hp || "0", 10);
+      if (newHp > 0 && target.damageCounters * 10 >= newHp) {
+        for (let pi = 0; pi < 2; pi++) {
+          const p = state.players[pi as 0 | 1];
+          if (p.active?.instanceId === target.instanceId) {
+            const attackerIdx = (pi === 0 ? 1 : 0) as 0 | 1;
+            const prizeCount = getPrizeCount(target);
+            if (checkKnockout(state, pi as 0 | 1, "active")) {
+              takePrizes(state, attackerIdx, prizeCount);
+              checkWinCondition(state);
+            }
+            break;
+          }
+        }
+      }
+
+      logEvent(state, playerIndex, "evolve_pokemon" as any,
+        `${removedCard.card.name} 被退化，恢复为 ${target.card.name}`,
+        { from: removedCard.card.name, to: target.card.name }
+      );
+
+      return removedCard;
+    },
+
+    spreadDamage(totalCounters: number, targets: GameCard[]): void {
+      if (totalCounters <= 0 || targets.length === 0) return;
+
+      // Non-interactive: distribute counters evenly, remainder to first targets
+      const perTarget = Math.floor(totalCounters / targets.length);
+      let remainder = totalCounters % targets.length;
+
+      for (const t of targets) {
+        const counters = perTarget + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder--;
+        if (counters > 0) {
+          t.damageCounters += counters;
+          logEvent(state, playerIndex, "damage",
+            `${source.card.name} 的效果在 ${t.card.name} 上放置了 ${counters} 个伤害标记`,
+            { counters, targetName: t.card.name }
+          );
+        }
+      }
+    },
+
+    discardEnergyFromPokemon(
+      count: number,
+      target: GameCard,
+      filter?: (card: GameCard) => boolean
+    ): GameCard[] {
+      // V2: Check if energy removal is blocked on this target
+      // Find target's owner player index
+      let targetPi: 0 | 1 = playerIndex;
+      for (let pi = 0; pi < 2; pi++) {
+        const p = state.players[pi as 0 | 1];
+        if (p.active?.instanceId === target.instanceId ||
+            p.bench.cards.some(c => c.instanceId === target.instanceId)) {
+          targetPi = pi as 0 | 1;
+          break;
+        }
+      }
+      // Only block if opponent is trying to remove energy (not self-discard for attack cost)
+      if (targetPi !== playerIndex && isEnergyRemovalBlocked(state, target, targetPi)) {
+        logEvent(state, playerIndex, "ability" as any,
+          `${target.card.name} 的特性阻止了能量被丢弃!`);
+        return [];
+      }
+
+      const discarded: GameCard[] = [];
+      let remaining = count;
+
+      for (let i = target.attachedEnergy.length - 1; i >= 0 && remaining > 0; i--) {
+        const energy = target.attachedEnergy[i];
+        if (!filter || filter(energy)) {
+          target.attachedEnergy.splice(i, 1);
+          // Find the owner of the target to put energy in their discard
+          for (let pi = 0; pi < 2; pi++) {
+            const p = state.players[pi as 0 | 1];
+            if (p.active?.instanceId === target.instanceId ||
+                p.bench.cards.some(c => c.instanceId === target.instanceId)) {
+              addToBottom(p.discard, energy);
+              break;
+            }
+          }
+          discarded.push(energy);
+          remaining--;
+        }
+      }
+
+      if (discarded.length > 0) {
+        logEvent(state, playerIndex, "use_trainer" as any,
+          `从 ${target.card.name} 上弃掉了 ${discarded.length} 张能量`,
+          { count: discarded.length, targetName: target.card.name }
+        );
+      }
+
+      return discarded;
+    },
+
+    searchLostZone(
+      filter: (card: GameCard) => boolean,
+      count: number,
+      who: "player" | "opponent" = "player"
+    ): GameCard[] {
+      const p = who === "player" ? state.players[playerIndex] : state.players[opponentIndex];
+      const found: GameCard[] = [];
+
+      for (let i = 0; i < p.lostZone.cards.length && found.length < count; i++) {
+        if (filter(p.lostZone.cards[i])) {
+          found.push(p.lostZone.cards[i]);
+        }
+      }
+
+      // Remove found cards from lost zone
+      for (const card of found) {
+        const idx = p.lostZone.cards.indexOf(card);
+        if (idx !== -1) {
+          p.lostZone.cards.splice(idx, 1);
+        }
+      }
+
+      return found;
     },
 
     // ─── User Prompt ───

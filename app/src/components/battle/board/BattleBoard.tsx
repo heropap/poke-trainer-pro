@@ -24,6 +24,7 @@ import {
   getEffectiveRetreatCost,
 } from "@/engine/turn-actions";
 import { hasEffect } from "@/engine/effects/effect-registry";
+import { queryActiveModifiers, type ActiveModifiers } from "@/engine/effects/modifier-query";
 import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
 import { CardDetailModal } from "./CardDetailModal";
@@ -39,6 +40,22 @@ import { ConfirmModal } from "./ConfirmModal";
 import { OrderCardsModal } from "./OrderCardsModal";
 import { SelectPokemonModal } from "./SelectPokemonModal";
 import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
+import { ZoneBrowserModal } from "./ZoneBrowserModal";
+
+// ────────────────────────────────────────────────
+// Phase Localization
+// ────────────────────────────────────────────────
+
+const PHASE_LABELS: Record<string, string> = {
+  SETUP: "设置阶段",
+  MULLIGAN: "调度阶段",
+  DRAW: "抽牌阶段",
+  MAIN: "主阶段",
+  ATTACK: "攻击阶段",
+  CHECKUP: "检查阶段",
+  BETWEEN_TURNS: "回合间",
+  GAME_OVER: "游戏结束",
+};
 
 // ────────────────────────────────────────────────
 // Types
@@ -82,16 +99,17 @@ function computePlayableCardIds(
   state: GameState,
   playerIndex: number,
   player: Player
-): Set<string> {
+): { playable: Set<string>; modifiers: ActiveModifiers } {
   const playable = new Set<string>();
+  const modifiers = queryActiveModifiers(state, playerIndex as 0 | 1);
 
   if (state.phase !== GamePhase.MAIN || state.currentPlayer !== playerIndex) {
-    return playable;
+    return { playable, modifiers };
   }
 
   // PTCG Rule: After attacking, turn is over — no more cards can be played
   if (state.turnStatus.hasAttacked) {
-    return playable;
+    return { playable, modifiers };
   }
 
   for (const card of player.hand.cards) {
@@ -106,31 +124,42 @@ function computePlayableCardIds(
       supertype === "Pokémon" &&
       (subtypes.includes("Stage 1") || subtypes.includes("Stage 2"))
     ) {
+      // V2: Check prevent_evolution modifier
+      if (modifiers.preventEvolution) continue;
       // Can play if there's a valid evolution target on field
       const targets = getEvolutionTargets(state, player, card);
       if (targets.length > 0) {
         playable.add(card.instanceId);
       }
     } else if (supertype === "Energy") {
-      // Can attach if not already attached this turn, and there's a Pokemon on field
-      if (!player.energyAttachedThisTurn && (player.active || player.bench.cards.length > 0)) {
+      // Can attach if there's a Pokemon on field
+      const hasPokemonOnField = player.active || player.bench.cards.length > 0;
+      if (!hasPokemonOnField) continue;
+      if (!player.energyAttachedThisTurn) {
+        playable.add(card.instanceId);
+      } else if (modifiers.extraEnergyAttach) {
+        // V2: Extra energy attachment allowed by ability
         playable.add(card.instanceId);
       }
     } else if (supertype === "Trainer") {
       if (subtypes.includes("Supporter")) {
+        // V2: Check prevent_supporter modifier
+        if (modifiers.preventSupporterUsage) continue;
         const res = canPlaySupporter(state, card.instanceId);
         if (res.success) playable.add(card.instanceId);
-      } else if (subtypes.includes("Item")) {
+      } else if (subtypes.includes("Pokémon Tool")) {
+        // Pokémon Tool — separate from Item because subtypes don't include "Item"
+        if (modifiers.preventItemUsage) continue;
         const res = canPlayItem(state, card.instanceId);
         if (res.success) {
-          // For Pokemon Tools, also need a target without a tool
-          if (subtypes.includes("Pokémon Tool")) {
-            const hasTarget = getToolTargets(player).length > 0;
-            if (hasTarget) playable.add(card.instanceId);
-          } else {
-            playable.add(card.instanceId);
-          }
+          const hasTarget = getToolTargets(player).length > 0;
+          if (hasTarget) playable.add(card.instanceId);
         }
+      } else if (subtypes.includes("Item")) {
+        // V2: Check prevent_item modifier
+        if (modifiers.preventItemUsage) continue;
+        const res = canPlayItem(state, card.instanceId);
+        if (res.success) playable.add(card.instanceId);
       } else if (subtypes.includes("Stadium")) {
         const res = canPlayStadium(state, card.instanceId);
         if (res.success) playable.add(card.instanceId);
@@ -138,7 +167,7 @@ function computePlayableCardIds(
     }
   }
 
-  return playable;
+  return { playable, modifiers };
 }
 
 /** Get all Pokemon on field that can be evolution targets for a given evolution card */
@@ -230,6 +259,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   // Card Detail Modal state
   const [viewingCard, setViewingCard] = React.useState<GameCard | null>(null);
 
+  // Zone Browser Modal state
+  const [browsingZone, setBrowsingZone] = React.useState<{ title: string; cards: GameCard[] } | null>(null);
+
   // Retreat bench selection state
   const [retreatSelecting, setRetreatSelecting] = React.useState(false);
 
@@ -293,8 +325,8 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
   });
   const sensors = useSensors(pointerSensor, touchSensor);
 
-  // Compute playable cards
-  const basePlayableCardIds = React.useMemo(
+  // Compute playable cards + V2 active modifiers
+  const { playable: basePlayableCardIds, modifiers: activeModifiers } = React.useMemo(
     () => computePlayableCardIds(gameState, myIndex, me),
     [gameState, myIndex, me]
   );
@@ -304,7 +336,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     if (!benchTargeting) return basePlayableCardIds;
     const ids = new Set<string>();
     for (const card of me.hand.cards) {
-      if (benchTargeting.action === "attach_energy" && card.card.supertype === "Energy" && !me.energyAttachedThisTurn) {
+      if (benchTargeting.action === "attach_energy" && card.card.supertype === "Energy" && (!me.energyAttachedThisTurn || activeModifiers.extraEnergyAttach)) {
         ids.add(card.instanceId);
       }
       if (benchTargeting.action === "equip_tool" && card.card.subtypes?.includes("Pokémon Tool")) {
@@ -559,8 +591,8 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
     switch (action) {
       case "attach_energy": {
-        // Check if player can attach energy and has energy in hand
-        if (me.energyAttachedThisTurn) {
+        // V2: Check energy attachment limit with modifier awareness
+        if (me.energyAttachedThisTurn && !activeModifiers.extraEnergyAttach) {
           showToast("本回合已附加过能量", "warning");
           setSelectedBenchId(null);
           return;
@@ -780,7 +812,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
     <AnimationProvider aiSpeed={aiSpeed}>
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
       <div
-        className="relative grid h-screen w-full grid-rows-[1fr_auto_1fr] overflow-hidden bg-zinc-900 text-zinc-100"
+        className="relative grid h-screen w-full grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] overflow-hidden bg-zinc-900 text-zinc-100"
         onClick={(e) => {
           if (targeting && e.target === e.currentTarget) {
             cancelSelection();
@@ -788,16 +820,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         }}
       >
         {/* ─── ROW 1: OPPONENT ZONE ─── */}
-        <div className={`grid w-full grid-cols-[120px_1fr_120px] gap-4 bg-zinc-900/50 ${isMobile ? "p-2" : "p-4"}`}>
+        <div className={`grid w-full grid-cols-[120px_1fr_120px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-900/50 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"}`}>
           {/* Top Left: Discard/Deck/Lost (Opponent Right) */}
           <div className="flex flex-col items-center justify-start gap-4 pt-12">
-             <DiscardPile cards={opponent.discard.cards} label="Discard" />
-             <DeckPile count={opponent.deck.cards.length} label="Deck" />
-             <LostZone count={opponent.lostZone.cards.length} />
+             <DiscardPile cards={opponent.discard.cards} label="弃牌堆" onClick={() => opponent.discard.cards.length > 0 && setBrowsingZone({ title: `${opponent.name} 弃牌堆`, cards: opponent.discard.cards })} />
+             <DeckPile count={opponent.deck.cards.length} label="牌组" />
+             <LostZone cards={opponent.lostZone.cards} onClick={() => setBrowsingZone({ title: `${opponent.name} 失落区`, cards: opponent.lostZone.cards })} />
           </div>
 
           {/* Top Center: Hand/Bench/Active */}
-          <div className="flex flex-col items-center justify-start relative">
+          <div className="flex flex-col items-center justify-start relative overflow-y-auto overflow-x-hidden min-h-0">
              {/* Opponent Info */}
              <div className="absolute top-0 left-0 z-10 flex items-center gap-2 rounded-full bg-zinc-800 px-4 py-1 text-xs shadow-md border border-zinc-700">
                 <div className="h-2 w-2 rounded-full bg-red-500" />
@@ -825,8 +857,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
              {/* Opponent Active */}
              <ActiveSpot
                card={opponent.active}
+               gameState={gameState}
+               playerIndex={opponentIndex as 0 | 1}
                isOpponent
-               isFirstTurn={false}
                onCardContextMenu={handleCardContextMenu}
                isAttacking={attackingPlayer === opponentIndex}
                compact={isMobile}
@@ -843,9 +876,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
         <div className="relative flex w-full items-center justify-between border-y border-zinc-800 bg-zinc-950/80 px-4 py-2 shadow-inner z-30">
            {/* Left: Stadium */}
            <div className="w-[120px] flex justify-center">
-             <StadiumSpot 
-               card={gameState.stadium ? gameState.stadium.card : null} 
+             <StadiumSpot
+               card={gameState.stadium ? gameState.stadium.card : null}
                onClick={() => gameState.stadium && setViewingCard(gameState.stadium.card)}
+               effectText={gameState.stadium?.card.card.rules?.[0]?.slice(0, 60)}
+               ownerIndex={gameState.stadium?.owner}
+               myIndex={myIndex}
              />
            </div>
 
@@ -880,11 +916,28 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
               ) : (
                  <div className="flex flex-col items-center">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                      Turn {gameState.turn} · {gameState.phase} Phase
+                      第 {gameState.turn} 回合 · {PHASE_LABELS[gameState.phase] || gameState.phase}
                     </div>
                     <div className={`text-lg font-black tracking-tight ${isMyTurn ? "text-blue-400 drop-shadow-sm" : "text-red-400"}`}>
-                      {isMyTurn ? "YOUR TURN" : `${opponent.name}'s TURN`}
+                      {isMyTurn ? "你的回合" : `${opponent.name} 的回合`}
                     </div>
+                    {/* V2 modifier warnings */}
+                    {isMyTurn && (activeModifiers.preventItemUsage || activeModifiers.preventSupporterUsage || activeModifiers.preventEvolution || activeModifiers.preventAttack) && (
+                      <div className="mt-1 flex flex-wrap justify-center gap-1">
+                        {activeModifiers.preventItemUsage && (
+                          <span className="rounded-full bg-red-600/80 px-2 py-0.5 text-[10px] font-bold text-white">道具被封锁</span>
+                        )}
+                        {activeModifiers.preventSupporterUsage && (
+                          <span className="rounded-full bg-red-600/80 px-2 py-0.5 text-[10px] font-bold text-white">支援者被封锁</span>
+                        )}
+                        {activeModifiers.preventEvolution && (
+                          <span className="rounded-full bg-orange-600/80 px-2 py-0.5 text-[10px] font-bold text-white">进化被封锁</span>
+                        )}
+                        {activeModifiers.preventAttack && (
+                          <span className="rounded-full bg-red-700/80 px-2 py-0.5 text-[10px] font-bold text-white">攻击被封锁</span>
+                        )}
+                      </div>
+                    )}
                  </div>
               )}
            </div>
@@ -916,15 +969,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                 onClick={() => dispatchAction({ type: "end_turn" })}
                 className="w-full rounded bg-red-600 py-1.5 text-xs font-bold text-white hover:bg-red-500 shadow-md transition-colors"
               >
-                End Turn
+                结束回合
               </button>
            </div>
         </div>
 
         {/* ─── ROW 3: PLAYER ZONE ─── */}
-        <div 
+        <div
           ref={playerField.setNodeRef}
-          className={`grid w-full grid-cols-[120px_1fr_120px] gap-4 bg-zinc-800/20 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "ring-2 ring-blue-500/30" : ""}`}
+          className={`grid w-full grid-cols-[120px_1fr_120px] grid-rows-[minmax(0,1fr)] gap-4 bg-zinc-800/20 overflow-hidden min-h-0 ${isMobile ? "p-2" : "p-4"} ${playerField.isOver ? "ring-2 ring-blue-500/30" : ""}`}
         >
           {/* Left: Prizes (Player Left) */}
           <div className="flex flex-col items-center justify-center pb-8">
@@ -932,16 +985,14 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           </div>
 
           {/* Center: Active/Bench/Hand */}
-          <div className="flex flex-col items-center justify-end relative">
+          <div className="flex flex-col items-center justify-end relative min-h-0 min-w-0 overflow-hidden h-full">
              {/* Player Active */}
-             <div className={isMobile ? "mb-2" : "mb-4"}>
+             <div className="shrink overflow-hidden min-h-0">
                <ActiveSpot
                  card={me.active}
                  gameState={gameState}
                  playerIndex={myIndex as 0 | 1}
-                 canAttack={isMyTurn && !targeting && !retreatSelecting}
-                 isFirstTurn={gameState.turn === 1 && gameState.isFirstTurn}
-                 hasAttackedThisTurn={gameState.turnStatus.hasAttacked}
+                 showActions={isMyTurn && !targeting && !retreatSelecting}
                  onAttack={(attackName) => {
                    setAttackingPlayer(myIndex);
                    setTimeout(() => setAttackingPlayer(null), 400);
@@ -957,12 +1008,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                  }}
                  onCardContextMenu={handleCardContextMenu}
                  isAttacking={attackingPlayer === myIndex}
-                 compact={isMobile}
+                 compact
                />
              </div>
 
              {/* Player Bench */}
-             <div className={`flex ${isMobile ? "mb-2 gap-1" : "mb-6 gap-4"}`}>
+             <div className={`flex shrink items-center justify-center ${isMobile ? "py-1 gap-1" : "py-1 gap-2"}`}>
                {Array.from({ length: 5 }).map((_, i) => {
                  const benchCard = me.bench.cards[i] || null;
                  const isTargetableForCard = benchCard
@@ -990,20 +1041,21 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                      isSelected={!!benchCard && selectedBenchId === benchCard.instanceId}
                      onBenchAction={(action) => benchCard && handleBenchAction(benchCard.instanceId, action)}
                      isMyTurn={isMyTurn}
-                     hasAttackedThisTurn={gameState.turnStatus.hasAttacked}
+                     gameState={gameState}
+                     playerIndex={myIndex as 0 | 1}
                      onUseAbility={(cardInstanceId, abilityName) => {
                        dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
                        setSelectedBenchId(null);
                      }}
                      onCardContextMenu={handleCardContextMenu}
-                     compact={isMobile}
+                     compact
                    />
                  );
                })}
              </div>
 
              {/* Player Hand */}
-             <div className="relative w-full">
+             <div className="relative w-full shrink min-h-0 overflow-hidden">
                <Hand
                  cards={me.hand.cards}
                  isMyTurn={isMyTurn}
@@ -1015,16 +1067,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                  onMenuAction={handleMenuAction}
                  onMenuCancel={cancelSelection}
                  onCardContextMenu={handleCardContextMenu}
-                 compact={isMobile}
+                 compact
                />
              </div>
           </div>
 
           {/* Right: Lost/Deck/Discard (Player Right) */}
           <div className="flex flex-col items-center justify-end gap-4 pb-4">
-             <LostZone count={me.lostZone.cards.length} />
-             <DeckPile count={me.deck.cards.length} label="Deck" />
-             <DiscardPile cards={me.discard.cards} label="Discard" onClick={() => {/* Future: show discard modal */}} />
+             <LostZone cards={me.lostZone.cards} onClick={() => setBrowsingZone({ title: "我的失落区", cards: me.lostZone.cards })} />
+             <DeckPile count={me.deck.cards.length} label="牌组" />
+             <DiscardPile cards={me.discard.cards} label="弃牌堆" onClick={() => me.discard.cards.length > 0 && setBrowsingZone({ title: "我的弃牌堆", cards: me.discard.cards })} />
           </div>
         </div>
 
@@ -1130,6 +1182,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
           />
         )}
 
+        {/* Waiting for opponent indicator */}
+        {gameState.prompt && gameState.prompt.playerIndex !== myIndex && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+            <div className="flex items-center gap-2 rounded-lg bg-zinc-800 px-6 py-3 text-sm text-zinc-300 shadow-lg border border-zinc-700">
+              <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-400" />
+              等待对手操作...
+            </div>
+          </div>
+        )}
+
         {/* Energy Selection Modal (Retreat) */}
         {retreatEnergyPending && me.active && (
           <EnergySelectionModal
@@ -1138,6 +1200,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             pokemonName={me.active.card.name}
             onConfirm={handleRetreatEnergyConfirm}
             onCancel={() => setRetreatEnergyPending(null)}
+          />
+        )}
+
+        {/* Zone Browser Modal */}
+        {browsingZone && (
+          <ZoneBrowserModal
+            title={browsingZone.title}
+            cards={browsingZone.cards}
+            onClose={() => setBrowsingZone(null)}
           />
         )}
 

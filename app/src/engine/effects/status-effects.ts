@@ -15,6 +15,7 @@ import { GameState, GameCard, logEvent } from "../game-state";
 import { flipCoin } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition } from "../game-actions";
 import { TURN_BASED_MARKERS } from "./markers";
+import { getEffect } from "./effect-registry";
 
 /**
  * Process between-turns status effects for one player.
@@ -138,6 +139,43 @@ export function processBetweenTurns(
       `${active.card.name} 的麻痹状态解除了`,
       { status: "paralyzed", cured: true }
     );
+  }
+
+  // ─── V2: heal_between_turns abilities ───
+  if (!koOccurred && active.damageCounters > 0) {
+    const effect = getEffect(active.cardId, active.card.name);
+    if (effect?.abilities) {
+      for (const ability of effect.abilities) {
+        if (ability.type === "passive") {
+          const abilityAny = ability as any;
+          if (abilityAny._modifierType === "heal_between_turns") {
+            const healAmount = abilityAny._modifierValue || 10;
+            const countersToHeal = Math.min(healAmount / 10, active.damageCounters);
+            if (countersToHeal > 0) {
+              active.damageCounters -= countersToHeal;
+              logEvent(state, playerIndex, "ability" as any,
+                `${active.card.name} 的特性 ${ability.name} 回复了 ${countersToHeal * 10} 点HP`);
+            }
+          }
+        }
+      }
+    }
+    // Also check attached tools for between-turns healing
+    for (const tool of active.attachedTools) {
+      const toolEffect = getEffect(tool.cardId, tool.card.name);
+      if (toolEffect?.tool) {
+        const toolAny = toolEffect.tool as any;
+        if (toolAny.whileAttached?.healBetweenTurns && active.damageCounters > 0) {
+          const healAmount = toolAny.whileAttached.healBetweenTurns;
+          const countersToHeal = Math.min(healAmount / 10, active.damageCounters);
+          if (countersToHeal > 0) {
+            active.damageCounters -= countersToHeal;
+            logEvent(state, playerIndex, "ability" as any,
+              `${tool.card.name} 为 ${active.card.name} 回复了 ${countersToHeal * 10} 点HP`);
+          }
+        }
+      }
+    }
   }
 
   // ─── Turn-based marker cleanup ───

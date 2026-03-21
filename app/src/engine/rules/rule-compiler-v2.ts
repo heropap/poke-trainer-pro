@@ -297,6 +297,52 @@ function compileModifierIntoAbility(mod: any, effect: AbilityEffect): void {
       const retreatMod = modType === "no_retreat_cost" ? -999 : value;
       effect.modifyRetreatCost = (_ctx, cost) => Math.max(0, cost + retreatMod);
       break;
+
+    // ─── V2 Modifier Types (tagged for modifier-query.ts) ───
+    case "prevent_item_usage":
+    case "prevent_supporter_usage":
+    case "prevent_ability":
+    case "prevent_evolution":
+    case "prevent_status":
+    case "prevent_energy_removal":
+    case "prevent_attack":
+    case "prevent_retreat":
+      (effect as any)._modifierType = modType;
+      (effect as any)._modifierValue = value;
+      (effect as any)._modifierTarget = mod.target?.owner || "opponent";
+      break;
+
+    case "extra_energy_attach":
+      (effect as any)._modifierType = "extra_energy_attach";
+      (effect as any)._modifierValue = value || 1;
+      break;
+
+    case "modify_hp":
+      (effect as any)._modifierType = "modify_hp";
+      (effect as any)._modifierValue = value;
+      break;
+
+    case "modify_attack_cost":
+      (effect as any)._modifierType = "modify_attack_cost";
+      (effect as any)._modifierValue = value;
+      break;
+
+    case "ignore_weakness":
+      (effect as any)._modifierType = "ignore_weakness";
+      break;
+
+    case "ignore_resistance":
+      (effect as any)._modifierType = "ignore_resistance";
+      break;
+
+    case "heal_between_turns":
+      (effect as any)._modifierType = "heal_between_turns";
+      (effect as any)._modifierValue = value;
+      break;
+
+    case "redirect_damage":
+      (effect as any)._modifierType = "redirect_damage";
+      break;
   }
 }
 

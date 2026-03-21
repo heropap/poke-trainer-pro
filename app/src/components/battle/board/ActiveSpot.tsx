@@ -4,10 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GameCard, GameState } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
-import { checkEnergyCost, canAttack } from "@/engine/game-actions";
 import { getEffectiveRetreatCost } from "@/engine/turn-actions";
-import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED } from "@/engine/effects/markers";
 import { getEffect, getEffectSource } from "@/engine/effects/effect-registry";
+import {
+  getAttackDisabledReason,
+  getRetreatDisabledReason,
+  getAbilityDisabledReason,
+} from "@/engine/action-availability";
 
 /** Map energy type to a dot color for cost display */
 const COST_DOT_COLORS: Record<string, string> = {
@@ -26,16 +29,15 @@ const COST_DOT_COLORS: Record<string, string> = {
 
 interface ActiveSpotProps {
   card: GameCard | null;
-  gameState?: GameState;
-  playerIndex?: 0 | 1;
+  gameState: GameState;
+  playerIndex: 0 | 1;
   isOpponent?: boolean;
   onClick?: () => void;
   onAttack?: (attackName: string) => void;
   onRetreat?: () => void;
   onUseAbility?: (cardInstanceId: string, abilityName: string) => void;
-  canAttack?: boolean;
-  isFirstTurn?: boolean;
-  hasAttackedThisTurn?: boolean;
+  /** UI-level control: hide action buttons during targeting/retreat selection */
+  showActions?: boolean;
   /** Whether this spot is a valid target in target selection mode */
   isTargetable?: boolean;
   /** Callback when clicked as a target */
@@ -47,66 +49,6 @@ interface ActiveSpotProps {
   isAttacking?: boolean;
 }
 
-/**
- * Determine why an ability is disabled and return a user-friendly reason.
- */
-function getAbilityDisabledReason(
-  card: GameCard,
-  abilityName: string,
-  hasAttackedThisTurn: boolean,
-): string | null {
-  if (hasAttackedThisTurn) return "攻击后不能使用特性";
-  if (card.abilityUsedThisTurn) return "本回合已使用特性";
-  if (card.markers[ABILITY_BLOCKED] > 0) return "特性被封锁";
-  // Check if there's an effect registered for this ability
-  const effect = getEffect(card.cardId, card.card.name);
-  const abilityEffect = effect?.abilities?.find(a => a.name === abilityName);
-  if (!abilityEffect) return "效果尚未实现";
-  if (abilityEffect.type !== "activated") return "不是主动特性";
-  return null;
-}
-
-/**
- * Determine why an attack is disabled and return a user-friendly reason.
- */
-function getAttackDisabledReason(
-  card: GameCard,
-  attackName: string,
-  isFirstTurn: boolean,
-  hasAttackedThisTurn: boolean,
-): string | null {
-  if (hasAttackedThisTurn) return "本回合已攻击";
-  if (isFirstTurn) return "先攻第一回合不能攻击";
-  if (card.statusConditions.includes("paralyzed")) return "麻痹状态不能攻击";
-  if (card.statusConditions.includes("asleep")) return "睡眠状态不能攻击";
-  if (card.markers[CANT_ATTACK_NEXT_TURN] > 0) return "被效果封锁，不能攻击";
-  if (card.markers[cantUseAttackMarker(attackName)] > 0) return `不能使用 ${attackName}`;
-  if (!checkEnergyCost(card.attachedEnergy, card.card.attacks?.find(a => a.name === attackName)?.cost || [])) {
-    return "能量不足";
-  }
-  return null;
-}
-
-/**
- * Determine retreat disabled reason.
- */
-function getRetreatDisabledReason(card: GameCard, hasBench: boolean, retreatedThisTurn: boolean, gameState?: GameState, playerIndex?: 0 | 1): string | null {
-  if (!hasBench) return "备战区没有宝可梦";
-  if (retreatedThisTurn) return "本回合已撤退";
-  if (card.statusConditions.includes("paralyzed")) return "麻痹状态不能撤退";
-  if (card.statusConditions.includes("asleep")) return "睡眠状态不能撤退";
-  if (card.markers[PREVENT_RETREAT_NEXT_TURN] > 0) return "被效果锁定，不能撤退";
-  // Check energy sufficiency with effective cost (after tool/ability/stadium modifiers)
-  const retreatCost =
-    gameState && playerIndex !== undefined
-      ? getEffectiveRetreatCost(gameState, playerIndex, card)
-      : card.card.convertedRetreatCost ?? 0;
-  if (retreatCost > 0 && card.attachedEnergy.length < retreatCost) {
-    return `能量不足 (需要 ${retreatCost}，当前 ${card.attachedEnergy.length})`;
-  }
-  return null;
-}
-
 export function ActiveSpot({
   card,
   gameState,
@@ -116,9 +58,7 @@ export function ActiveSpot({
   onAttack,
   onRetreat,
   onUseAbility,
-  canAttack: canAttackProp = false,
-  isFirstTurn = false,
-  hasAttackedThisTurn = false,
+  showActions = false,
   isTargetable = false,
   onTargetClick,
   onCardContextMenu,
@@ -145,15 +85,17 @@ export function ActiveSpot({
   // Evolution stack tooltip
   const [showEvoStack, setShowEvoStack] = React.useState(false);
 
-  // Retreat state
-  const retreatedThisTurn = gameState?.turnStatus?.hasRetreated ?? false;
-  const hasBench = gameState ? gameState.players[playerIndex ?? 0].bench.cards.length > 0 : false;
-  const retreatDisabledReason = card && !isOpponent ? getRetreatDisabledReason(card, hasBench, retreatedThisTurn, gameState, playerIndex) : null;
-  const canRetreatNow = !isOpponent && card && canAttackProp && !hasAttackedThisTurn && !retreatDisabledReason;
-  const retreatCost =
-    card && gameState && playerIndex !== undefined
-      ? getEffectiveRetreatCost(gameState, playerIndex, card)
-      : card?.card.convertedRetreatCost ?? 0;
+  // Derive turn state from gameState (V2 pattern — no V1 prop drilling)
+  const hasAttacked = gameState.turnStatus.hasAttacked;
+
+  // Retreat state — all derived from gameState via V2 queries
+  const retreatDisabledReason = card && !isOpponent
+    ? getRetreatDisabledReason(gameState, playerIndex, card)
+    : null;
+  const canRetreatNow = !isOpponent && card && showActions && !hasAttacked && !retreatDisabledReason;
+  const retreatCost = card
+    ? getEffectiveRetreatCost(gameState, playerIndex, card)
+    : 0;
 
   return (
     <div className={`flex ${compact ? "flex-col" : "flex-row"} items-center justify-center gap-2`}>
@@ -259,7 +201,7 @@ export function ActiveSpot({
       </div>
 
       {/* Action Buttons (Attack + Retreat) — right side on desktop, below on mobile */}
-      {!isOpponent && card && canAttackProp && (
+      {!isOpponent && card && showActions && (
         <div className={`flex ${compact ? attackBtnClass : "w-[160px]"} flex-col gap-1`}>
           {/* Ability Buttons */}
           {card.card.abilities?.map((ability, i) => {
@@ -269,7 +211,7 @@ export function ActiveSpot({
             // Show button for activated abilities, or if no effect registered yet (show as disabled)
             if (abilityEffect && abilityEffect.type !== "activated") return null;
 
-            const disabledReason = getAbilityDisabledReason(card, ability.name, hasAttackedThisTurn);
+            const disabledReason = getAbilityDisabledReason(gameState, playerIndex, card, ability.name);
             const isUsable = !disabledReason;
 
             return (
@@ -290,7 +232,7 @@ export function ActiveSpot({
                   <span className="shrink-0 text-[9px] text-cyan-200">{ability.type === "Ability" ? "特性" : ability.type}</span>
                 </div>
                 {disabledReason && (
-                  <div className="mt-0.5 text-[8px] font-normal text-zinc-400 truncate">
+                  <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
                     ⚠ {disabledReason}
                   </div>
                 )}
@@ -300,7 +242,7 @@ export function ActiveSpot({
 
           {/* Attack Buttons */}
           {card.card.attacks?.map((attack, i) => {
-            const disabledReason = getAttackDisabledReason(card, attack.name, isFirstTurn, hasAttackedThisTurn);
+            const disabledReason = getAttackDisabledReason(gameState, playerIndex, card, attack.name);
             const isUsable = !disabledReason;
 
             return (
@@ -313,7 +255,7 @@ export function ActiveSpot({
                     ? "cursor-pointer bg-red-600 hover:bg-red-500"
                     : "cursor-not-allowed bg-zinc-600 opacity-60"
                 }`}
-                title={disabledReason || `${attack.name}: ${attack.damage || "0"} damage | Cost: ${attack.cost?.join(", ") || "Free"}`}
+                title={disabledReason || `${attack.name}: ${attack.damage || "0"} 伤害 | 花费: ${attack.cost?.join(", ") || "免费"}`}
               >
                 <div className="flex items-center justify-between gap-1">
                   {/* Energy cost dots */}
@@ -326,7 +268,7 @@ export function ActiveSpot({
                         />
                       ))
                     ) : (
-                      <span className="text-[9px] text-zinc-300">Free</span>
+                      <span className="text-[9px] text-zinc-300">免费</span>
                     )}
                   </div>
                   {/* Attack name and damage */}
@@ -342,13 +284,50 @@ export function ActiveSpot({
                 </div>
                 {/* Disabled reason badge */}
                 {disabledReason && (
-                  <div className="mt-0.5 text-[8px] font-normal text-zinc-400 truncate">
+                  <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
                     ⚠ {disabledReason}
                   </div>
                 )}
               </button>
             );
           })}
+
+          {/* Passive Abilities Display */}
+          {card.card.abilities?.map((ability, i) => {
+            const effect = getEffect(card.cardId, card.card.name);
+            const abilityEffect = effect?.abilities?.find(a => a.name === ability.name);
+            if (!abilityEffect || abilityEffect.type !== "passive") return null;
+            return (
+              <div key={`passive-${i}`} className="rounded bg-cyan-900/40 px-2 py-0.5 text-[9px] text-cyan-300 border border-cyan-800/50 truncate" title={ability.text}>
+                🛡 {ability.name} <span className="text-cyan-500">(被动)</span>
+              </div>
+            );
+          })}
+
+          {/* Weakness / Resistance Info */}
+          {card.card.weaknesses && card.card.weaknesses.length > 0 && (
+            <div className="flex items-center gap-1 text-[9px] text-zinc-400">
+              <span className="text-red-400">弱:</span>
+              {card.card.weaknesses.map((w, i) => (
+                <span key={i} className="flex items-center gap-0.5">
+                  <span className={`inline-block h-2 w-2 rounded-full ${COST_DOT_COLORS[w.type] || "bg-zinc-400"}`} />
+                  <span className="text-red-300">{w.value}</span>
+                </span>
+              ))}
+              {card.card.resistances && card.card.resistances.length > 0 && (
+                <>
+                  <span className="mx-0.5 text-zinc-600">|</span>
+                  <span className="text-green-400">抗:</span>
+                  {card.card.resistances.map((r, i) => (
+                    <span key={i} className="flex items-center gap-0.5">
+                      <span className={`inline-block h-2 w-2 rounded-full ${COST_DOT_COLORS[r.type] || "bg-zinc-400"}`} />
+                      <span className="text-green-300">{r.value}</span>
+                    </span>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Retreat Button */}
           <button
@@ -369,19 +348,19 @@ export function ActiveSpot({
                     <div key={j} className="h-2.5 w-2.5 rounded-full bg-zinc-300 ring-1 ring-zinc-400" />
                   ))
                 ) : (
-                  <span className="text-[9px]">Free</span>
+                  <span className="text-[9px]">免费</span>
                 )}
               </span>
             </div>
             {retreatDisabledReason && (
-              <div className="mt-0.5 text-[8px] font-normal text-zinc-500 truncate">
+              <div className="mt-0.5 text-[10px] font-normal text-red-400 truncate">
                 ⚠ {retreatDisabledReason}
               </div>
             )}
           </button>
 
           {/* Already Attacked Indicator */}
-          {hasAttackedThisTurn && (
+          {hasAttacked && (
             <div className="rounded bg-zinc-700 px-2 py-1 text-center text-[10px] font-medium text-yellow-300">
               ⚔ 已攻击 — 等待回合结束
             </div>

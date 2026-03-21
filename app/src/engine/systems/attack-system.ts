@@ -1,6 +1,6 @@
 
 import { GameState, GameCard, logEvent } from "../game-state";
-import { checkKnockout, takePrizes, checkWinCondition } from "../game-actions";
+import { checkKnockout, takePrizes, checkWinCondition, getPrizeCount } from "../game-actions";
 import { getEffect } from "../effects/effect-registry";
 import { createEffectContext } from "../effects/effect-context";
 import { ABILITY_BLOCKED, PREVENT_ALL_DAMAGE_NEXT_TURN } from "../effects/markers";
@@ -64,9 +64,8 @@ export function resolveAttack(
   // 3. Post-Attack Checks (Event Trigger)
   // Check KO
   if (checkKnockout(state, defenderIndex, "active")) {
-    // Take Prizes
-    // TODO: Determine prize count based on rule box (ex = 2, V = 2, etc.)
-    const prizesToTake = 1;
+    // Take Prizes based on rule box (ex = 2, V = 2, VMAX = 3, etc.)
+    const prizesToTake = getPrizeCount(ctx.defender);
     takePrizes(state, attackerIndex, prizesToTake);
 
     // Check Win

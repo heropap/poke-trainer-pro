@@ -12,7 +12,7 @@ interface DeckPileProps {
   label?: string;
 }
 
-export function DeckPile({ count, onClick, className = "", label = "Deck" }: DeckPileProps) {
+export function DeckPile({ count, onClick, className = "", label = "牌组" }: DeckPileProps) {
   return (
     <div 
       className={`relative flex flex-col items-center justify-center ${className}`}
@@ -34,7 +34,7 @@ export function DeckPile({ count, onClick, className = "", label = "Deck" }: Dec
         </div>
       ) : (
         <div className="flex h-[140px] w-[100px] items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-800/30">
-          <span className="text-xs text-zinc-600">Empty</span>
+          <span className="text-xs text-zinc-600">空</span>
         </div>
       )}
       <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
@@ -50,7 +50,7 @@ interface DiscardPileProps {
   label?: string;
 }
 
-export function DiscardPile({ cards, onClick, className = "", label = "Discard" }: DiscardPileProps) {
+export function DiscardPile({ cards, onClick, className = "", label = "弃牌堆" }: DiscardPileProps) {
   const topCard = cards.length > 0 ? cards[cards.length - 1] : null;
 
   return (
@@ -72,7 +72,7 @@ export function DiscardPile({ cards, onClick, className = "", label = "Discard" 
         </div>
       ) : (
         <div className="flex h-[140px] w-[100px] items-center justify-center rounded-lg border-2 border-dashed border-zinc-700 bg-zinc-800/30">
-          <span className="text-xs text-zinc-600">Discard</span>
+          <span className="text-xs text-zinc-600">弃牌堆</span>
         </div>
       )}
       <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</span>
@@ -109,7 +109,7 @@ export function PrizePile({ cards, isOpponent = false, onSelect, className = "" 
           Usually prizes shrink as taken. */}
       {cards.length === 0 && (
         <div className="col-span-2 flex h-[84px] items-center justify-center text-xs text-zinc-600">
-          Win!
+          胜利!
         </div>
       )}
     </div>
@@ -118,18 +118,24 @@ export function PrizePile({ cards, isOpponent = false, onSelect, className = "" 
 
 // ─── Lost Zone ───────────────────────────────────────
 interface LostZoneProps {
-  count?: number; // Currently state doesn't track lost zone explicitly in Player, but assuming it might
+  cards?: GameCard[];
+  count?: number;
   className?: string;
+  onClick?: () => void;
 }
 
-export function LostZone({ count = 0, className = "" }: LostZoneProps) {
+export function LostZone({ cards, count, className = "", onClick }: LostZoneProps) {
+  const displayCount = cards?.length ?? count ?? 0;
   return (
-    <div className={`flex flex-col items-center justify-center ${className}`}>
-      <div className="relative flex h-[80px] w-[80px] items-center justify-center rounded-full border-2 border-purple-900/50 bg-purple-900/20 shadow-inner">
+    <div
+      className={`flex flex-col items-center justify-center ${displayCount > 0 ? "cursor-pointer" : ""} ${className}`}
+      onClick={() => displayCount > 0 && onClick?.()}
+    >
+      <div className="relative flex h-[80px] w-[80px] items-center justify-center rounded-full border-2 border-purple-900/50 bg-purple-900/20 shadow-inner hover:border-purple-700/60 transition-colors">
         <div className="absolute inset-0 animate-spin-slow rounded-full border-t-2 border-purple-500 opacity-30"></div>
-        <span className="text-xl font-bold text-purple-400">{count}</span>
+        <span className="text-xl font-bold text-purple-400">{displayCount}</span>
       </div>
-      <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-purple-900">Lost Zone</span>
+      <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-purple-900">失落区</span>
     </div>
   );
 }
@@ -139,24 +145,41 @@ interface StadiumSpotProps {
   card: GameCard | null;
   className?: string;
   onClick?: () => void;
+  effectText?: string;
+  ownerIndex?: number;
+  myIndex?: number;
 }
 
-export function StadiumSpot({ card, className = "", onClick }: StadiumSpotProps) {
+export function StadiumSpot({ card, className = "", onClick, effectText, ownerIndex, myIndex }: StadiumSpotProps) {
+  const isOwnStadium = ownerIndex !== undefined && myIndex !== undefined && ownerIndex === myIndex;
+  const borderColor = card
+    ? isOwnStadium ? "border-emerald-500/60" : "border-red-500/40"
+    : "border-emerald-900/30";
+
   return (
-    <div 
-      className={`relative flex h-[140px] w-[100px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-emerald-900/30 bg-emerald-900/10 ${className}`}
+    <div
+      className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed ${borderColor} bg-emerald-900/10 ${card ? "cursor-pointer" : ""} ${className}`}
       onClick={onClick}
+      style={{ minHeight: "140px", width: "110px" }}
     >
       {card ? (
-        <VisualCard 
-          card={card} 
-          scale={0.66} 
-          className="shadow-lg"
-        />
+        <>
+          <VisualCard
+            card={card}
+            scale={0.60}
+            className="shadow-lg"
+          />
+          <div className="mt-0.5 max-w-[106px] text-center">
+            <div className="truncate text-[9px] font-bold text-emerald-300">{card.card.name}</div>
+            {effectText && (
+              <div className="mt-0.5 line-clamp-2 text-[8px] leading-tight text-zinc-500">{effectText}</div>
+            )}
+          </div>
+        </>
       ) : (
         <div className="text-center">
           <div className="text-2xl opacity-20">🏟️</div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800/50">Stadium</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800/50">竞技场</span>
         </div>
       )}
     </div>

@@ -20,7 +20,8 @@ import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
-import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker } from "./effects/markers";
+import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED } from "./effects/markers";
+import { queryActiveModifiers, isStatusImmune, isEnergyRemovalBlocked } from "./effects/modifier-query";
 
 export interface PlayCardResult {
   success: boolean;
@@ -354,6 +355,10 @@ export function canAttack(
 
   // Can't use this specific attack (e.g., Shinobi Blade)
   if (player.active.markers[cantUseAttackMarker(attackName)] > 0) return false;
+
+  // V2: Check prevent_attack modifier from field abilities
+  const mods = queryActiveModifiers(state, playerIndex);
+  if (mods.preventAttack) return false;
 
   return true;
 }
@@ -826,6 +831,17 @@ export function performAttack(
     // Bench damage
     if (effectResult.benchDamage) {
       for (const bd of effectResult.benchDamage) {
+        // V2: Check bench damage prevention from passive abilities
+        if (bd.target.markers[ABILITY_BLOCKED] <= 0) {
+          const targetEffect = getEffect(bd.target.cardId, bd.target.card.name);
+          if (targetEffect?.abilities?.some(a =>
+            a.type === "passive" && (a as any).preventBenchDamage
+          )) {
+            logEvent(state, playerIndex, "ability" as any,
+              `${bd.target.card.name} 的特性阻挡了板凳伤害!`);
+            continue;
+          }
+        }
         bd.target.damageCounters += bd.damage / 10;
         logEvent(state, playerIndex, "damage",
           `${attacker.active!.card.name} 的效果对 ${bd.target.card.name} 造成了 ${bd.damage} 点伤害`);
@@ -843,7 +859,14 @@ export function performAttack(
     if (effectResult.statusEffects) {
       for (const se of effectResult.statusEffects) {
         const target = se.target === "defender" ? defender.active : attacker.active;
+        const targetPi = se.target === "defender" ? defenderIndex : playerIndex;
         if (target) {
+          // V2: Check status immunity from passive abilities/tools
+          if (isStatusImmune(state, target, targetPi)) {
+            logEvent(state, playerIndex, "ability" as any,
+              `${target.card.name} 的特性免疫了${statusToText(se.status)}状态!`);
+            continue;
+          }
           // Mutually exclusive statuses
           if (se.status === "asleep" || se.status === "confused" || se.status === "paralyzed") {
             target.statusConditions = target.statusConditions.filter(

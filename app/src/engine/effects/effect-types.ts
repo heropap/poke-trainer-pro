@@ -221,6 +221,66 @@ export interface EffectContext {
    */
   evolvePokemonDirect?(targetInstanceId: string, evolutionCard: GameCard): boolean;
 
+  // ─── V2 Action Support Methods ───
+
+  // ─── V2 Action Support Methods (optional for backward compat with existing mocks) ───
+
+  /**
+   * Place damage counters directly (bypasses weakness/resistance).
+   * Used by effects like "place 3 damage counters" — NOT attack damage.
+   */
+  placeDamageCounters?(amount: number, target: GameCard): void;
+
+  /**
+   * Move damage counters between Pokemon.
+   * @param count - Number of damage counters to move
+   */
+  moveDamageCounters?(count: number, from: GameCard, to: GameCard): void;
+
+  /**
+   * Move a card to the Lost Zone (removed from play permanently).
+   * Removes from whatever zone the card is currently in.
+   */
+  moveToLostZone?(card: GameCard, who?: "player" | "opponent"): void;
+
+  /**
+   * Move multiple cards to the Lost Zone.
+   */
+  moveToLostZoneMultiple?(cards: GameCard[], who?: "player" | "opponent"): void;
+
+  /**
+   * Devolve a Pokemon: remove the top evolution card, reveal the previous stage.
+   * The removed evolution card goes to the specified destination.
+   */
+  devolve?(target: GameCard, destination?: "hand" | "discard"): GameCard | null;
+
+  /**
+   * Spread damage across multiple targets (player chooses distribution).
+   * For non-interactive, distributes evenly starting from first target.
+   */
+  spreadDamage?(totalCounters: number, targets: GameCard[]): void;
+
+  /**
+   * Discard energy from a target Pokemon.
+   * @param count - Number of energy to discard
+   * @param target - The Pokemon to discard energy from
+   * @param filter - Optional filter for which energy to discard
+   */
+  discardEnergyFromPokemon?(
+    count: number,
+    target: GameCard,
+    filter?: (card: GameCard) => boolean
+  ): GameCard[];
+
+  /**
+   * Search the Lost Zone for cards matching a filter.
+   */
+  searchLostZone?(
+    filter: (card: GameCard) => boolean,
+    count: number,
+    who?: "player" | "opponent"
+  ): GameCard[];
+
   /**
    * Prompt the user to select cards or targets.
    * Returns a promise that resolves with the selected card IDs.

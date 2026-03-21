@@ -1,11 +1,12 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GameCard } from "@/engine/game-state";
+import { GameCard, GameState } from "@/engine/game-state";
 import { VisualCard } from "./VisualCard";
 import { useDroppable } from "@dnd-kit/core";
 import { getEffect } from "@/engine/effects/effect-registry";
 import { ABILITY_BLOCKED } from "@/engine/effects/markers";
+import { queryActiveModifiers } from "@/engine/effects/modifier-query";
 
 interface BenchSpotProps {
   card: GameCard | null;
@@ -26,8 +27,10 @@ interface BenchSpotProps {
   isMyTurn?: boolean;
   /** Whether the player is the opponent */
   isOpponent?: boolean;
-  /** Has attacked this turn (disables abilities) */
-  hasAttackedThisTurn?: boolean;
+  /** Game state for V2 modifier queries */
+  gameState?: GameState;
+  /** Player index for V2 modifier queries */
+  playerIndex?: 0 | 1;
   /** Callback when bench Pokemon uses an ability */
   onUseAbility?: (cardInstanceId: string, abilityName: string) => void;
 }
@@ -44,7 +47,8 @@ export function BenchSpot({
   onBenchAction,
   isMyTurn = false,
   isOpponent = false,
-  hasAttackedThisTurn = false,
+  gameState,
+  playerIndex,
   onUseAbility,
 }: BenchSpotProps) {
   const containerClass = compact
@@ -61,6 +65,13 @@ export function BenchSpot({
     disabled: !card,
     data: { instanceId: card?.instanceId }
   });
+
+  // V2: Derive turn state and modifiers from gameState
+  const hasAttacked = gameState?.turnStatus?.hasAttacked ?? false;
+  const modifiers = gameState && playerIndex !== undefined
+    ? queryActiveModifiers(gameState, playerIndex)
+    : null;
+  const preventAbility = modifiers?.preventAbility ?? false;
 
   return (
     <div className="relative">
@@ -148,7 +159,8 @@ export function BenchSpot({
                 const isBlocked = card.markers[ABILITY_BLOCKED] > 0;
                 const isUsed = card.abilityUsedThisTurn;
                 const noEffect = !abilityEffect;
-                const isDisabled = isBlocked || isUsed || noEffect || hasAttackedThisTurn;
+                // V2: Check global ability lock + hasAttacked from state
+                const isDisabled = isBlocked || isUsed || noEffect || hasAttacked || preventAbility;
                 return (
                   <button
                     key={`ability-${i}`}
@@ -159,7 +171,14 @@ export function BenchSpot({
                         ? "bg-zinc-600 opacity-60 cursor-not-allowed"
                         : "bg-cyan-600 hover:bg-cyan-500 cursor-pointer"
                     }`}
-                    title={isBlocked ? "特性被封锁" : isUsed ? "本回合已使用" : noEffect ? "效果未实现" : ability.text}
+                    title={
+                      isBlocked ? "特性被封锁"
+                      : preventAbility ? "场上能力封锁了所有特性"
+                      : isUsed ? "本回合已使用"
+                      : noEffect ? "效果未实现"
+                      : hasAttacked ? "攻击后不能使用特性"
+                      : ability.text
+                    }
                   >
                     ✨{ability.name}
                   </button>

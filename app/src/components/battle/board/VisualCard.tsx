@@ -80,25 +80,50 @@ function getEnergyTypeFromCard(energyCard: GameCard): string {
   return "Colorless";
 }
 
-/** Map marker name to display style */
-function getMarkerStyle(name: string): { bg: string; text: string; label: string } {
+/** Map marker name to display style + tooltip */
+function getMarkerStyle(name: string): { bg: string; text: string; label: string; tooltip: string } {
   if (name === CANT_ATTACK_NEXT_TURN) {
-    return { bg: "bg-red-600", text: "text-white", label: "封" };
+    return { bg: "bg-red-600", text: "text-white", label: "封", tooltip: "被效果封锁 — 下回合不能攻击" };
   }
   if (name.startsWith("CANT_USE_ATTACK:")) {
-    return { bg: "bg-red-500", text: "text-white", label: "限" };
+    const attackName = name.replace("CANT_USE_ATTACK:", "");
+    return { bg: "bg-red-500", text: "text-white", label: "限", tooltip: `不能使用招式: ${attackName}` };
   }
   if (name === PREVENT_RETREAT_NEXT_TURN) {
-    return { bg: "bg-red-700", text: "text-white", label: "锁" };
+    return { bg: "bg-red-700", text: "text-white", label: "锁", tooltip: "被效果锁定 — 不能撤退" };
   }
   if (name === ABILITY_BLOCKED) {
-    return { bg: "bg-blue-600", text: "text-white", label: "禁" };
+    return { bg: "bg-blue-600", text: "text-white", label: "禁", tooltip: "特性被封锁" };
   }
   if (name === VSTAR_USED) {
-    return { bg: "bg-yellow-500", text: "text-black", label: "V★" };
+    return { bg: "bg-yellow-500", text: "text-black", label: "V★", tooltip: "VSTAR 力量已使用" };
+  }
+  if (name === "PREVENT_ALL_DAMAGE_NEXT_TURN") {
+    return { bg: "bg-cyan-600", text: "text-white", label: "盾", tooltip: "下回合免疫所有伤害" };
   }
   // Default: yellow for unknown markers
-  return { bg: "bg-yellow-600", text: "text-white", label: "●" };
+  return { bg: "bg-yellow-600", text: "text-white", label: "●", tooltip: name };
+}
+
+/** Status condition tooltip descriptions */
+const STATUS_TOOLTIPS: Record<string, string> = {
+  poisoned: "中毒: 每回合间放1个伤害指示物(10HP)",
+  burned: "灼伤: 每回合间掷硬币,反面放2个伤害指示物(20HP)",
+  asleep: "睡眠: 掷硬币正面清醒; 不能攻击/撤退",
+  paralyzed: "麻痹: 不能攻击/撤退; 下回合自动恢复",
+  confused: "混乱: 攻击时掷硬币,反面对自己造成30伤害",
+};
+
+/** Get prize count for a Pokemon based on subtypes */
+function getPrizeLabel(card: GameCard): string | null {
+  const subtypes = card.card.subtypes || [];
+  const name = card.card.name || "";
+  if (subtypes.includes("VMAX") || name.includes(" VMAX")) return "×3";
+  if (subtypes.includes("VSTAR") || name.includes(" VSTAR")) return "×2";
+  if (subtypes.includes("V") || name.includes(" V") || name.endsWith(" V")) return "×2";
+  if (subtypes.includes("EX") || subtypes.includes("ex") || name.includes("-EX") || name.includes(" ex")) return "×2";
+  if (subtypes.includes("GX") || name.includes("-GX")) return "×2";
+  return null;
 }
 
 interface VisualCardProps {
@@ -266,7 +291,8 @@ export function VisualCard({
           {card.statusConditions.map((status) => (
             <div
               key={status}
-              className={`rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${
+              title={STATUS_TOOLTIPS[status] || status}
+              className={`cursor-help rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${
                 status === "poisoned" ? "bg-purple-600 text-white" :
                 status === "burned" ? "bg-orange-600 text-white" :
                 status === "asleep" ? "bg-blue-600 text-white" :
@@ -290,17 +316,24 @@ export function VisualCard({
         <div className="absolute left-0.5 top-7 flex flex-col gap-0.5">
           {Object.entries(card.markers).map(([name, value]) => {
             if (value <= 0) return null;
-            const { bg, text, label } = getMarkerStyle(name);
+            const style = getMarkerStyle(name);
             return (
               <div
                 key={name}
-                className={`rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${bg} ${text}`}
-                title={name}
+                className={`cursor-help rounded-full px-1 py-0.5 text-[7px] font-bold shadow-md ${style.bg} ${style.text}`}
+                title={style.tooltip}
               >
-                {label}
+                {style.label}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Multi-Prize Badge (bottom-right) */}
+      {card.card.supertype === "Pokémon" && getPrizeLabel(card) && (
+        <div className="absolute bottom-0.5 right-0.5 rounded bg-yellow-500 px-1 py-0.5 text-[7px] font-black text-black shadow-md" title={`击倒后对手获得${getPrizeLabel(card)?.replace("×", "")}张奖品`}>
+          {getPrizeLabel(card)}
         </div>
       )}
 

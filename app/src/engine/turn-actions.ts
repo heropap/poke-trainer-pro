@@ -29,6 +29,7 @@ import { validateEvolution } from "./middleware/evolution.middleware";
 import { ActionEvent } from "./middleware/types";
 import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
 import { PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED } from "./effects/markers";
+import { queryActiveModifiers } from "./effects/modifier-query";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -79,10 +80,28 @@ export function getEffectiveRetreatCost(
     }
   }
 
-  // Apply Beach Court stadium effect: Basic Pokemon retreat cost -1
-  if (state.stadium && state.stadium.card.card.name === "Beach Court") {
-    if (card.card.subtypes.includes("Basic")) {
-      retreatCost -= 1;
+  // Apply stadium retreat cost modifiers via effect registry
+  if (state.stadium) {
+    const stadiumEffect = getEffect(state.stadium.card.cardId, state.stadium.card.card.name);
+    const stadiumCtx = createEffectContext(state, playerIndex, state.stadium.card);
+    // Check tool-style modifier (V2 compiled stadiums)
+    if (stadiumEffect?.tool?.whileAttached?.modifyRetreatCost) {
+      retreatCost = stadiumEffect.tool.whileAttached.modifyRetreatCost(stadiumCtx, retreatCost);
+    }
+    // Check passive abilities on stadium effect (V2 compiled with modifyRetreatCost)
+    if (stadiumEffect?.abilities) {
+      for (const ability of stadiumEffect.abilities) {
+        if (ability.type === "passive" && ability.modifyRetreatCost) {
+          retreatCost = ability.modifyRetreatCost(stadiumCtx, retreatCost);
+        }
+      }
+    }
+    // Fallback: hand-written trainer.modifyRetreatCost (Beach Court etc.)
+    if (stadiumEffect?.trainer) {
+      const trainerAny = stadiumEffect.trainer as Record<string, any>;
+      if (typeof trainerAny.modifyRetreatCost === "function") {
+        retreatCost = trainerAny.modifyRetreatCost(stadiumCtx, retreatCost, card);
+      }
     }
   }
 
@@ -370,6 +389,12 @@ export function canRetreat(
     return fail("该宝可梦被禁止撤退");
   }
 
+  // ─── V2: Check prevent_retreat modifier from field abilities ───
+  const mods = queryActiveModifiers(state, state.currentPlayer);
+  if (mods.preventRetreat) {
+    return fail("场上能力阻止了撤退");
+  }
+
   const retreatCost = getEffectiveRetreatCost(state, state.currentPlayer, player.active);
 
   const selectedEnergy: GameCard[] = [];
@@ -547,7 +572,7 @@ export function canPlayItem(
 
   if (
     card.card.supertype !== "Trainer" ||
-    !card.card.subtypes.includes("Item")
+    (!card.card.subtypes.includes("Item") && !card.card.subtypes.includes("Pokémon Tool"))
   ) {
     return fail("所选卡牌不是物品卡");
   }
