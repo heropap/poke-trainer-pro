@@ -573,12 +573,20 @@ export default function BattlePageClient() {
     if (!gameState || !isLocalGame.current) return { success: false, error: "游戏未初始化" };
 
     // In AI mode, block actions during AI's turn
-    if (battleMode === "ai" && gameState.currentPlayer !== 0) {
+    // Exception: select_cards_response and prompt_response are allowed even during AI turn
+    // if the prompt is directed at the human player (playerIndex 0).
+    const isPromptResponse = action.type === "select_cards_response" || action.type === "prompt_response";
+    const humanHasActivePrompt = isPromptResponse && gameState.prompt?.playerIndex === 0;
+
+    if (battleMode === "ai" && gameState.currentPlayer !== 0 && !humanHasActivePrompt) {
       console.warn("[AI Mode] It's the AI's turn, action blocked");
       return { success: false, error: "AI 回合中" };
     }
 
-    const playerIndex = gameState.currentPlayer;
+    // For prompt responses, use the prompt's playerIndex to avoid wrong-turn errors
+    const playerIndex = humanHasActivePrompt
+      ? (gameState.prompt!.playerIndex as 0 | 1)
+      : gameState.currentPlayer;
     const result = await processAction(gameState, playerIndex, action);
 
     if (result.success) {

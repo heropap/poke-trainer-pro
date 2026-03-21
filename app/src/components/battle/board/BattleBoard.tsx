@@ -921,6 +921,12 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                     <div className={`text-lg font-black tracking-tight ${isMyTurn ? "text-blue-400 drop-shadow-sm" : "text-red-400"}`}>
                       {isMyTurn ? "你的回合" : `${opponent.name} 的回合`}
                     </div>
+                    {/* Post-attack hint for children */}
+                    {isMyTurn && gameState.turnStatus.hasAttacked && (
+                      <div className="mt-1 animate-bounce text-sm font-bold text-green-400">
+                        ✅ 攻击完毕！点击「结束回合」
+                      </div>
+                    )}
                     {/* V2 modifier warnings */}
                     {isMyTurn && (activeModifiers.preventItemUsage || activeModifiers.preventSupporterUsage || activeModifiers.preventEvolution || activeModifiers.preventAttack) && (
                       <div className="mt-1 flex flex-wrap justify-center gap-1">
@@ -965,11 +971,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                    </button>
                  )}
               </div>
-              <button 
+              <button
                 onClick={() => dispatchAction({ type: "end_turn" })}
-                className="w-full rounded bg-red-600 py-1.5 text-xs font-bold text-white hover:bg-red-500 shadow-md transition-colors"
+                className={`w-full rounded font-bold text-white shadow-md transition-colors ${
+                  isMyTurn && gameState.turnStatus.hasAttacked
+                    ? "animate-pulse bg-green-600 py-2 text-sm hover:bg-green-500 ring-2 ring-green-400"
+                    : "bg-red-600 py-1.5 text-xs hover:bg-red-500"
+                }`}
               >
-                结束回合
+                {isMyTurn && gameState.turnStatus.hasAttacked ? "✅ 结束回合" : "结束回合"}
               </button>
            </div>
         </div>

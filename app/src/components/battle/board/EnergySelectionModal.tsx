@@ -46,6 +46,14 @@ export function EnergySelectionModal({
 
   const isValid = selectedIds.length === required;
 
+  // Auto-confirm when exactly enough energy selected (child-friendly)
+  React.useEffect(() => {
+    if (isValid && required > 0) {
+      const timer = setTimeout(() => onConfirm(selectedIds), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedIds, isValid, required, onConfirm]);
+
   // Prevent body scroll
   React.useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -88,15 +96,15 @@ export function EnergySelectionModal({
               取消
             </button>
             <button
-              onClick={() => onConfirm(selectedIds)}
+              onClick={() => isValid && onConfirm(selectedIds)}
               disabled={!isValid}
               className={`rounded-lg px-6 py-2 font-bold shadow-lg transition-all ${
                 isValid
-                  ? "bg-blue-600 text-white hover:bg-blue-500"
+                  ? "bg-blue-600 text-white hover:bg-blue-500 animate-pulse"
                   : "cursor-not-allowed bg-zinc-800 text-zinc-500"
               }`}
             >
-              确认撤退
+              {isValid ? "即将确认撤退…" : "确认撤退"}
             </button>
           </div>
         </div>
