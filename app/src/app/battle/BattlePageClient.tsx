@@ -19,7 +19,8 @@ import { createMockInitialState } from "@/lib/ryuu-adapter/mock-data";
 import { preloadDeckImages, addPreloadLinks } from "@/lib/image-preloader";
 import { setPromptStateChangeCallback, pendingPrompts } from "@/engine/effects/effect-context";
 import { OpeningSequenceModal } from "@/components/battle/board/OpeningSequenceModal";
-import { setFirstPlayer } from "@/engine/battle-prepare";
+import { PokemonPlacementModal } from "@/components/battle/board/PokemonPlacementModal";
+import { setFirstPlayer, finalizeManualPlacement, PlacementChoice } from "@/engine/battle-prepare";
 
 // ─── Battle Mode Types ───
 
@@ -64,6 +65,15 @@ export default function BattlePageClient() {
     }, 1000);
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [battleMode, gameState?.phase, gameState?.currentPlayer]);
+
+  // Pokemon placement state (shown before coin flip for human players)
+  const [placementData, setPlacementData] = useState<{
+    basicPokemon: GameCard[];
+    playerName: string;
+    pendingGameState: GameState;
+    effectiveMode: BattleMode;
+    coinFlipResult: { winner: 0 | 1; result: "heads" | "tails" } | null;
+  } | null>(null);
 
   // Opening sequence state (coin flip animation + first/second choice)
   const [openingData, setOpeningData] = useState<{
@@ -629,15 +639,33 @@ export default function BattlePageClient() {
     console.log(`  Player 1: ${deck1.name}`);
     console.log(`  Player 2 (${p2Name}): ${deck2.name}`);
 
-    const result = initializeGame(deck1, deck2, cardLookup, "玩家", p2Name, { fullPreparation: true, enableProxyCards: true });
+    // Human player (0) picks manually; AI (1) auto-places
+    const manualPlayers: (0 | 1)[] = effectiveMode === "ai" || effectiveMode === "local" ? [0] : [];
+
+    const result = initializeGame(deck1, deck2, cardLookup, "玩家", p2Name, {
+      fullPreparation: true,
+      enableProxyCards: true,
+      manualPlacementPlayers: manualPlayers,
+    });
     setSetupResult(result);
 
     if (result.success && result.gameState) {
       isLocalGame.current = true;
       setMyPlayerId(0);
 
-      // Show opening sequence (coin flip + choice) before starting the game
-      if (result.coinFlipResult) {
+      // If player 0 has pending placement, show placement modal first
+      if (result.pendingPlacements && result.pendingPlacements[0]) {
+        setPlacementData({
+          basicPokemon: result.pendingPlacements[0],
+          playerName: result.gameState.players[0].name,
+          pendingGameState: result.gameState,
+          effectiveMode,
+          coinFlipResult: result.coinFlipResult ?? null,
+        });
+        setBattleMode(effectiveMode);
+        console.log(`[BattlePage] Showing placement modal (${result.pendingPlacements[0].length} basic Pokemon)`);
+      } else if (result.coinFlipResult) {
+        // No pending placement — show opening sequence directly
         setOpeningData({
           coinResult: result.coinFlipResult.result,
           flipWinner: result.coinFlipResult.winner,
@@ -658,6 +686,42 @@ export default function BattlePageClient() {
       console.error("[BattlePage] Game initialization failed:", result.errors);
     }
   }, [selectedDeck1, selectedDeck2, validDecks, cardLookup, battleMode]);
+
+  /**
+   * Called when the player finishes placing their Pokemon.
+   * Finalizes placement, sets prizes, then moves to coin flip.
+   */
+  const handlePlacementComplete = useCallback((choice: PlacementChoice) => {
+    if (!placementData) return;
+
+    const { pendingGameState, effectiveMode, coinFlipResult } = placementData;
+
+    // Finalize: place pokemon + set prizes for player 0
+    const result = finalizeManualPlacement(pendingGameState, 0, choice);
+    if (!result.success) {
+      console.error("[BattlePage] Placement failed:", result.errors);
+      return;
+    }
+
+    setPlacementData(null);
+
+    // Now show the opening sequence (coin flip)
+    if (coinFlipResult) {
+      setOpeningData({
+        coinResult: coinFlipResult.result,
+        flipWinner: coinFlipResult.winner,
+        playerNames: [pendingGameState.players[0].name, pendingGameState.players[1].name],
+        pendingGameState,
+        effectiveMode,
+      });
+      console.log(`[BattlePage] Placement done, showing opening sequence`);
+    } else {
+      // No coin flip — start directly
+      const readyState = startFirstTurn(pendingGameState);
+      setGameState(readyState);
+      console.log(`[BattlePage] Placement done, starting game directly`);
+    }
+  }, [placementData]);
 
   /**
    * Called when the opening sequence (coin flip + choice) completes.
@@ -713,6 +777,8 @@ export default function BattlePageClient() {
     if (aiTimerRef.current) clearTimeout(aiTimerRef.current);
     setGameState(null);
     setSetupResult(null);
+    setPlacementData(null);
+    setOpeningData(null);
     isLocalGame.current = false;
     setAiThinking(false);
     setAiLastAction("");
@@ -746,6 +812,20 @@ export default function BattlePageClient() {
         >
           前往导入卡组 →
         </Link>
+      </div>
+    );
+  }
+
+  // ─── Pokemon Placement (before coin flip) ───
+
+  if (placementData && !gameState) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950">
+        <PokemonPlacementModal
+          basicPokemon={placementData.basicPokemon}
+          playerName={placementData.playerName}
+          onConfirm={handlePlacementComplete}
+        />
       </div>
     );
   }

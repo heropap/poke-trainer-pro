@@ -39,6 +39,8 @@ export interface SetupResult {
   warnings: string[];
   /** Coin flip result from preparation phase (null if legacy mode or failed) */
   coinFlipResult?: { winner: 0 | 1; result: "heads" | "tails" } | null;
+  /** Basic Pokemon in hand for players that need manual placement (key: playerIndex) */
+  pendingPlacements?: Record<number, GameCard[]>;
 }
 
 export interface DeckLoadResult {
@@ -65,6 +67,12 @@ export interface InitializeGameOptions {
   enableProxyCards?: boolean;
   /** Prize cards per player (default 6, supported 6/3/1) */
   prizeCardsPerPlayer?: number;
+  /**
+   * Player indices that should choose their placement manually (UI modal).
+   * These players will NOT auto-place; their basic Pokemon are returned
+   * in SetupResult.pendingPlacements.
+   */
+  manualPlacementPlayers?: (0 | 1)[];
 }
 
 /**
@@ -194,6 +202,7 @@ export function initializeGame(
     randomFn,
     enableProxyCards = false,
     prizeCardsPerPlayer,
+    manualPlacementPlayers,
   } = options;
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -304,7 +313,7 @@ export function initializeGame(
 
   if (fullPreparation) {
     // Full PTCG setup: mulligan → placement → prizes → coin flip
-    const prepResult = executePreparation(state, randomFn);
+    const prepResult = executePreparation(state, randomFn, manualPlacementPlayers ? { manualPlacementPlayers } : undefined);
 
     if (!prepResult.success) {
       errors.push(...prepResult.errors);
@@ -313,6 +322,18 @@ export function initializeGame(
 
     warnings.push(...prepResult.warnings);
     coinFlipResult = prepResult.coinFlipResult;
+
+    // Pass through pending placements if any
+    if (prepResult.pendingPlacements && Object.keys(prepResult.pendingPlacements).length > 0) {
+      return {
+        success: true,
+        gameState: state,
+        errors,
+        warnings,
+        coinFlipResult,
+        pendingPlacements: prepResult.pendingPlacements,
+      };
+    }
   } else {
     // Legacy behavior: check mulligan (warn only), set prizes, transition to draw
     for (let p = 0; p < 2; p++) {

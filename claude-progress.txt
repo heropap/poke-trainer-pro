@@ -1825,3 +1825,43 @@ Notes: 实现了开局硬币翻转的 3D CSS 动画和先攻/后攻选择交互�
 - AI 模式下 AI 赢得翻转时自动选择先攻
 - 9 个新测试全部通过，总计 61 套件 1379 测试无回归
 - 同时追加了 3 个新功能到 feature_list.json：开局硬币翻转、开局宝可梦选择、KO后备战区选择优化
+
+=== Session 27 | 2026-03-22 ===
+Feature: 开局宝可梦选择 Modal — 从手牌选基础宝可梦放置战斗区/备战区
+Status: completed
+Notes: 实现了完整的开局宝可梦手动选择系统，替换了之前的 autoPlaceBasicPokemon 自动放置逻辑。
+
+实现内容:
+1. engine/battle-prepare.ts:
+   - 新增 PrepareOptions 接口，支持 manualPlacementPlayers 参数
+   - executePreparation() 支持跳过指定玩家的自动放置，返回 pendingPlacements（该玩家手牌中的基础宝可梦列表）
+   - 手动放置玩家跳过奖赏卡设置（等 finalizeManualPlacement 完成后再设置）
+   - 新增 finalizeManualPlacement()：接收 PlacementChoice，执行放置 + 设置奖赏卡
+   - 向后兼容：不传 manualPlacementPlayers 时行为与之前完全一致
+
+2. engine/battle-setup.ts:
+   - InitializeGameOptions 新增 manualPlacementPlayers 字段
+   - SetupResult 新增 pendingPlacements 字段
+   - initializeGame() 透传 manualPlacementPlayers 到 executePreparation
+
+3. components/battle/board/PokemonPlacementModal.tsx（全新组件）:
+   - 展示手牌中所有基础宝可梦（卡图 + HP + 属性 + 招式预览）
+   - 点击选择战斗区宝可梦（红色标记，必选1只）
+   - 再次点击选择备战区宝可梦（蓝色标记，可选0-5只）
+   - 按 HP 降序排列，帮助玩家快速识别主力
+   - Portal 渲染，z-index 隔离
+   - 确认按钮显示出战数量
+
+4. BattlePageClient.tsx 流程改造:
+   - 新增 placementData 状态管理
+   - handleStartBattle: 传入 manualPlacementPlayers: [0]（人类手动，AI 自动）
+   - 新流程: 初始化 → 放置 Modal → 硬币翻转 → 先后攻选择 → 对战开始
+   - handlePlacementComplete: 调用 finalizeManualPlacement 完成放置后进入硬币翻转
+   - returnToLobby 清理 placementData 状态
+
+关键决策:
+- 只有人类玩家（player 0）手动选择，AI（player 1）仍使用 autoPlaceBasicPokemon
+- 放置 Modal 在硬币翻转之前显示（符合 PTCG 官方规则：先放置，再掷硬币决定先攻）
+- 使用 Portal + z-100 确保 Modal 覆盖全屏
+
+测试: 新增 10 个测试（pokemon-placement.test.ts），总计 1389 个测试全部通过（62 个测试套件）。

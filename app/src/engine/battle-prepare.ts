@@ -423,12 +423,28 @@ export function setPrizeCards(
 // Full Preparation Flow
 // ───────────────────────────────────────────────
 
+export interface PrepareOptions {
+  /**
+   * Player indices that should skip auto-placement.
+   * These players' basic Pokemon will be returned in `pendingPlacements`
+   * for the UI to handle interactively.
+   * AI players should NOT be in this list (they auto-place).
+   */
+  manualPlacementPlayers?: (0 | 1)[];
+}
+
 export interface PrepareResult {
   success: boolean;
   errors: string[];
   warnings: string[];
   mulliganResult: MulliganResult;
   coinFlipResult: CoinFlipResult | null;
+  /**
+   * For players that skipped auto-placement, contains their basic Pokemon
+   * from hand so the UI can show a placement modal.
+   * Key: playerIndex, Value: array of basic GameCards in hand.
+   */
+  pendingPlacements?: Record<number, GameCard[]>;
 }
 
 /**
@@ -445,10 +461,12 @@ export interface PrepareResult {
  *
  * @param state GameState with decks loaded and shuffled, hands drawn
  * @param randomFn Optional random function for coin flip (for testing)
+ * @param options Optional preparation options (e.g. skip placement for human players)
  */
 export function executePreparation(
   state: GameState,
-  randomFn?: () => number
+  randomFn?: () => number,
+  options?: PrepareOptions
 ): PrepareResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -482,12 +500,34 @@ export function executePreparation(
     );
   }
 
-  // ─── Step 2: Auto-place Basic Pokemon ───
+  // ─── Step 2: Place Basic Pokemon (auto or manual) ───
 
   state.phase = GamePhase.SETUP;
 
+  const manualPlayers = new Set(options?.manualPlacementPlayers ?? []);
+  const pendingPlacements: Record<number, GameCard[]> = {};
+
   for (let p = 0; p < 2; p++) {
     const pIdx = p as 0 | 1;
+
+    if (manualPlayers.has(pIdx)) {
+      // Skip auto-placement for this player — collect their basic Pokemon for the UI
+      const basics = getBasicPokemon(state.players[pIdx].hand);
+      if (basics.length === 0) {
+        errors.push(`${state.players[pIdx].name} 手牌中没有基础宝可梦可放置`);
+        return {
+          success: false,
+          errors,
+          warnings,
+          mulliganResult,
+          coinFlipResult: null,
+        };
+      }
+      pendingPlacements[pIdx] = basics;
+      continue;
+    }
+
+    // Auto-place for AI / non-manual players
     const choice = autoPlaceBasicPokemon(state, pIdx);
 
     if (!choice) {
@@ -515,10 +555,13 @@ export function executePreparation(
     }
   }
 
-  // ─── Step 3: Set Prize Cards ───
+  // ─── Step 3: Set Prize Cards (only for players that have been placed) ───
 
   for (let p = 0; p < 2; p++) {
     const pIdx = p as 0 | 1;
+    // Skip prize setup for players with pending manual placement
+    if (manualPlayers.has(pIdx)) continue;
+
     const prizeCount = setPrizeCards(state, pIdx);
     const prizeTarget = state.rules?.prizeCardsPerPlayer ?? PRIZE_CARD_COUNT;
     if (prizeCount < prizeTarget) {
@@ -545,11 +588,41 @@ export function executePreparation(
     `准备阶段完成，第 1 回合开始，${state.players[coinFlipResult.winner].name} 先攻`
   );
 
+  const hasPendingPlacements = Object.keys(pendingPlacements).length > 0;
+
   return {
     success: true,
     errors,
     warnings,
     mulliganResult,
     coinFlipResult,
+    ...(hasPendingPlacements ? { pendingPlacements } : {}),
   };
+}
+
+// ───────────────────────────────────────────────
+// Finalize Manual Placement
+// ───────────────────────────────────────────────
+
+/**
+ * After the UI collects a manual placement choice, finalize it:
+ * 1. Place basic Pokemon from hand to active + bench
+ * 2. Set prize cards for this player
+ *
+ * Call this for each player that had pendingPlacements.
+ */
+export function finalizeManualPlacement(
+  state: GameState,
+  playerIndex: 0 | 1,
+  choice: PlacementChoice
+): PlacementResult {
+  const result = placeBasicPokemon(state, playerIndex, choice);
+  if (!result.success) {
+    return result;
+  }
+
+  // Now set prize cards for this player
+  setPrizeCards(state, playerIndex);
+
+  return { success: true, errors: [] };
 }
