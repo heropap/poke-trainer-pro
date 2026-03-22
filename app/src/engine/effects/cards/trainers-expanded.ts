@@ -795,8 +795,28 @@ const mysteriousTrunk: NamedEffect = {
 // Exports
 // ───────────────────────────────────────────────
 
+/** Lillie's Determination — Shuffle hand into deck, draw 6 (or 8 if exactly 6 prizes remaining) */
+const lilliesDetermination: NamedEffect = {
+  cardId: "name:Lillie's Determination",
+  cardName: "Lillie's Determination",
+  trainer: {
+    onPlay: (ctx: EffectContext) => {
+      // Shuffle hand into deck (the card itself is already removed from hand)
+      const handCount = ctx.shuffleHandIntoDeck();
+      ctx.shuffleDeck();
+
+      // Draw 8 if exactly 6 prize cards, otherwise draw 6
+      const prizeCount = ctx.player.prizes.cards.length;
+      const drawCount = prizeCount === 6 ? 8 : 6;
+      ctx.drawCards(drawCount);
+
+      ctx.log(`Lillie's Determination: 将 ${handCount} 张手牌洗入牌组，抽了 ${drawCount} 张牌${prizeCount === 6 ? '（6张奖赏卡加成）' : ''}`);
+    },
+  },
+};
+
 export const expandedTrainerEffects: NamedEffect[] = [
-  // Supporters (11)
+  // Supporters (12)
   kieran,
   eri,
   crispin,
@@ -808,6 +828,7 @@ export const expandedTrainerEffects: NamedEffect[] = [
   serena,
   adventurersDiscovery,
   giovannisCharisma,
+  lilliesDetermination,
   // Items (10)
   tmEvolution,
   technoRadar,

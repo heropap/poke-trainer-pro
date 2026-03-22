@@ -23,7 +23,7 @@ import {
   canPlayStadium,
   getEffectiveRetreatCost,
 } from "@/engine/turn-actions";
-import { hasEffect } from "@/engine/effects/effect-registry";
+import { hasEffect, getEffect } from "@/engine/effects/effect-registry";
 import { queryActiveModifiers, type ActiveModifiers } from "@/engine/effects/modifier-query";
 import { ManualToolkit } from "./ManualToolkit";
 import { ActionLog } from "./ActionLog";
@@ -882,6 +882,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                effectText={gameState.stadium?.card.card.rules?.[0]?.slice(0, 60)}
                ownerIndex={gameState.stadium?.owner}
                myIndex={myIndex}
+               canUseEffect={(() => {
+                 if (!isMyTurn || !gameState.stadium || gameState.turnStatus.hasUsedStadium) return false;
+                 const sc = gameState.stadium.card;
+                 const eff = getEffect(sc.cardId, sc.card.name);
+                 return !!eff?.abilities?.some(a => a.type === "activated");
+               })()}
+               onUseEffect={() => {
+                 dispatchAction({ type: "use_stadium" });
+               }}
              />
            </div>
 

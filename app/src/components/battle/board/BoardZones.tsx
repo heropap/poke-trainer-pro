@@ -148,9 +148,11 @@ interface StadiumSpotProps {
   effectText?: string;
   ownerIndex?: number;
   myIndex?: number;
+  canUseEffect?: boolean;
+  onUseEffect?: () => void;
 }
 
-export function StadiumSpot({ card, className = "", onClick, effectText, ownerIndex, myIndex }: StadiumSpotProps) {
+export function StadiumSpot({ card, className = "", onClick, effectText, ownerIndex, myIndex, canUseEffect, onUseEffect }: StadiumSpotProps) {
   const isOwnStadium = ownerIndex !== undefined && myIndex !== undefined && ownerIndex === myIndex;
   const borderColor = card
     ? isOwnStadium ? "border-emerald-500/60" : "border-red-500/40"
@@ -175,6 +177,14 @@ export function StadiumSpot({ card, className = "", onClick, effectText, ownerIn
               <div className="mt-0.5 line-clamp-2 text-[8px] leading-tight text-zinc-500">{effectText}</div>
             )}
           </div>
+          {canUseEffect && onUseEffect && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onUseEffect(); }}
+              className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg hover:bg-emerald-500 active:scale-95 animate-pulse whitespace-nowrap z-10"
+            >
+              使用效果
+            </button>
+          )}
         </>
       ) : (
         <div className="text-center">
