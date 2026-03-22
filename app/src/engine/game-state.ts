@@ -6,6 +6,7 @@
  */
 
 import { Card } from "@/types/card";
+import type { GameEffectEvent } from "./effects/game-events";
 
 // ───────────────────────────────────────────────
 // Zone: A collection of cards in a specific area
@@ -170,6 +171,12 @@ export interface GameState {
     /** Whether the timer is active */
     active: boolean;
   } | null;
+  /**
+   * Effect event queue for chain reaction processing.
+   * Events are emitted after game actions and drained by the event bus.
+   * Optional for backward compatibility with existing test mocks.
+   */
+  effectQueue?: GameEffectEvent[];
 }
 
 // ───────────────────────────────────────────────
@@ -379,6 +386,7 @@ export function createGameState(
       prizeCardsPerPlayer: 6,
     },
     turnTimer: null,
+    effectQueue: [],
   };
 }
 

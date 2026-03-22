@@ -23,6 +23,7 @@ import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
 import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP, DAMAGE_BOOST, PREVENT_ALL_DAMAGE_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./effects/markers";
 import { queryActiveModifiers, isStatusImmune, isEnergyRemovalBlocked } from "./effects/modifier-query";
+import { emitEvent } from "./effects/event-bus";
 
 export interface PlayCardResult {
   success: boolean;
@@ -916,6 +917,16 @@ export function performAttack(
       resistanceApplied,
       effectSource,
     });
+
+    // Emit DAMAGE_DEALT event for chain reactions
+    emitEvent(state, {
+      type: "DAMAGE_DEALT",
+      source: attacker.active!,
+      target: defender.active,
+      amount: finalDamage,
+      attackName,
+      playerIndex,
+    });
   } else if (baseDamage === 0) {
     logEvent(state, playerIndex, "attack", `${attacker.active!.card.name} 使用了 ${attackName}`, { effectSource });
   } else {
@@ -1004,6 +1015,14 @@ export function performAttack(
           logEvent(state, playerIndex, "status_effect",
             `${target.card.name} 陷入了${statusToText(se.status)}状态!`,
             { status: se.status });
+
+          // Emit STATUS_APPLIED event
+          emitEvent(state, {
+            type: "STATUS_APPLIED",
+            pokemon: target,
+            status: se.status,
+            playerIndex: targetPi,
+          });
         }
       }
     }
@@ -1034,8 +1053,23 @@ export function performAttack(
   const prizeCountForKO = defenderActiveBeforeKO ? getPrizeCount(defenderActiveBeforeKO) : 1;
 
   if (defenderActiveBeforeKO && checkKnockout(state, defenderIndex, "active")) {
+    // Emit POKEMON_KO event
+    emitEvent(state, {
+      type: "POKEMON_KO",
+      pokemon: defenderActiveBeforeKO,
+      knockedBy: attacker.active ?? undefined,
+      playerIndex: defenderIndex,
+    });
+
     const extraPrize = effectResult?.extraPrize ?? 0;
     takePrizes(state, playerIndex, prizeCountForKO + extraPrize);
+
+    // Emit PRIZE_TAKEN event
+    emitEvent(state, {
+      type: "PRIZE_TAKEN",
+      playerIndex,
+      count: prizeCountForKO + extraPrize,
+    });
 
     if (checkWinCondition(state)) {
       return { success: true, gameEnded: true };
@@ -1060,7 +1094,18 @@ export function performAttack(
       if (hp > 0 && benchCard.damageCounters * 10 >= hp) {
         const benchPrize = getPrizeCount(benchCard);
         if (checkKnockout(state, defenderIndex, "bench", i)) {
+          emitEvent(state, {
+            type: "POKEMON_KO",
+            pokemon: benchCard,
+            knockedBy: attacker.active ?? undefined,
+            playerIndex: defenderIndex,
+          });
           takePrizes(state, playerIndex, benchPrize);
+          emitEvent(state, {
+            type: "PRIZE_TAKEN",
+            playerIndex,
+            count: benchPrize,
+          });
           if (checkWinCondition(state)) {
             return { success: true, gameEnded: true };
           }
@@ -1075,7 +1120,17 @@ export function performAttack(
     if (selfHp > 0 && attacker.active.damageCounters * 10 >= selfHp) {
       const selfPrize = getPrizeCount(attacker.active);
       if (checkKnockout(state, playerIndex, "active")) {
+        emitEvent(state, {
+          type: "POKEMON_KO",
+          pokemon: attacker.active,
+          playerIndex,
+        });
         takePrizes(state, defenderIndex, selfPrize);
+        emitEvent(state, {
+          type: "PRIZE_TAKEN",
+          playerIndex: defenderIndex,
+          count: selfPrize,
+        });
         if (checkWinCondition(state)) {
           return { success: true, gameEnded: true };
         }

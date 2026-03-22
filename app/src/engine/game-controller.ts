@@ -49,6 +49,7 @@ import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
 import { basePipeline, validateActionWithMiddleware } from "./rules/base-rules";
 import { ValidationResult } from "./interfaces/validation";
+import { drainEffectQueue } from "./effects/event-bus";
 
 // ───────────────────────────────────────────────
 // Action Types (from UI)
@@ -258,6 +259,13 @@ export function processAction(
           error: `未知操作: ${(action as any).type}`,
           newState: { ...state }
         };
+    }
+
+    // Drain the effect queue — process all chain reactions before returning to UI
+    if (result.success && !result.gameEnded) {
+      await drainEffectQueue(state);
+      // Re-create shallow clone after drain (state may have been mutated by handlers)
+      result = { ...result, newState: { ...state } };
     }
 
     return result;

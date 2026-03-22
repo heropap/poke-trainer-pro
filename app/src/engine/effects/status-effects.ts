@@ -16,6 +16,7 @@ import { flipCoin } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition, getEffectiveHp } from "../game-actions";
 import { TURN_BASED_MARKERS, DAMAGE_BOOST } from "./markers";
 import { getEffect } from "./effect-registry";
+import { emitEvent } from "./event-bus";
 
 /**
  * Process between-turns status effects for one player.
@@ -102,6 +103,7 @@ export function processBetweenTurns(
 
     if (healed) {
       active.statusConditions = active.statusConditions.filter(s => s !== "burned");
+      emitEvent(state, { type: "STATUS_REMOVED", pokemon: active, status: "burned", playerIndex });
     }
 
     // Check KO from burn
@@ -128,6 +130,7 @@ export function processBetweenTurns(
 
     if (woke) {
       active.statusConditions = active.statusConditions.filter(s => s !== "asleep");
+      emitEvent(state, { type: "STATUS_REMOVED", pokemon: active, status: "asleep", playerIndex });
     }
   }
 
@@ -139,6 +142,8 @@ export function processBetweenTurns(
       `${active.card.name} 的麻痹状态解除了`,
       { status: "paralyzed", cured: true }
     );
+
+    emitEvent(state, { type: "STATUS_REMOVED", pokemon: active, status: "paralyzed", playerIndex });
   }
 
   // ─── V2: heal_between_turns abilities ───

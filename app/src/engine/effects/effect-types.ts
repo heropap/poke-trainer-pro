@@ -12,6 +12,7 @@
  */
 
 import { GameState, GameCard, Player, StatusCondition } from "../game-state";
+import type { GameEffectEvent } from "./game-events";
 
 // ───────────────────────────────────────────────
 // Effect Context: passed to every effect function
@@ -372,6 +373,18 @@ export interface AbilityEffect {
   modifyIncomingDamage?: (ctx: EffectContext, damage: number) => number;
   /** Prevent all bench damage to this Pokemon (passive) */
   preventBenchDamage?: boolean;
+  /**
+   * Event trigger: automatically invoked when matching game events occur.
+   * Enables chain reactions — e.g., "when this Pokemon takes damage, draw a card".
+   */
+  onEvent?: {
+    /** Event types this ability listens to */
+    triggers: GameEffectEvent["type"][];
+    /** Handler called when a matching event fires */
+    handler: (ctx: EffectContext, event: GameEffectEvent) => void | Promise<void>;
+    /** Optional filter — return false to skip this event */
+    filter?: (ctx: EffectContext, event: GameEffectEvent) => boolean;
+  };
 }
 
 // ───────────────────────────────────────────────

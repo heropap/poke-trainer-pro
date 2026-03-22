@@ -30,6 +30,7 @@ import { ActionEvent } from "./middleware/types";
 import { checkEnergyCostWithProvided, getProvidedEnergy } from "./game-actions";
 import { PREVENT_RETREAT_NEXT_TURN, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 import { queryActiveModifiers } from "./effects/modifier-query";
+import { emitEvent } from "./effects/event-bus";
 
 // ───────────────────────────────────────────────
 // Action Result type
@@ -207,6 +208,13 @@ export function attachEnergy(
     { energyCardId: energyCard.cardId, targetCardId: target.cardId }
   );
 
+  emitEvent(state, {
+    type: "ENERGY_ATTACHED",
+    pokemon: target,
+    energy: energyCard,
+    playerIndex: state.currentPlayer,
+  });
+
   return ok();
 }
 
@@ -290,12 +298,15 @@ export function evolvePokemon(
     { from: previousName, to: target.card.name }
   );
 
+  // Emit EVOLUTION event
+  emitEvent(state, {
+    type: "EVOLUTION",
+    pokemon: target,
+    from: evolutionCard,
+    playerIndex: state.currentPlayer,
+  });
+
   // Trigger on_enter abilities for the evolved Pokemon
-  // This handles abilities like "When you play this Pokémon from your hand to evolve..."
-  // (e.g., Charizard ex's Infernal Reign, Gardevoir ex's Psychic Embrace, etc.)
-  // Note: triggerOnEnterAbility is async but we fire-and-forget here to keep
-  // evolvePokemon synchronous for backward compatibility. The async prompt
-  // interactions will be handled via the state.prompt → UI callback mechanism.
   triggerOnEnterAbility(state, state.currentPlayer, target);
 
   return ok();
@@ -338,6 +349,14 @@ export async function evolvePokemonAsync(
     `${player.name} 将 ${previousName} 进化为 ${target.card.name}`,
     { from: previousName, to: target.card.name }
   );
+
+  // Emit EVOLUTION event
+  emitEvent(state, {
+    type: "EVOLUTION",
+    pokemon: target,
+    from: evolutionCard,
+    playerIndex: state.currentPlayer,
+  });
 
   // Await on_enter abilities for interactive prompt support
   await triggerOnEnterAbility(state, state.currentPlayer, target);
@@ -469,6 +488,12 @@ export function retreat(
     { retreated: active.card.name, promoted: benchCard.card.name }
   );
 
+  emitEvent(state, {
+    type: "RETREAT",
+    pokemon: active,
+    playerIndex: state.currentPlayer,
+  });
+
   return ok();
 }
 
@@ -539,6 +564,13 @@ export async function playSupporter(
     `${player.name} 使用了 ${card.card.name}`,
     { cardName: card.card.name, effectSource }
   );
+
+  emitEvent(state, {
+    type: "CARD_PLAYED",
+    card,
+    cardType: "supporter",
+    playerIndex: state.currentPlayer,
+  });
 
   // Execute trainer effect if registered
   await runTrainerEffect(state, state.currentPlayer, card);
@@ -616,6 +648,12 @@ export async function playItem(
       `${player.name} 将 ${card.card.name} 装备到了 ${target.card.name}`,
       { toolName: card.card.name, targetName: target.card.name }
     );
+    emitEvent(state, {
+      type: "CARD_PLAYED",
+      card,
+      cardType: "tool",
+      playerIndex: state.currentPlayer,
+    });
     return ok();
   }
 
@@ -628,6 +666,13 @@ export async function playItem(
     `${player.name} 使用了 ${card.card.name}`,
     { cardName: card.card.name, effectSource: itemEffectSource }
   );
+
+  emitEvent(state, {
+    type: "CARD_PLAYED",
+    card,
+    cardType: "item",
+    playerIndex: state.currentPlayer,
+  });
 
   // Execute item effect if registered
   await runTrainerEffect(state, state.currentPlayer, card);
@@ -696,6 +741,13 @@ export function playBasicToBench(
     `${player.name} 将 ${card.card.name} 放到备战区`,
     { cardName: card.card.name }
   );
+
+  emitEvent(state, {
+    type: "POKEMON_ENTERED",
+    pokemon: card,
+    from: "hand",
+    playerIndex: state.currentPlayer,
+  });
 
   // Trigger on_enter abilities (fire-and-forget for sync compatibility)
   triggerOnEnterAbility(state, state.currentPlayer, card);
@@ -823,6 +875,13 @@ export async function playStadium(
     { stadiumName: card.card.name }
   );
 
+  emitEvent(state, {
+    type: "CARD_PLAYED",
+    card,
+    cardType: "stadium",
+    playerIndex: state.currentPlayer,
+  });
+
   // Execute stadium effect if registered
   await runTrainerEffect(state, state.currentPlayer, card);
 
@@ -844,6 +903,11 @@ export function endTurn(state: GameState): ActionResult {
 
   const currentPlayerIndex = state.currentPlayer;
   const player = getCurrentPlayer(state);
+
+  emitEvent(state, {
+    type: "TURN_END",
+    playerIndex: currentPlayerIndex,
+  });
 
   // Process between-turns status effects for BOTH players (PTCG rule)
   // Current player's active Pokemon checked first, then opponent's

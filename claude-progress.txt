@@ -1793,3 +1793,23 @@ Notes:
     - 能量移动→能量最少目标
 
   所有1352测试通过，0 TypeScript错误
+
+=== Session 26 | 2026-03-22 ===
+Feature: Effect Event Bus + Chain Resolver（效果连锁执行器）
+Status: completed
+Notes: 补全了卡牌效果连锁反应系统。
+新建文件:
+- engine/effects/game-events.ts: 11种 GameEffectEvent 联合类型（DAMAGE_DEALT/POKEMON_KO/CARD_PLAYED/POKEMON_ENTERED/ENERGY_ATTACHED/STATUS_APPLIED/STATUS_REMOVED/RETREAT/EVOLUTION/TURN_END/PRIZE_TAKEN）
+- engine/effects/event-bus.ts: emitEvent() 入队 + drainEffectQueue() 循环执行器（MAX_CHAIN_DEPTH=20 防无限循环）
+- __tests__/event-bus.test.ts: 18个测试覆盖核心功能（emit/drain/chain/filter/block/integration）
+
+修改文件:
+- game-state.ts: GameState 新增可选 effectQueue 字段
+- effect-types.ts: AbilityEffect 新增 onEvent（triggers/handler/filter）支持事件触发
+- game-actions.ts: performAttack 中插入 DAMAGE_DEALT/POKEMON_KO/PRIZE_TAKEN/STATUS_APPLIED 事件
+- turn-actions.ts: 插入 ENERGY_ATTACHED/EVOLUTION/RETREAT/CARD_PLAYED/TURN_END/POKEMON_ENTERED 事件
+- status-effects.ts: 插入 STATUS_REMOVED 事件（烧伤/睡眠/麻痹恢复时）
+- game-controller.ts: processAction 每次成功执行后调用 drainEffectQueue()
+
+关键设计: effectQueue 为可选字段确保零破坏性，所有 emit 在现有 logEvent 之后追加。
+测试结果: 60 suites, 1370 tests, all passing（原 1352 + 新增 18）
