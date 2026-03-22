@@ -37,6 +37,8 @@ export interface SetupResult {
   gameState: GameState | null;
   errors: string[];
   warnings: string[];
+  /** Coin flip result from preparation phase (null if legacy mode or failed) */
+  coinFlipResult?: { winner: 0 | 1; result: "heads" | "tails" } | null;
 }
 
 export interface DeckLoadResult {
@@ -298,6 +300,8 @@ export function initializeGame(
 
   // ─── Full preparation OR legacy setup ───
 
+  let coinFlipResult: { winner: 0 | 1; result: "heads" | "tails" } | null = null;
+
   if (fullPreparation) {
     // Full PTCG setup: mulligan → placement → prizes → coin flip
     const prepResult = executePreparation(state, randomFn);
@@ -308,6 +312,7 @@ export function initializeGame(
     }
 
     warnings.push(...prepResult.warnings);
+    coinFlipResult = prepResult.coinFlipResult;
   } else {
     // Legacy behavior: check mulligan (warn only), set prizes, transition to draw
     for (let p = 0; p < 2; p++) {
@@ -344,5 +349,5 @@ export function initializeGame(
     `[BattleSetup] Game initialized: ${player1Name} (deck: ${state.players[0].deck.cards.length}, hand: ${state.players[0].hand.cards.length}, active: ${state.players[0].active?.card.name ?? "none"}) vs ${player2Name} (deck: ${state.players[1].deck.cards.length}, hand: ${state.players[1].hand.cards.length}, active: ${state.players[1].active?.card.name ?? "none"})`
   );
 
-  return { success: true, gameState: state, errors, warnings };
+  return { success: true, gameState: state, errors, warnings, coinFlipResult };
 }

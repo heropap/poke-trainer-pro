@@ -18,6 +18,8 @@ import { ExternalState, ExternalPlayer, ExternalCard, CardList } from "@/lib/ryu
 import { createMockInitialState } from "@/lib/ryuu-adapter/mock-data";
 import { preloadDeckImages, addPreloadLinks } from "@/lib/image-preloader";
 import { setPromptStateChangeCallback, pendingPrompts } from "@/engine/effects/effect-context";
+import { OpeningSequenceModal } from "@/components/battle/board/OpeningSequenceModal";
+import { setFirstPlayer } from "@/engine/battle-prepare";
 
 // ─── Battle Mode Types ───
 
@@ -62,6 +64,15 @@ export default function BattlePageClient() {
     }, 1000);
     return () => { if (turnTimerRef.current) clearInterval(turnTimerRef.current); };
   }, [battleMode, gameState?.phase, gameState?.currentPlayer]);
+
+  // Opening sequence state (coin flip animation + first/second choice)
+  const [openingData, setOpeningData] = useState<{
+    coinResult: "heads" | "tails";
+    flipWinner: 0 | 1;
+    playerNames: [string, string];
+    pendingGameState: GameState;
+    effectiveMode: BattleMode;
+  } | null>(null);
 
   // Mock Engine Ref
   const mockEngineRef = useRef<MockEngine | null>(null);
@@ -623,16 +634,50 @@ export default function BattlePageClient() {
 
     if (result.success && result.gameState) {
       isLocalGame.current = true;
-      setBattleMode(effectiveMode);
       setMyPlayerId(0);
 
-      const readyState = startFirstTurn(result.gameState);
-      setGameState(readyState);
-      console.log(`[BattlePage] ${effectiveMode} game started successfully`);
+      // Show opening sequence (coin flip + choice) before starting the game
+      if (result.coinFlipResult) {
+        setOpeningData({
+          coinResult: result.coinFlipResult.result,
+          flipWinner: result.coinFlipResult.winner,
+          playerNames: [result.gameState.players[0].name, result.gameState.players[1].name],
+          pendingGameState: result.gameState,
+          effectiveMode,
+        });
+        setBattleMode(effectiveMode);
+        console.log(`[BattlePage] Showing opening sequence (coin flip winner: player ${result.coinFlipResult.winner})`);
+      } else {
+        // No coin flip (legacy mode) — start immediately
+        setBattleMode(effectiveMode);
+        const readyState = startFirstTurn(result.gameState);
+        setGameState(readyState);
+        console.log(`[BattlePage] ${effectiveMode} game started successfully (legacy mode)`);
+      }
     } else {
       console.error("[BattlePage] Game initialization failed:", result.errors);
     }
   }, [selectedDeck1, selectedDeck2, validDecks, cardLookup, battleMode]);
+
+  /**
+   * Called when the opening sequence (coin flip + choice) completes.
+   * Sets the chosen first player and starts the game.
+   */
+  const handleOpeningComplete = useCallback((firstPlayer: 0 | 1) => {
+    if (!openingData) return;
+
+    const { pendingGameState, effectiveMode } = openingData;
+
+    // Override the first player if different from the coin flip winner
+    if (pendingGameState.currentPlayer !== firstPlayer) {
+      setFirstPlayer(pendingGameState, firstPlayer);
+    }
+
+    const readyState = startFirstTurn(pendingGameState);
+    setGameState(readyState);
+    setOpeningData(null);
+    console.log(`[BattlePage] Opening sequence complete. First player: ${firstPlayer} (${pendingGameState.players[firstPlayer].name})`);
+  }, [openingData]);
 
   const handleStartMatchmaking = useCallback(() => {
     if (!socket || !selectedDeck1) return;
@@ -701,6 +746,23 @@ export default function BattlePageClient() {
         >
           前往导入卡组 →
         </Link>
+      </div>
+    );
+  }
+
+  // ─── Opening Sequence (Coin Flip + Choice) ───
+
+  if (openingData && !gameState) {
+    return (
+      <div className="fixed inset-0 z-50 bg-zinc-950">
+        <OpeningSequenceModal
+          coinResult={openingData.coinResult}
+          flipWinner={openingData.flipWinner}
+          playerNames={openingData.playerNames}
+          myIndex={0}
+          isAI={openingData.effectiveMode === "ai"}
+          onComplete={handleOpeningComplete}
+        />
       </div>
     );
   }

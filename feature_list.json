@@ -193,5 +193,8 @@
   {"category":"functional","description":"WebSocket 断线重连 — 自动重连 + 状态恢复","steps":["服务端游戏状态持久化(30分钟TTL)","game:reconnect 事件实现","客户端 exponential backoff","掉线 UI 提示横幅","编写重连流程测试"],"passes":true,"priority":21},
   {"category":"functional","description":"回合计时器 — 90秒限时 + 超时自动结束","steps":["GameState 添加 turnTimer 字段","服务端倒计时 + 超时自动 end_turn","客户端进度环 UI","10秒警告闪红","编写计时器测试"],"passes":true,"priority":22},
   {"category":"functional","description":"高级 Prompt 系统 — 硬币翻转/选择宝可梦/排序卡牌","steps":["扩展 GamePrompt 支持 6 种类型","PromptModal 组件(按类型渲染)","硬币翻转动画","拖拽排序卡牌","Prompt 队列(连续提示)"],"passes":true,"priority":23},
-  {"category":"polish","description":"卡牌图片优化 — next/image + 预加载 + 离线缓存","steps":["配置 Next.js images.remotePatterns","VisualCard 使用 next/image","对战开始预加载卡组图片","卡背图片替代占位符","IntersectionObserver 懒加载"],"passes":true,"priority":24}
+  {"category":"polish","description":"卡牌图片优化 — next/image + 预加载 + 离线缓存","steps":["配置 Next.js images.remotePatterns","VisualCard 使用 next/image","对战开始预加载卡组图片","卡背图片替代占位符","IntersectionObserver 懒加载"],"passes":true,"priority":24},
+  {"category":"ui","description":"开局硬币翻转动画+先后攻选择 — 3D硬币动画+赢家选择先攻/后攻","steps":["SetupResult 携带 coinFlipResult","创建 OpeningSequenceModal 组件(3D硬币翻转CSS动画)","硬币翻转赢家选择先攻/后攻(AI自动选)","BattlePageClient 集成开局序列","编写开局序列测试"],"passes":true,"priority":25},
+  {"category":"ui","description":"开局宝可梦选择 Modal — 从手牌选基础宝可梦放置战斗区/备战区","steps":["创建 PokemonPlacementModal 组件","显示手牌中所有基础宝可梦","选择战斗区宝可梦(必选1只)","选择备战区宝可梦(可选0-5只)","替换 autoPlaceBasicPokemon 为交互式放置"],"passes":false,"priority":26},
+  {"category":"ui","description":"KO后备战区选择优化 — 被击倒后选择替补宝可梦的交互改进","steps":["创建 PromotionModal 专用组件","显示备战区宝可梦卡牌详情","高亮可选目标+确认按钮","添加升级动画过渡效果","替换当前点击备战区直接升级的交互"],"passes":false,"priority":27}
 ]

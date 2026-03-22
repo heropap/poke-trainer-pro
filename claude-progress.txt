@@ -1813,3 +1813,15 @@ Notes: 补全了卡牌效果连锁反应系统。
 
 关键设计: effectQueue 为可选字段确保零破坏性，所有 emit 在现有 logEvent 之后追加。
 测试结果: 60 suites, 1370 tests, all passing（原 1352 + 新增 18）
+
+=== Session 25 | 2026-03-22 ===
+Feature: 开局硬币翻转动画+先后攻选择
+Status: completed
+Notes: 实现了开局硬币翻转的 3D CSS 动画和先攻/后攻选择交互。
+- SetupResult 新增 coinFlipResult 字段，传递硬币结果到 UI 层
+- 创建 OpeningSequenceModal 组件：3D 硬币旋转动画(CSS perspective + rotateY)、结果展示、先攻/后攻选择按钮
+- battle-prepare.ts 新增 setFirstPlayer() 函数，允许赢家选择后攻时覆盖 currentPlayer
+- BattlePageClient 集成：初始化后显示开局序列 modal，选择完成后才启动第一回合
+- AI 模式下 AI 赢得翻转时自动选择先攻
+- 9 个新测试全部通过，总计 61 套件 1379 测试无回归
+- 同时追加了 3 个新功能到 feature_list.json：开局硬币翻转、开局宝可梦选择、KO后备战区选择优化

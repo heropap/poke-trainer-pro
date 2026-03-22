@@ -213,6 +213,22 @@ export function flipCoin(
   return { winner, result };
 }
 
+/**
+ * Override who goes first (used when coin flip winner chooses to go second).
+ */
+export function setFirstPlayer(
+  state: GameState,
+  playerIndex: 0 | 1
+): void {
+  state.currentPlayer = playerIndex;
+  logEvent(
+    state,
+    playerIndex,
+    "game_start",
+    `${state.players[playerIndex].name} 选择先攻`
+  );
+}
+
 // ───────────────────────────────────────────────
 // Basic Pokemon Placement
 // ───────────────────────────────────────────────
