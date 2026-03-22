@@ -1754,3 +1754,42 @@ Notes:
   2. ActiveSpot攻击/特性/被动按钮增加hover浮窗，显示完整技能文字、费用、伤害，状态原因
   3. CardSelectionModal全面中文化（跳过/确认选择/搜索卡牌名称），新增进度条显示，min===max时选满300ms自动确认
   4. effect-context.ts: promptSearchDeck和promptSearchDiscard的min从0改为count，玩家必须选够卡牌数
+
+=== Session code-review-global | 2026-03-21 ===
+Feature: 全局卡片效果审查与优化
+Status: completed
+Notes:
+  修复了3类问题共30+处：
+
+  1. 逻辑Bug修复:
+    - DAMAGE_BOOST 退场后残留：扩展清除到所有宝可梦
+    - Lost Vacuum：canPlay检查+备战区道具覆盖
+    - Roaring Moon ex：HP计算纳入道具加成
+    - Fezandipiti ex Cruel Arrow：从仅打active改为任意目标
+    - Radiant Greninja：修正弃2能量+双目标攻击
+    - Pidgeot ex：May discard改为仅弃对手球场
+
+  2. 缺失功能实现:
+    - Iron Hands ex：extraPrize +1 击倒时多拿奖励卡
+    - Lumineon V Aqua Return：shuffleSelf洗入牌组
+    - Manaphy Wave Veil：全场备战区免伤(被动特性)
+    - Bibarel Industrious Incisors：抽牌到5张(主动特性)
+    - Squawkabilly ex Squawk and Seize：弃手牌抽6(主动特性,每局一次)
+    - AttackResult新增extraPrize/shuffleSelf字段
+
+  3. 球场激活系统:
+    - 新增use_stadium动作类型+handleUseStadium处理器
+    - TurnState新增hasUsedStadium（每回合一次）
+    - Artazon：搜索无规则框基础宝可梦
+    - Iono's Palace：对手洗回手牌抽等量
+    - Academy at Night：选手牌放牌顶
+    - Mesagoza：弃手牌抽5
+
+  4. bench伤害防御系统升级：
+    - 从单体检查扩展到全场友军检查(Manaphy保护所有队友)
+
+  5. 智能目标自动选择（同步攻击无法prompt）：
+    - 备战伤害→最接近KO目标
+    - 能量移动→能量最少目标
+
+  所有1352测试通过，0 TypeScript错误

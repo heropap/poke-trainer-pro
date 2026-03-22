@@ -21,7 +21,7 @@ import { getEffect, getEffectSource } from "./effects/effect-registry";
 import { createEffectContext } from "./effects/effect-context";
 import { flipCoin } from "./effects/coin";
 import type { AttackResult } from "./effects/effect-types";
-import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
+import { CANT_ATTACK_NEXT_TURN, cantUseAttackMarker, ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP, DAMAGE_BOOST, PREVENT_ALL_DAMAGE_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./effects/markers";
 import { queryActiveModifiers, isStatusImmune, isEnergyRemovalBlocked } from "./effects/modifier-query";
 
 export interface PlayCardResult {
@@ -41,7 +41,11 @@ export function getEffectiveHp(card: GameCard): number {
   for (const tool of card.attachedTools) {
     const toolEffect = getEffect(tool.cardId, tool.card.name);
     const hpMod = toolEffect?.tool?.whileAttached?.modifyHp;
-    if (typeof hpMod === "number") bonus += hpMod;
+    if (typeof hpMod === "number") {
+      bonus += hpMod;
+    } else if (typeof hpMod === "function") {
+      bonus += hpMod(card.card.subtypes || []);
+    }
   }
   return base + bonus;
 }
@@ -784,6 +788,17 @@ export function performAttack(
   const skipWeakness = effectResult?.skipWeakness ?? false;
   const skipResistance = effectResult?.skipResistance ?? false;
 
+  // 3a. Apply trainer damage boosts (Kieran +20, Giovanni's Charisma +10)
+  // DAMAGE_BOOST marker is set by trainer supporters, applied BEFORE weakness/resistance
+  if (baseDamage > 0 && attacker.active) {
+    const damageBoost = attacker.active.markers[DAMAGE_BOOST] ?? 0;
+    if (damageBoost > 0) {
+      baseDamage += damageBoost;
+      logEvent(state, playerIndex, "damage" as any,
+        `${attacker.active.card.name} 的攻击伤害 +${damageBoost}（训练家效果）`);
+    }
+  }
+
   // 3b. Apply attacker tool damage modifiers (e.g. Choice Belt +30, Vitality Band +10)
   if (baseDamage > 0 && attacker.active) {
     baseDamage = applyAttackerToolDamageModifiers(state, attacker.active, baseDamage);
@@ -815,6 +830,75 @@ export function performAttack(
   if (finalDamage > 0 && defender.active) {
     finalDamage = applyToolDamageModifiers(state, defender.active, finalDamage);
     if (finalDamage < 0) finalDamage = 0;
+  }
+
+  // 5b. Apply passive ability damage modifiers from all Pokemon in play
+  if (finalDamage > 0 && attacker.active && defender.active) {
+    // Collect all Pokemon by player
+    const allPokemonByPlayer: [GameCard[], GameCard[]] = [[], []];
+    for (let pi = 0; pi < 2; pi++) {
+      const p = state.players[pi];
+      if (p.active) allPokemonByPlayer[pi].push(p.active);
+      allPokemonByPlayer[pi].push(...p.bench.cards);
+    }
+
+    // Attacker side: modifyDamage (isAttacker = true) — only for the attacking Pokemon
+    for (const pokemon of allPokemonByPlayer[playerIndex]) {
+      if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
+      const effect = getEffect(pokemon.cardId, pokemon.card.name);
+      if (!effect?.abilities) continue;
+      for (const ability of effect.abilities) {
+        if (ability.type !== "passive" || !ability.modifyDamage) continue;
+        if (pokemon.instanceId !== attacker.active!.instanceId) continue;
+        const ectx = createEffectContext(state, playerIndex, pokemon);
+        const newDamage = ability.modifyDamage(ectx, finalDamage, true);
+        if (newDamage !== finalDamage) {
+          logEvent(state, playerIndex, "ability" as any,
+            `${pokemon.card.name} 的特性 ${ability.name} 修改了伤害 (${finalDamage} → ${newDamage})`);
+          finalDamage = newDamage;
+        }
+      }
+    }
+
+    // Defender side: modifyDamage (isAttacker = false) + modifyIncomingDamage — only for the defending Pokemon
+    for (const pokemon of allPokemonByPlayer[defenderIndex]) {
+      if (pokemon.markers[ABILITY_BLOCKED] > 0 || pokemon.markers[ABILITY_BLOCKED_TEMP] > 0) continue;
+      const effect = getEffect(pokemon.cardId, pokemon.card.name);
+      if (!effect?.abilities) continue;
+      for (const ability of effect.abilities) {
+        if (ability.type !== "passive") continue;
+        if (pokemon.instanceId !== defender.active!.instanceId) continue;
+        if (ability.modifyDamage) {
+          const ectx = createEffectContext(state, defenderIndex, pokemon);
+          const newDamage = ability.modifyDamage(ectx, finalDamage, false);
+          if (newDamage !== finalDamage) {
+            logEvent(state, defenderIndex, "ability" as any,
+              `${pokemon.card.name} 的特性 ${ability.name} 修改了伤害 (${finalDamage} → ${newDamage})`);
+            finalDamage = newDamage;
+          }
+        }
+        if (ability.modifyIncomingDamage) {
+          const ectx = createEffectContext(state, defenderIndex, pokemon);
+          const newDamage = ability.modifyIncomingDamage(ectx, finalDamage);
+          if (newDamage !== finalDamage) {
+            logEvent(state, defenderIndex, "ability" as any,
+              `${pokemon.card.name} 的特性 ${ability.name} 减少了受到的伤害 (${finalDamage} → ${newDamage})`);
+            finalDamage = newDamage;
+          }
+        }
+      }
+    }
+
+    if (finalDamage < 0) finalDamage = 0;
+  }
+
+  // 5c. Check PREVENT_ALL_DAMAGE_NEXT_TURN marker on defender
+  if (finalDamage > 0 && defender.active) {
+    if ((defender.active.markers[PREVENT_ALL_DAMAGE_NEXT_TURN] ?? 0) > 0) {
+      logEvent(state, defenderIndex, "ability" as any,
+        `${defender.active.card.name} 的保护效果阻挡了所有伤害`);
+      finalDamage = 0;
+    }
   }
 
   // 6. Apply Damage to defender's active
@@ -922,6 +1006,13 @@ export function performAttack(
             { status: se.status });
         }
       }
+    }
+
+    // Prevent retreat on defender (e.g., attacks that trap the opponent)
+    if (effectResult.preventRetreat && defender.active) {
+      defender.active.markers[PREVENT_RETREAT_NEXT_TURN] = (defender.active.markers[PREVENT_RETREAT_NEXT_TURN] ?? 0) + 1;
+      logEvent(state, playerIndex, "status_effect" as any,
+        `${defender.active.card.name} 下回合无法撤退!`);
     }
 
     // Energy discard

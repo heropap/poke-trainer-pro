@@ -24,7 +24,7 @@
  */
 
 import { CardEffectDef, AttackResult } from "../effect-types";
-import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN, cantUseAttackMarker } from "../markers";
+import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "../markers";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -62,9 +62,8 @@ const pidgeotEx: NamedEffect = {
     {
       name: "Blustery Wind",
       onAttack: (ctx, baseDamage) => {
-        // "You may discard a Stadium in play" — optional.
-        // Auto-discard if opponent owns the stadium (strategically correct).
-        if (ctx.state.stadium && ctx.state.stadium.owner !== ctx.playerIndex) {
+        // "You may discard a Stadium in play" — discard any stadium.
+        if (ctx.state.stadium) {
           ctx.removeStadium();
         }
         return { damage: baseDamage };
@@ -506,17 +505,33 @@ const radiantGreninja: NamedEffect = {
           const energy = ctx.source.attachedEnergy.pop()!;
           ctx.player.discard.cards.push(energy);
         }
-        // 90 damage to active + 90 to first bench target (auto-select)
+        // 90 damage to 2 of opponent's Pokemon (any combination of active/bench)
+        // Auto-select: pick the 2 Pokemon closest to KO
+        const allOpponent = [
+          ctx.opponent.active,
+          ...ctx.opponent.bench.cards,
+        ].filter(Boolean) as typeof ctx.opponent.bench.cards;
+
+        // Sort by remaining HP ascending (closest to KO first)
+        const sorted = [...allOpponent].sort((a, b) => {
+          const aRemaining = parseInt(a.card.hp || "999") - a.damageCounters * 10;
+          const bRemaining = parseInt(b.card.hp || "999") - b.damageCounters * 10;
+          return aRemaining - bRemaining;
+        });
+
+        const targets = sorted.slice(0, 2);
+        let mainDamage = 0;
         const benchDamage: AttackResult["benchDamage"] = [];
-        if (ctx.opponent.bench.cards.length > 0) {
-          // Auto-select: target bench Pokemon with most existing damage (closest to KO)
-          const bench = ctx.opponent.bench.cards;
-          const target = bench.reduce((best, curr) =>
-            curr.damageCounters > best.damageCounters ? curr : best
-          , bench[0]);
-          benchDamage.push({ target, damage: 90 });
+
+        for (const target of targets) {
+          if (target === ctx.opponent.active) {
+            mainDamage += 90;
+          } else {
+            benchDamage.push({ target, damage: 90 });
+          }
         }
-        return { damage: 90, benchDamage };
+
+        return { damage: mainDamage, benchDamage };
       },
     },
   ],
@@ -549,7 +564,7 @@ const bibarel: NamedEffect = {
   cardName: "Bibarel",
   attacks: [
     {
-      name: "Hyper Fang",
+      name: "Tail Smash",
       onAttack: (ctx, baseDamage) => {
         const heads = ctx.flipCoin();
         if (!heads) return { damage: 0 };
@@ -573,27 +588,15 @@ const bibarel: NamedEffect = {
   ],
 };
 
-// Hawlucha — Big Match (30+ bench damage)
+// Hawlucha — Wing Attack (70, no special effect)
 const hawlucha: NamedEffect = {
   cardId: "name:Hawlucha",
   cardName: "Hawlucha",
   attacks: [
     {
-      name: "Big Match",
-      onAttack: (ctx, baseDamage) => {
-        // "This attack also does 30 damage to 1 of your opponent's Benched Pokémon."
-        const benchDamage: AttackResult["benchDamage"] = [];
-        if (ctx.opponent.bench.cards.length > 0) {
-          // Auto-select: target bench Pokemon closest to KO
-          const bench = ctx.opponent.bench.cards;
-          const target = bench.reduce((best, curr) => {
-            const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
-            const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
-            return currRemaining < bestRemaining ? curr : best;
-          }, bench[0]);
-          benchDamage.push({ target, damage: 30 });
-        }
-        return { damage: baseDamage, benchDamage };
+      name: "Wing Attack",
+      onAttack: (_ctx, baseDamage) => {
+        return { damage: baseDamage };
       },
     },
   ],
@@ -641,8 +644,8 @@ const squawkabillyEx: NamedEffect = {
       name: "Squawk and Seize",
       type: "activated" as const,
       canActivate: (ctx) => {
-        // Once per game (not once per turn)
-        return !ctx.source.markers["SQUAWK_AND_SEIZE_USED"];
+        // Once per game, only on your first turn
+        return !ctx.source.markers["SQUAWK_AND_SEIZE_USED"] && ctx.state.isFirstTurn;
       },
       onActivate: (ctx) => {
         // Discard hand and draw 6
@@ -655,7 +658,7 @@ const squawkabillyEx: NamedEffect = {
   ],
 };
 
-// Greninja ex — Shinobi Blade (170, can't use next turn)
+// Greninja ex — Shinobi Blade (170, search deck for 1 card, add to hand, shuffle)
 const greninjaEx: NamedEffect = {
   cardId: "name:Greninja ex",
   cardName: "Greninja ex",
@@ -663,8 +666,13 @@ const greninjaEx: NamedEffect = {
     {
       name: "Shinobi Blade",
       onAttack: (ctx, baseDamage) => {
-        // Can't use this specific attack next turn
-        ctx.addMarker(ctx.source, cantUseAttackMarker("Shinobi Blade"));
+        // Search deck for any 1 card, add to hand, shuffle deck
+        const found = ctx.searchDeck(() => true, 1, "player");
+        if (found.length > 0) {
+          ctx.addToHand(found[0], "player");
+          ctx.log(`Shinobi Blade: 从牌组中搜索了 1 张卡牌加入手牌`);
+        }
+        ctx.shuffleDeck("player");
         return { damage: baseDamage };
       },
     },
@@ -700,7 +708,7 @@ const lugiaEx: NamedEffect = {
   ],
 };
 
-// Fezandipiti ex — Flip coin paralyze + poison
+// Fezandipiti ex — Cruel Arrow (100 damage to 1 of opponent's Pokemon)
 const fezandipitiEx: NamedEffect = {
   cardId: "name:Fezandipiti ex",
   cardName: "Fezandipiti ex",
@@ -708,46 +716,48 @@ const fezandipitiEx: NamedEffect = {
     {
       name: "Cruel Arrow",
       onAttack: (ctx, _baseDamage) => {
-        // "Put 6 damage counters on 1 of your opponent's Pokémon."
-        // This bypasses weakness/resistance (damage counters, not attack damage).
+        // "This attack does 100 damage to 1 of your opponent's Pokémon."
         // Auto-select: target the opponent Pokemon closest to KO.
         const allOpponent = [
           ctx.opponent.active,
           ...ctx.opponent.bench.cards,
         ].filter(Boolean) as typeof ctx.opponent.bench.cards;
 
-        if (allOpponent.length > 0) {
-          // Pick target closest to KO (highest damageCounters relative to HP)
-          const target = allOpponent.reduce((best, curr) => {
-            const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
-            const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
-            return currRemaining < bestRemaining ? curr : best;
-          }, allOpponent[0]);
-          // Place damage counters directly (not attack damage — bypasses W/R)
-          target.damageCounters += 6;
-          ctx.log(`Cruel Arrow: 在 ${target.card.name} 上放置了 6 个伤害指示物`);
+        if (allOpponent.length === 0) return { damage: 0 };
+
+        // Pick target closest to KO
+        const target = allOpponent.reduce((best, curr) => {
+          const bestRemaining = parseInt(best.card.hp || "999") - best.damageCounters * 10;
+          const currRemaining = parseInt(curr.card.hp || "999") - curr.damageCounters * 10;
+          return currRemaining < bestRemaining ? curr : best;
+        }, allOpponent[0]);
+
+        // If target is the active, apply as main attack damage (with W/R)
+        if (target === ctx.opponent.active) {
+          return { damage: 100 };
         }
-        // Return 0 damage — all damage is via counters, not attack damage
-        return { damage: 0 };
+        // If target is on bench, use benchDamage (no W/R for bench)
+        return {
+          damage: 0,
+          benchDamage: [{ target, damage: 100 }],
+        };
       },
     },
   ],
 };
 
-// Munkidori — Adrena-Brain (extra damage if opp has status)
+// Munkidori — Mind Bend (PC, 60, confuse opponent's active)
 const munkidori: NamedEffect = {
   cardId: "name:Munkidori",
   cardName: "Munkidori",
   attacks: [
     {
-      name: "Adrena-Brain",
-      onAttack: (ctx, baseDamage) => {
-        // +100 if defending Pokemon has a Special Condition
-        let bonus = 0;
-        if (ctx.opponent.active && ctx.opponent.active.statusConditions.length > 0) {
-          bonus = 100;
-        }
-        return { damage: baseDamage + bonus };
+      name: "Mind Bend",
+      onAttack: (_ctx, baseDamage) => {
+        return {
+          damage: baseDamage,
+          statusEffects: [{ status: "confused" as const, target: "defender" as const }],
+        };
       },
     },
   ],

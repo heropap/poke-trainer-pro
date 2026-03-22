@@ -12,6 +12,7 @@
  */
 
 import { CardEffectDef, AttackResult } from "../effect-types";
+import { CANT_ATTACK_NEXT_TURN } from "../markers";
 
 // ───────────────────────────────────────────────
 // 1. Status Attacks
@@ -158,6 +159,13 @@ const stonjourner: CardEffectDef = {
         };
       },
     },
+    {
+      name: "Boundless Power",
+      onAttack: (ctx, baseDamage) => {
+        ctx.addMarker(ctx.source, CANT_ATTACK_NEXT_TURN);
+        return { damage: baseDamage };
+      },
+    },
   ],
 };
 
@@ -181,6 +189,13 @@ const megaCameruptEx: CardEffectDef = {
         };
       },
     },
+    {
+      name: "Roasting Heat",
+      onAttack: (ctx, baseDamage) => {
+        const bonus = ctx.opponent.active?.statusConditions.includes("burned") ? 160 : 0;
+        return { damage: baseDamage + bonus };
+      },
+    },
   ],
 };
 
@@ -198,6 +213,25 @@ const kyogre: CardEffectDef = {
           damage: baseDamage,
           discardEnergy: 2,
         };
+      },
+    },
+    {
+      name: "Riptide",
+      onAttack: (ctx, baseDamage) => {
+        const waterEnergy = ctx.player.discard.cards.filter(
+          (c) => c.card.supertype === "Energy" && c.card.types?.includes("Water")
+        );
+        const damage = waterEnergy.length * 20;
+        // Move water energy from discard to deck
+        for (const e of waterEnergy) {
+          const idx = ctx.player.discard.cards.indexOf(e);
+          if (idx >= 0) {
+            ctx.player.discard.cards.splice(idx, 1);
+            ctx.player.deck.cards.push(e);
+          }
+        }
+        ctx.shuffleDeck("player");
+        return { damage };
       },
     },
   ],
@@ -256,6 +290,13 @@ const exeggutor: CardEffectDef = {
         return {
           damage: baseDamage + grassEnergy * 30,
         };
+      },
+    },
+    {
+      name: "Guard Press",
+      onAttack: (ctx, baseDamage) => {
+        ctx.source.markers["REDUCE_DAMAGE_30"] = 1;
+        return { damage: baseDamage };
       },
     },
   ],

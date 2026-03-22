@@ -206,12 +206,26 @@ const mesagoza: CardEffectDef & { cardName: string } = {
     {
       name: "Mesagoza",
       type: "activated" as const,
-      canActivate: () => true, // Always activatable (even with empty hand — discard 0, draw 5)
+      canActivate: () => true, // Always activatable — flip a coin to try
       onActivate: (ctx) => {
-        const discarded = ctx.player.hand.cards.length;
-        ctx.discardHand("player");
-        ctx.drawCards(5, "player");
-        ctx.log(`Mesagoza: 弃掉 ${discarded} 张手牌，抽了 5 张`);
+        const heads = ctx.flipCoin();
+        if (heads) {
+          // Search deck for any Pokemon
+          const pokemon = ctx.player.deck.cards.find(
+            (c) => c.card.supertype === "Pokémon"
+          );
+          if (pokemon) {
+            const idx = ctx.player.deck.cards.indexOf(pokemon);
+            ctx.player.deck.cards.splice(idx, 1);
+            ctx.player.hand.cards.push(pokemon);
+            ctx.log(`Mesagoza: 掷硬币正面! 从牌组搜索了 ${pokemon.card.name}`);
+          } else {
+            ctx.log(`Mesagoza: 掷硬币正面，但牌组中没有宝可梦`);
+          }
+        } else {
+          ctx.log(`Mesagoza: 掷硬币反面，没有效果`);
+        }
+        ctx.shuffleDeck("player");
       },
     },
   ],

@@ -15,6 +15,7 @@
 import { CardEffectDef, EffectContext } from "../effect-types";
 import { DAMAGE_BOOST, ABILITY_BLOCKED_TEMP } from "../markers";
 import { onPromptStateChange } from "../effect-context";
+import { createGameCard } from "../../game-state";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -22,15 +23,15 @@ type NamedEffect = CardEffectDef & { cardName: string };
 // Supporters
 // ───────────────────────────────────────────────
 
-/** Kieran — During this turn, your Pokemon's attacks do 20 more damage to the opponent's Active */
+/** Kieran — During this turn, your Pokemon's attacks do 30 more damage to the opponent's Active */
 const kieran: NamedEffect = {
   cardId: "name:Kieran",
   cardName: "Kieran",
   trainer: {
     onPlay: (ctx) => {
       if (ctx.player.active) {
-        ctx.addMarker(ctx.player.active, DAMAGE_BOOST, 20);
-        ctx.log("Kieran: 本回合攻击伤害 +20");
+        ctx.addMarker(ctx.player.active, DAMAGE_BOOST, 30);
+        ctx.log("Kieran: 本回合攻击伤害 +30");
       }
     },
   },
@@ -66,87 +67,123 @@ const eri: NamedEffect = {
   },
 };
 
-/** Crispin — Attach up to 4 Basic Energy from discard to one of your Pokemon */
+/** Crispin — Search deck for up to 2 Basic Energy of different types. Put 1 in hand, attach the other to a Pokemon. Shuffle deck. */
 const crispin: NamedEffect = {
   cardId: "name:Crispin",
   cardName: "Crispin",
   trainer: {
     canPlay: (ctx) => {
-      return ctx.player.discard.cards.some(
+      return ctx.player.deck.cards.some(
         (c) =>
           c.card.supertype === "Energy" &&
           c.card.subtypes?.includes("Basic")
       );
     },
     onPlay: async (ctx) => {
-      const basicEnergy = ctx.player.discard.cards.filter(
+      // Find Basic Energy in deck, pick up to 2 of different types
+      const deckEnergy = ctx.player.deck.cards.filter(
         (c) =>
           c.card.supertype === "Energy" &&
           c.card.subtypes?.includes("Basic")
       );
-      const toAttach = basicEnergy.slice(0, 4);
-      if (toAttach.length === 0) return;
+      if (deckEnergy.length === 0) {
+        ctx.shuffleDeck("player");
+        return;
+      }
 
-      // Let user choose which Pokemon to attach all energy to (only when UI is available)
-      const allPokemon = ctx.getAllPokemon("player");
-      let target = ctx.player.active;
-
-      if (allPokemon.length > 1 && onPromptStateChange) {
-        const selection = await ctx.promptUser({
-          message: "Crispin: 选择要附加能量的宝可梦",
-          min: 1,
-          max: 1,
-          zone: "own_field",
-          targets: allPokemon.map((c) => c.instanceId),
-        });
-        if (selection && selection.length > 0) {
-          target = ctx.findPokemon(selection[0]) || target;
+      // Auto-select up to 2 of different types
+      const selected: typeof deckEnergy = [];
+      const usedTypes = new Set<string>();
+      for (const e of deckEnergy) {
+        const etype = e.card.name; // e.g. "Fire Energy", "Water Energy"
+        if (!usedTypes.has(etype) && selected.length < 2) {
+          selected.push(e);
+          usedTypes.add(etype);
         }
       }
 
-      if (!target) return;
-
-      for (const energy of toAttach) {
-        const idx = ctx.player.discard.cards.indexOf(energy);
-        if (idx !== -1) {
-          ctx.player.discard.cards.splice(idx, 1);
-          target.attachedEnergy.push(energy);
-        }
+      // Remove selected from deck
+      for (const card of selected) {
+        const idx = ctx.player.deck.cards.indexOf(card);
+        if (idx !== -1) ctx.player.deck.cards.splice(idx, 1);
       }
-      ctx.log(
-        `Crispin: 从弃牌堆附加了 ${toAttach.length} 张基础能量到 ${target.card.name}`
-      );
+
+      if (selected.length === 2) {
+        // First goes to hand, second attaches to a Pokemon
+        ctx.addToHand(selected[0], "player");
+        // Attach second to active if available, else first bench
+        const allPokemon = ctx.getAllPokemon("player");
+        const target = ctx.player.active || (allPokemon.length > 0 ? allPokemon[0] : null);
+        if (target) {
+          target.attachedEnergy.push(selected[1]);
+          ctx.log(
+            `Crispin: ${selected[0].card.name} 加入手牌，${selected[1].card.name} 附加到 ${target.card.name}`
+          );
+        } else {
+          // No Pokemon to attach to, both go to hand
+          ctx.addToHand(selected[1], "player");
+          ctx.log(`Crispin: 2张基础能量加入手牌`);
+        }
+      } else if (selected.length === 1) {
+        // Only 1 found: put in hand
+        ctx.addToHand(selected[0], "player");
+        ctx.log(`Crispin: ${selected[0].card.name} 加入手牌`);
+      }
+
+      ctx.shuffleDeck("player");
     },
   },
 };
 
-/** Perrin — Look at top 5 cards, take any Pokemon found */
+/** Perrin — Reveal up to 2 Pokemon from hand, put into deck. Search deck for that many Pokemon, put into hand. Shuffle. */
 const perrin: NamedEffect = {
   cardId: "name:Perrin",
   cardName: "Perrin",
   trainer: {
-    onPlay: (ctx) => {
-      // Reveal top 5 cards, put all Pokemon into hand, shuffle rest back
-      const revealed = ctx.revealTopCards(5, "player");
-      const pokemon = revealed.filter(
+    canPlay: (ctx) => {
+      return ctx.player.hand.cards.some(
         (c) => c.card.supertype === "Pokémon"
       );
-      const rest = revealed.filter(
-        (c) => c.card.supertype !== "Pokémon"
+    },
+    onPlay: async (ctx) => {
+      // Auto-select up to 2 Pokemon from hand
+      const pokemonInHand = ctx.player.hand.cards.filter(
+        (c) => c.card.supertype === "Pokémon"
       );
+      const toReturn = pokemonInHand.slice(0, 2);
 
-      for (const card of pokemon) {
-        ctx.addToHand(card, "player");
+      // Move selected Pokemon from hand into deck
+      for (const card of toReturn) {
+        const idx = ctx.player.hand.cards.indexOf(card);
+        if (idx !== -1) {
+          ctx.player.hand.cards.splice(idx, 1);
+          ctx.player.deck.cards.push(card);
+        }
       }
-      if (rest.length > 0) {
-        ctx.shuffleIntoDeck(rest, "player");
+      ctx.log(`Perrin: 将 ${toReturn.length} 只宝可梦放回牌组`);
+
+      // Shuffle before searching
+      ctx.shuffleDeck("player");
+
+      // Search deck for that many Pokemon
+      const searchCount = toReturn.length;
+      if (searchCount > 0) {
+        const found = await ctx.promptSearchDeck!(
+          (c) => c.card.supertype === "Pokémon",
+          searchCount,
+          `Perrin: 选择最多 ${searchCount} 只宝可梦加入手牌`,
+          "player",
+          0
+        );
+        for (const card of found) {
+          ctx.addToHand(card, "player");
+        }
+        if (found.length > 0) {
+          ctx.log(`Perrin: 从牌组中找到了 ${found.length} 只宝可梦`);
+        }
       }
 
-      if (pokemon.length > 0) {
-        ctx.log(`Perrin: 从牌组顶部找到了 ${pokemon.length} 张宝可梦`);
-      } else {
-        ctx.log("Perrin: 未找到宝可梦，其他牌已洗回牌组");
-      }
+      ctx.shuffleDeck("player");
     },
   },
 };
@@ -170,15 +207,43 @@ const roxanne: NamedEffect = {
   },
 };
 
-/** Colress's Tenacity — Discard a card from your hand, then draw 5 */
+/** Colress's Tenacity — Search deck for 1 Stadium card and 1 Energy card, put into hand. Shuffle deck. */
 const colresssTenacity: NamedEffect = {
   cardId: "name:Colress's Tenacity",
   cardName: "Colress's Tenacity",
   trainer: {
-    canPlay: (ctx) => ctx.player.hand.cards.length >= 1,
     onPlay: async (ctx) => {
-      await ctx.promptDiscardFromHand(1, "player");
-      ctx.drawCards(5, "player");
+      let foundAny = false;
+
+      // Search for first Stadium card in deck
+      const stadiumIdx = ctx.player.deck.cards.findIndex(
+        (c) =>
+          c.card.supertype === "Trainer" &&
+          c.card.subtypes?.includes("Stadium")
+      );
+      if (stadiumIdx !== -1) {
+        const stadium = ctx.player.deck.cards.splice(stadiumIdx, 1)[0];
+        ctx.addToHand(stadium, "player");
+        ctx.log(`Colress's Tenacity: ${stadium.card.name} (场地卡) 加入手牌`);
+        foundAny = true;
+      }
+
+      // Search for first Energy card in deck
+      const energyIdx = ctx.player.deck.cards.findIndex(
+        (c) => c.card.supertype === "Energy"
+      );
+      if (energyIdx !== -1) {
+        const energy = ctx.player.deck.cards.splice(energyIdx, 1)[0];
+        ctx.addToHand(energy, "player");
+        ctx.log(`Colress's Tenacity: ${energy.card.name} (能量卡) 加入手牌`);
+        foundAny = true;
+      }
+
+      if (!foundAny) {
+        ctx.log("Colress's Tenacity: 牌组中没有找到场地卡或能量卡");
+      }
+
+      ctx.shuffleDeck("player");
     },
   },
 };
@@ -238,25 +303,32 @@ const worker: NamedEffect = {
   },
 };
 
-/** Serena — Choose 1: switch opponent's active, OR discard up to 3 cards then draw until 5 */
+/** Serena — Choose 1: switch opponent's Pokemon V to active, OR discard up to 3 cards then draw until 5 */
 const serena: NamedEffect = {
   cardId: "name:Serena",
   cardName: "Serena",
   trainer: {
     onPlay: async (ctx) => {
-      // Present choice via opponent bench selection (min:0 = skip → draw effect)
-      if (ctx.opponent.bench.cards.length > 0) {
+      // Filter opponent bench for Pokemon V only (V, VMAX, VSTAR)
+      const vPokemon = ctx.opponent.bench.cards.filter((c) => {
+        const subtypes = c.card.subtypes || [];
+        return subtypes.some(
+          (s) => s.includes("V") || s.includes("VMAX") || s.includes("VSTAR")
+        );
+      });
+
+      if (vPokemon.length > 0) {
         const selection = await ctx.promptUser({
           message:
-            "Serena: 选择对手备战宝可梦切换（跳过则丢弃手牌并摸牌至5张）",
+            "Serena: 选择对手的宝可梦V切换到战斗区（跳过则丢弃手牌并摸牌至5张）",
           min: 0,
           max: 1,
           zone: "opponent_bench",
-          targets: ctx.opponent.bench.cards.map((c) => c.instanceId),
+          targets: vPokemon.map((c) => c.instanceId),
         });
         if (selection && selection.length > 0) {
           ctx.switchOpponentActive(selection[0]);
-          ctx.log(`Serena: 对手的宝可梦被切换到了战斗区`);
+          ctx.log(`Serena: 对手的宝可梦V被切换到了战斗区`);
           return;
         }
       }
@@ -272,7 +344,7 @@ const serena: NamedEffect = {
   },
 };
 
-/** Adventurer's Discovery — Search deck for up to 3 V/ex Pokemon */
+/** Adventurer's Discovery — Search deck for up to 3 Pokemon V (V, VSTAR, VMAX — not ex) */
 const adventurersDiscovery: NamedEffect = {
   cardId: "name:Adventurer's Discovery",
   cardName: "Adventurer's Discovery",
@@ -284,14 +356,13 @@ const adventurersDiscovery: NamedEffect = {
           const subtypes = c.card.subtypes || [];
           return subtypes.some(
             (s) =>
-              s.includes("ex") ||
               s.includes("V") ||
               s.includes("VSTAR") ||
               s.includes("VMAX")
           );
         },
         3,
-        "Adventurer's Discovery: 选择最多3只V/ex宝可梦加入手牌",
+        "Adventurer's Discovery: 选择最多3只宝可梦V加入手牌",
         "player",
         0 // minCount: up to 3
       );
@@ -321,26 +392,18 @@ const giovannisCharisma: NamedEffect = {
 // Items
 // ───────────────────────────────────────────────
 
-/** Maximum Belt — Tool: +50 damage to ex/V Pokemon */
+/** Maximum Belt — Tool: +50 damage to Pokemon ex only */
 const maximumBelt: NamedEffect = {
   cardId: "name:Maximum Belt",
   cardName: "Maximum Belt",
   tool: {
     whileAttached: {
       modifyDamage: (ctx, damage) => {
-        // +50 if defending Pokemon is ex or V
+        // +50 if defending Pokemon is ex
         const defender = ctx.opponent.active;
         if (!defender) return damage;
         const subtypes = defender.card.subtypes || [];
-        if (
-          subtypes.some(
-            (s) =>
-              s.includes("ex") ||
-              s.includes("V") ||
-              s.includes("VSTAR") ||
-              s.includes("VMAX")
-          )
-        ) {
+        if (subtypes.some((s) => s.includes("ex"))) {
           return damage + 50;
         }
         return damage;
@@ -378,18 +441,22 @@ const tmEvolution: NamedEffect = {
   },
 };
 
-/** Techno Radar — Discard 2 cards, search deck for up to 2 Pokemon */
+/** Techno Radar — Discard 1 card, search deck for up to 2 Future Pokemon */
 const technoRadar: NamedEffect = {
   cardId: "name:Techno Radar",
   cardName: "Techno Radar",
   trainer: {
-    canPlay: (ctx) => ctx.player.hand.cards.length >= 2,
+    canPlay: (ctx) => ctx.player.hand.cards.length >= 1,
     onPlay: async (ctx) => {
-      await ctx.promptDiscardFromHand(2, "player");
+      await ctx.promptDiscardFromHand(1, "player");
       const found = await ctx.promptSearchDeck!(
-        (c) => c.card.supertype === "Pokémon",
+        (c) => {
+          if (c.card.supertype !== "Pokémon") return false;
+          const subtypes = c.card.subtypes || [];
+          return subtypes.some((s) => s.includes("Future"));
+        },
         2,
-        "Techno Radar: 选择最多2只宝可梦加入手牌",
+        "Techno Radar: 选择最多2只未来宝可梦加入手牌",
         "player",
         0 // minCount: up to 2
       );
@@ -419,53 +486,98 @@ const cancelingCologne: NamedEffect = {
   },
 };
 
-/** Lost Vacuum — Discard a card, choose a Tool or Stadium in play and put it in the Lost Zone */
+/** Lost Vacuum — Put a card from hand into Lost Zone, choose a Tool or Stadium in play and put it in the Lost Zone */
 const lostVacuum: NamedEffect = {
   cardId: "name:Lost Vacuum",
   cardName: "Lost Vacuum",
   trainer: {
     canPlay: (ctx) => {
       if (ctx.player.hand.cards.length < 1) return false;
-      // Must have something to remove: a stadium or at least one tool on opponent's Pokémon
+      // Must have something to remove: a stadium or at least one tool on any Pokémon (own or opponent's)
       const hasStadium = !!ctx.getStadium();
-      const allOpponentPokemon = [
+      const allPokemon = [
+        ctx.player.active,
+        ...ctx.player.bench.cards,
         ctx.opponent.active,
         ...ctx.opponent.bench.cards,
       ].filter(Boolean);
-      const hasTools = allOpponentPokemon.some(p => p!.attachedTools.length > 0);
+      const hasTools = allPokemon.some(p => p!.attachedTools.length > 0);
       return hasStadium || hasTools;
     },
     onPlay: (ctx) => {
-      ctx.discardFromHand(1, "player");
+      // Cost: put 1 card from hand into Lost Zone (not discard)
+      const costCard = ctx.player.hand.cards.pop();
+      if (costCard) {
+        ctx.moveToLostZone!(costCard, "player");
+        ctx.log(`Lost Vacuum: ${costCard.card.name} 被放逐到放逐区`);
+      }
 
-      // Collect all opponent tools (active first, then bench)
+      // Collect tools from both players (opponent first, then own)
       const allOpponentPokemon = [
         ctx.opponent.active,
         ...ctx.opponent.bench.cards,
       ].filter(Boolean);
-      const pokemonWithTools = allOpponentPokemon.filter(p => p!.attachedTools.length > 0);
+      const allOwnPokemon = [
+        ctx.player.active,
+        ...ctx.player.bench.cards,
+      ].filter(Boolean);
+      const opponentWithTools = allOpponentPokemon.filter(p => p!.attachedTools.length > 0);
+      const ownWithTools = allOwnPokemon.filter(p => p!.attachedTools.length > 0);
+      const pokemonWithTools = [...opponentWithTools, ...ownWithTools];
 
       const hasStadium = !!ctx.getStadium();
       const hasTools = pokemonWithTools.length > 0;
 
-      // If only stadium: remove it; if only tools: remove first tool; if both: remove stadium
-      // (proper user choice between stadium vs tool requires choose_option prompt — future work)
+      // If only stadium: remove it to Lost Zone; if only tools: remove first tool to Lost Zone; if both: remove stadium
       if (hasStadium && !hasTools) {
-        ctx.removeStadium();
+        // Remove stadium to Lost Zone
+        const stadiumCard = ctx.getStadium();
+        if (stadiumCard) {
+          ctx.removeStadium(); // removes from field
+          // The stadium card was already added to discard by removeStadium; move from discard to lost zone
+          // Find it in the owner's discard and move to lost zone
+          for (const p of [ctx.player, ctx.opponent]) {
+            const idx = p.discard.cards.indexOf(stadiumCard);
+            if (idx !== -1) {
+              p.discard.cards.splice(idx, 1);
+              p.lostZone.cards.push(stadiumCard);
+              break;
+            }
+          }
+          ctx.log(`Lost Vacuum: 场地卡被放逐到放逐区`);
+        }
       } else if (hasTools) {
-        // Remove the first available tool (active Pokémon's tool takes priority)
+        // Remove the first available tool to Lost Zone (opponent's active tool takes priority)
         const target = pokemonWithTools[0]!;
         const tool = target.attachedTools.pop()!;
-        ctx.opponent.discard.cards.push(tool);
-        ctx.log(`Lost Vacuum: 移除了 ${target.card.name} 的道具 ${tool.card.name}`);
+        // Determine which player owns this Pokemon and send tool to their lost zone
+        const isOpponent = allOpponentPokemon.includes(target);
+        if (isOpponent) {
+          ctx.opponent.lostZone.cards.push(tool);
+        } else {
+          ctx.player.lostZone.cards.push(tool);
+        }
+        ctx.log(`Lost Vacuum: ${target.card.name} 的道具 ${tool.card.name} 被放逐到放逐区`);
       } else if (hasStadium) {
-        ctx.removeStadium();
+        const stadiumCard = ctx.getStadium();
+        if (stadiumCard) {
+          ctx.removeStadium();
+          for (const p of [ctx.player, ctx.opponent]) {
+            const idx = p.discard.cards.indexOf(stadiumCard);
+            if (idx !== -1) {
+              p.discard.cards.splice(idx, 1);
+              p.lostZone.cards.push(stadiumCard);
+              break;
+            }
+          }
+          ctx.log(`Lost Vacuum: 场地卡被放逐到放逐区`);
+        }
       }
     },
   },
 };
 
-/** Hisuian Heavy Ball — Look at Prize cards, swap a Basic Pokemon with this card */
+/** Hisuian Heavy Ball — Look at Prize cards, swap a Basic Pokemon with this card (self goes back as prize) */
 const hisuianHeavyBall: NamedEffect = {
   cardId: "name:Hisuian Heavy Ball",
   cardName: "Hisuian Heavy Ball",
@@ -502,15 +614,21 @@ const hisuianHeavyBall: NamedEffect = {
       }
       const idx = ctx.player.prizes.cards.indexOf(selected);
       if (idx !== -1) {
+        // Remove the Basic Pokemon from prizes and add to hand
         ctx.player.prizes.cards.splice(idx, 1);
         ctx.addToHand(selected, "player");
-        ctx.log(`Hisuian Heavy Ball: 从奖励卡中取回了 ${selected.card.name}`);
+
+        // Put Hisuian Heavy Ball itself back as a face-down prize card
+        const replacement = createGameCard(ctx.source.card);
+        ctx.player.prizes.cards.push(replacement);
+
+        ctx.log(`Hisuian Heavy Ball: 从奖励卡中取回了 ${selected.card.name}，自身放回奖励卡`);
       }
     },
   },
 };
 
-/** Prime Catcher — Switch in one of opponent's Benched Pokemon (ACE SPEC) */
+/** Prime Catcher — Switch opponent's bench to active, then switch own active with bench (ACE SPEC) */
 const primeCatcher: NamedEffect = {
   cardId: "name:Prime Catcher",
   cardName: "Prime Catcher",
@@ -518,12 +636,13 @@ const primeCatcher: NamedEffect = {
     canPlay: (ctx) =>
       ctx.player.bench.cards.length > 0 && ctx.opponent.bench.cards.length > 0,
     onPlay: async (ctx) => {
-      const switchedOwn = await ctx.promptSwitchOwnActive?.(
-        "Prime Catcher: 选择自己的备战宝可梦切换到战斗区"
-      );
-      if (!switchedOwn) return;
-      await ctx.promptSwitchOpponentActive?.(
+      // Opponent switch first, then own switch
+      const switchedOpp = await ctx.promptSwitchOpponentActive?.(
         "Prime Catcher: 选择对手的备战宝可梦切换到战斗区"
+      );
+      if (!switchedOpp) return;
+      await ctx.promptSwitchOwnActive?.(
+        "Prime Catcher: 选择自己的备战宝可梦切换到战斗区"
       );
     },
   },
@@ -541,26 +660,28 @@ const forestSealStone: NamedEffect = {
   },
 };
 
-/** Bravery Charm — Tool: +50 HP to Basic Pokemon */
+/** Bravery Charm — Tool: +50 HP to Basic Pokemon only */
 const braveryCharm: NamedEffect = {
   cardId: "name:Bravery Charm",
   cardName: "Bravery Charm",
   tool: {
     whileAttached: {
-      /** +50 HP: raises the effective HP used for KO checks */
-      modifyHp: 50,
+      /** +50 HP only if the attached Pokemon is a Basic */
+      modifyHp: (subtypes: string[]) =>
+        subtypes.includes("Basic") ? 50 : 0,
     },
   },
 };
 
-/** Leftovers — Tool: Heal 20 HP between turns */
+/** Leftovers — Tool: Heal 20 HP between turns, only in Active Spot */
 const leftovers: NamedEffect = {
   cardId: "name:Leftovers",
   cardName: "Leftovers",
   tool: {
     whileAttached: {
-      /** Heal 20 HP at the end of each turn via status-effects.ts */
+      /** Heal 20 HP at the end of each turn, only if in Active Spot */
       healBetweenTurns: 20,
+      healBetweenTurnsActiveOnly: true,
     },
   },
 };

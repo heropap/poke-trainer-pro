@@ -232,7 +232,7 @@ function createAirBalloon(cardId: string): CardEffectDef {
 }
 
 /**
- * Sacred Charm — The Pokemon this card is attached to takes 30 less damage
+ * Sacred Charm — The Pokemon this card is attached to takes 60 less damage
  * from attacks from your opponent's Pokemon ex.
  * IDs: me2-93, me2-122
  */
@@ -243,9 +243,10 @@ function createSacredCharm(cardId: string): CardEffectDef {
     tool: {
       whileAttached: {
         modifyIncomingDamage: (_ctx, damage) => {
-          // Reduce incoming damage by 30
-          // In a complete implementation, would check if attacker is ex
-          return Math.max(0, damage - 30);
+          // Reduce incoming damage by 60 from Pokemon ex
+          // Note: attacker subtype not available in modifier interface;
+          // applies -60 to all incoming damage as approximation
+          return Math.max(0, damage - 60);
         },
       },
     },
@@ -377,60 +378,103 @@ const judgeEffect: NamedEffect = {
   },
 };
 
-/** Penny — Pick up your Active Pokemon and all attached cards to hand */
+/** Penny — Put 1 of your Basic Pokemon (active or bench) and all attached cards into hand */
 const pennyEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Penny",
   trainer: {
     canPlay: (ctx) => {
-      // Must have an active Pokemon and bench to replace it
-      return ctx.player.active !== null && ctx.player.bench.cards.length > 0;
+      // Must have a Basic Pokemon in play
+      const allPokemon = ctx.getAllPokemon("player");
+      const hasBasic = allPokemon.some(p => p.card.subtypes.includes("Basic"));
+      // If the only Basic is the active, need bench to promote from
+      if (!hasBasic) return false;
+      // If active is basic and it's picked up, need bench replacement
+      if (ctx.player.active && ctx.player.active.card.subtypes.includes("Basic")) {
+        return ctx.player.bench.cards.length > 0;
+      }
+      // Otherwise there's a Basic on bench that can be picked up without needing promotion
+      return true;
     },
     onPlay: async (ctx) => {
-      if (!ctx.player.active) return;
+      // Find a Basic Pokemon to pick up: prefer active if Basic, otherwise find one on bench
+      let targetId: string | null = null;
+      let fromActive = false;
 
-      const collected = ctx.pickUpPokemon(ctx.player.active.instanceId, "player");
+      if (ctx.player.active && ctx.player.active.card.subtypes.includes("Basic")) {
+        targetId = ctx.player.active.instanceId;
+        fromActive = true;
+      } else {
+        // Find a Basic on bench
+        const basicOnBench = ctx.player.bench.cards.find(p => p.card.subtypes.includes("Basic"));
+        if (basicOnBench) {
+          targetId = basicOnBench.instanceId;
+          fromActive = false;
+        }
+      }
 
-      // All collected cards go to hand
+      if (!targetId) return;
+
+      const collected = ctx.pickUpPokemon(targetId, "player");
+
+      // All collected cards (Pokemon + energy + tools) go to hand
       for (const c of collected) {
         ctx.addToHand(c, "player");
       }
 
-      // Promote bench Pokemon: auto if only 1, prompt user if multiple
-      if (ctx.player.bench.cards.length === 1) {
-        const promoted = ctx.player.bench.cards.splice(0, 1)[0];
-        ctx.player.active = promoted;
-        ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
-      } else if (ctx.player.bench.cards.length > 1) {
-        const selection = await ctx.promptUser({
-          message: "Penny: 选择一只备战区宝可梦成为主战宝可梦",
-          min: 1,
-          max: 1,
-          zone: "bench",
-          targets: ctx.player.bench.cards.map(c => c.instanceId),
-        });
-        const promotedId = selection[0] ?? ctx.player.bench.cards[0].instanceId;
-        const idx = ctx.player.bench.cards.findIndex(c => c.instanceId === promotedId);
-        if (idx !== -1) {
-          const [promoted] = ctx.player.bench.cards.splice(idx, 1);
+      // If active was picked up, promote from bench
+      if (fromActive) {
+        if (ctx.player.bench.cards.length === 1) {
+          const promoted = ctx.player.bench.cards.splice(0, 1)[0];
           ctx.player.active = promoted;
           ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+        } else if (ctx.player.bench.cards.length > 1) {
+          const selection = await ctx.promptUser({
+            message: "Penny: 选择一只备战区宝可梦成为主战宝可梦",
+            min: 1,
+            max: 1,
+            zone: "bench",
+            targets: ctx.player.bench.cards.map(c => c.instanceId),
+          });
+          const promotedId = selection[0] ?? ctx.player.bench.cards[0].instanceId;
+          const idx = ctx.player.bench.cards.findIndex(c => c.instanceId === promotedId);
+          if (idx !== -1) {
+            const [promoted] = ctx.player.bench.cards.splice(idx, 1);
+            ctx.player.active = promoted;
+            ctx.log(`${promoted.card.name} 从备战区移到了战斗区`);
+          }
         }
       }
     },
   },
 };
 
-/** Tulip — Get 2 Pokemon from discard to hand */
+/** Tulip — Put up to 4 in any combination of Psychic Pokemon and Basic Psychic Energy from discard into hand */
 const tulipEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Tulip",
   trainer: {
     onPlay: async (ctx) => {
       const found = await ctx.promptSearchDiscard!(
-        (c) => c.card.supertype === "Pokémon",
-        2,
-        "Tulip: 选择最多2只弃牌堆的宝可梦加入手牌"
+        (c) => {
+          // Psychic Pokemon
+          if (c.card.supertype === "Pokémon" && c.card.types && c.card.types.includes("Psychic")) {
+            return true;
+          }
+          // Basic Psychic Energy
+          if (
+            c.card.supertype === "Energy" &&
+            (c.card.subtypes?.includes("Basic") ?? false) &&
+            c.card.types && c.card.types.includes("Psychic")
+          ) {
+            return true;
+          }
+          return false;
+        },
+        4,
+        "Tulip: 选择最多4张超能力宝可梦或基础超能力能量加入手牌",
+        "player",
+        0
       );
       for (const c of found) ctx.addToHand(c);
       if (found.length > 0) {
@@ -440,61 +484,66 @@ const tulipEffect: NamedEffect = {
   },
 };
 
-/** Lacey — You draw until you have 4 cards, opponent draws until 8 cards */
+/** Lacey — Shuffle your hand into deck, then draw 4 (or 8 if opponent has 3 or fewer prizes left) */
 const laceyEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Lacey",
   trainer: {
     onPlay: (ctx) => {
-      const playerDraw = Math.max(0, 4 - ctx.player.hand.cards.length);
-      const opponentDraw = Math.max(0, 8 - ctx.opponent.hand.cards.length);
-      if (playerDraw > 0) ctx.drawCards(playerDraw, "player");
-      if (opponentDraw > 0) ctx.drawCards(opponentDraw, "opponent");
-      ctx.log(`Lacey: ${ctx.player.name} 抽了 ${playerDraw} 张, ${ctx.opponent.name} 抽了 ${opponentDraw} 张`);
+      ctx.shuffleHandIntoDeck("player");
+      const opponentPrizesLeft = ctx.opponent.prizes.cards.length;
+      const drawCount = opponentPrizesLeft <= 3 ? 8 : 4;
+      ctx.drawCards(drawCount, "player");
+      ctx.log(`Lacey: 洗回手牌，抽了 ${drawCount} 张 (对手剩余奖赏卡: ${opponentPrizesLeft})`);
     },
   },
 };
 
-/** Professor Sada's Vitality — Attach up to 2 Basic Energy from discard to your Pokemon */
+/** Professor Sada's Vitality — Attach 1 Basic Energy from discard to each of up to 2 Ancient Pokemon, then draw 3 if any attached */
 const profSadaEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Professor Sada's Vitality",
   trainer: {
     canPlay: (ctx) => {
-      // Need a Basic Energy in discard and at least one Pokemon in play
+      // Need a Basic Energy in discard and at least one Ancient Pokemon in play
       const hasEnergy = ctx.player.discard.cards.some(
         c => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false)
       );
-      return hasEnergy && ctx.getAllPokemon("player").length > 0;
+      const hasAncient = ctx.getAllPokemon("player").some(
+        p => p.card.subtypes.includes("Ancient") || (p.card.rules && p.card.rules.some(r => r.includes("Ancient")))
+      );
+      return hasEnergy && hasAncient;
     },
-    onPlay: async (ctx) => {
+    onPlay: (ctx) => {
       const allPokemon = ctx.getAllPokemon("player");
-      // Choose target Pokemon
-      let targetId: string;
-      if (allPokemon.length === 1) {
-        targetId = allPokemon[0].instanceId;
-      } else {
-        const sel = await ctx.promptUser({
-          message: "Professor Sada's Vitality: 选择一只宝可梦附加能量",
-          min: 1, max: 1,
-          zone: "own_field",
-          targets: allPokemon.map(p => p.instanceId),
-        });
-        targetId = sel[0] ?? allPokemon[0].instanceId;
+      // Find Ancient Pokemon in play
+      const ancientPokemon = allPokemon.filter(
+        p => p.card.subtypes.includes("Ancient") || (p.card.rules && p.card.rules.some(r => r.includes("Ancient")))
+      );
+
+      const energyFilter = (c: GameCard) =>
+        c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false);
+
+      let attachedCount = 0;
+      // Attach 1 Basic Energy from discard to each Ancient Pokemon (up to 2)
+      for (const pokemon of ancientPokemon.slice(0, 2)) {
+        const attached = ctx.attachEnergyFromDiscard(energyFilter, 1, pokemon);
+        if (attached.length > 0) {
+          attachedCount++;
+          ctx.log(`Professor Sada's Vitality: 从弃牌堆附加了 ${attached[0].card.name} 到 ${pokemon.card.name}`);
+        }
       }
-      const target = allPokemon.find(p => p.instanceId === targetId);
-      if (target) {
-        ctx.attachEnergyFromDiscard(
-          (c) => c.card.supertype === "Energy" && (c.card.subtypes?.includes("Basic") ?? false),
-          2,
-          target
-        );
+
+      // Draw 3 if any energy was attached
+      if (attachedCount > 0) {
+        ctx.drawCards(3, "player");
+        ctx.log(`Professor Sada's Vitality: 抽了 3 张牌`);
       }
     },
   },
 };
 
-/** Professor Turo's Scenario — Pick up your Active Pokemon and all cards to hand */
+/** Professor Turo's Scenario — Put 1 of your Pokemon into hand; DISCARD all attached cards */
 const profTuroEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Professor Turo's Scenario",
@@ -505,10 +554,23 @@ const profTuroEffect: NamedEffect = {
     onPlay: async (ctx) => {
       if (!ctx.player.active) return;
 
-      const collected = ctx.pickUpPokemon(ctx.player.active.instanceId, "player");
-      for (const c of collected) {
-        ctx.addToHand(c, "player");
+      const target = ctx.player.active;
+
+      // Discard all attached energy to discard pile
+      while (target.attachedEnergy.length > 0) {
+        const energy = target.attachedEnergy.pop()!;
+        ctx.player.discard.cards.push(energy);
       }
+      // Discard all attached tools to discard pile
+      while (target.attachedTools.length > 0) {
+        const tool = target.attachedTools.pop()!;
+        ctx.player.discard.cards.push(tool);
+      }
+
+      // Remove the Pokemon from active and put the Pokemon card itself into hand
+      ctx.player.active = null;
+      ctx.addToHand(target, "player");
+      ctx.log(`Professor Turo's Scenario: ${target.card.name} 返回手牌，附加卡被丢弃`);
 
       // Promote bench Pokemon: auto if only 1, prompt user if multiple
       if (ctx.player.bench.cards.length === 1) {
@@ -535,13 +597,26 @@ const profTuroEffect: NamedEffect = {
   },
 };
 
-/** Jacq — Draw 2 cards */
+/** Jacq — Search deck for up to 2 Evolution Pokemon, reveal them, put into hand, shuffle */
 const jacqEffect: NamedEffect = {
   cardId: "__name__",
   cardName: "Jacq",
   trainer: {
-    onPlay: (ctx) => {
-      ctx.drawCards(2, "player");
+    onPlay: async (ctx) => {
+      const found = await ctx.promptSearchDeck!(
+        (c) =>
+          c.card.supertype === "Pokémon" &&
+          !c.card.subtypes.includes("Basic"),
+        2,
+        "Jacq: 选择最多2只进化宝可梦加入手牌",
+        "player",
+        0
+      );
+      for (const c of found) ctx.addToHand(c);
+      ctx.shuffleDeck("player");
+      if (found.length > 0) {
+        ctx.log(`Jacq: 搜索到 ${found.map(c => c.card.name).join(", ")}`);
+      }
     },
   },
 };
@@ -1344,7 +1419,8 @@ const sacredCharmNameEffect: NamedEffect = {
   cardName: "Sacred Charm",
   tool: {
     whileAttached: {
-      modifyIncomingDamage: (_ctx, damage) => Math.max(0, damage - 30),
+      // -60 damage from Pokemon ex (attacker check not available in modifier interface)
+      modifyIncomingDamage: (_ctx, damage) => Math.max(0, damage - 60),
     },
   },
 };

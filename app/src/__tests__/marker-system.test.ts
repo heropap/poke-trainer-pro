@@ -547,21 +547,26 @@ describe("marker system: meta-attack integration", () => {
     expect(state.players[1].active!.markers[PREVENT_RETREAT_NEXT_TURN]).toBe(1);
   });
 
-  test("Greninja ex Shinobi Blade sets CANT_USE_ATTACK:Shinobi Blade", () => {
+  test("Greninja ex Shinobi Blade searches deck (no attack lock)", () => {
     const { metaAttackEffects } = require("../engine/effects/cards/meta-attacks");
     const greninja = metaAttackEffects.find(
       (e: { cardName: string }) => e.cardName === "Greninja ex"
     );
 
     const state = setupGameWithActive();
+    // Ensure deck has cards
+    state.players[0].deck.cards.push(state.players[0].active!); // reuse as dummy
+    const handBefore = state.players[0].hand.cards.length;
     const ctx = createEffectContext(state, 0, state.players[0].active!);
 
     const attack = greninja.attacks!.find(
       (a: { name: string }) => a.name === "Shinobi Blade"
     );
-    attack!.onAttack(ctx, 170);
+    const result = attack!.onAttack(ctx, 170);
 
+    // Real card: NO attack lock, just searches deck
     const markerKey = cantUseAttackMarker("Shinobi Blade");
-    expect(state.players[0].active!.markers[markerKey]).toBe(1);
+    expect(state.players[0].active!.markers[markerKey] ?? 0).toBe(0);
+    expect(result.damage).toBe(170);
   });
 });

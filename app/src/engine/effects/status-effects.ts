@@ -181,6 +181,9 @@ export function processBetweenTurns(
     for (const tool of benchCard.attachedTools) {
       const toolEffect = getEffect(tool.cardId, tool.card.name);
       const healAmount = toolEffect?.tool?.whileAttached?.healBetweenTurns;
+      const activeOnly = toolEffect?.tool?.whileAttached?.healBetweenTurnsActiveOnly;
+      // Skip healing on bench if the tool requires Active Spot (e.g. Leftovers)
+      if (activeOnly) continue;
       if (healAmount && benchCard.damageCounters > 0) {
         const countersToHeal = Math.min(healAmount / 10, benchCard.damageCounters);
         if (countersToHeal > 0) {
