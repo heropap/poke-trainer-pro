@@ -1926,3 +1926,19 @@ Notes: 新增5套预置Standard卡组，用户无需手动粘贴代码即可一�
 - #32 游戏结算统计画面
 
 测试: 新增 23 个测试（prebuilt-decks.test.ts），总计 1420 个测试全部通过（64 个套件）。
+
+=== Session 30 | 2026-03-23 ===
+Feature: 先攻首回合规则验证 — 确保先攻方首回合不能攻击和使用Supporter
+Status: completed
+Notes: 功能已在引擎层完整实现（action-availability.ts、base-rules.ts、turn-actions.ts），本次编写了12个综合验证测试确认全路径正确。
+
+验证覆盖:
+- processAction 阻止首回合攻击 ✓
+- getAttackDisabledReason UI 禁用提示 ✓
+- canPlaySupporter 首回合返回失败 ✓
+- processAction 阻止首回合打出 Supporter ✓
+- 后手方首回合可以攻击和使用 Supporter ✓
+- AI 首回合不尝试攻击 ✓
+- 贴能/放基础宝可梦/结束回合不受限制 ✓
+
+测试: 新增 12 个测试，总计 1432 个测试全部通过（65 个套件）。
