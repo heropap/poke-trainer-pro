@@ -2035,3 +2035,25 @@ Notes: 批量实现了预置卡组中缺失的15张训练师/物品卡效果，�
 15. Gift Energy — 非规则盒被击倒时抽2
 
 测试: 新增 35 个覆盖率验证测试，总计 1478 个测试通过（69 套件）。
+
+=== Session 36 | 2026-03-23 ===
+Feature: 关键宝可梦特性/能力批量实现 — 预置卡组核心引擎卡效果
+Status: completed
+Notes: 为预置卡组的核心宝可梦添加了 Ability 实现，使卡组战术体系真正可用。
+
+新增 Abilities (10个):
+1. Charizard ex — Infernal Reign (进化时从牌组附加3张火能量)
+2. Pidgeot ex — Quick Search (每回合搜索牌组任意1张卡)
+3. Gardevoir ex — Psychic Embrace (从弃牌堆附加超能量，受20伤害)
+4. Miraidon ex — Tandem Unit (搜索2只雷系基础宝可梦到备战区)
+5. Lumineon V — Luminous Sign (入场时搜索1张支持者)
+6. Comfey — Flower Selecting (顶部2张取1放1到失落区)
+7. Radiant Greninja — Concealed Cards (弃1能量抽2张)
+8. Lugia VSTAR — Summoning Star (VSTAR Power: 从弃牌堆放2只无色宝可梦)
+9. Archeops — Primal Turbo (从牌组附加2张特殊能量)
+
+新增攻击效果 (3个):
+10. Lugia V — Read the Wind (弃顶部3张抽3) + Aero Dive (移除场地)
+11. Lugia VSTAR — Tempest Dive (220+移除场地)
+
+测试: 1478 个测试全部通过（69 个套件）。

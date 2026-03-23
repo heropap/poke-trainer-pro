@@ -49,6 +49,32 @@ const charizardEx: NamedEffect = {
       },
     },
   ],
+  abilities: [
+    {
+      name: "Infernal Reign",
+      type: "on_enter" as const,
+      onActivate: (ctx) => {
+        // When this Pokemon evolves, search deck for up to 3 Basic Fire Energy and attach to your Pokemon
+        const fires = ctx.player.deck.cards.filter(
+          c => c.card.supertype === "Energy" && c.card.name.includes("Fire") && c.card.subtypes.includes("Basic")
+        );
+        const toAttach = fires.slice(0, 3);
+        for (const energy of toAttach) {
+          ctx.player.deck.cards = ctx.player.deck.cards.filter(c => c.instanceId !== energy.instanceId);
+          // Distribute: active first, then bench in order
+          const targets = [ctx.player.active, ...ctx.player.bench.cards].filter(Boolean) as any[];
+          if (targets.length > 0) {
+            const target = targets[toAttach.indexOf(energy) % targets.length];
+            target.attachedEnergy.push(energy);
+          }
+        }
+        if (toAttach.length > 0) {
+          ctx.shuffleDeck();
+          ctx.log(`Infernal Reign: 从牌组附加了 ${toAttach.length} 张火能量`);
+        }
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────
@@ -67,6 +93,20 @@ const pidgeotEx: NamedEffect = {
           ctx.removeStadium();
         }
         return { damage: baseDamage };
+      },
+    },
+  ],
+  abilities: [
+    {
+      name: "Quick Search",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Once per turn: search deck for any 1 card and put it in hand
+        const found = ctx.searchDeck(() => true, 1);
+        ctx.shuffleDeck();
+        if (found.length > 0) {
+          ctx.log(`Quick Search: 从牌组搜索了 ${found[0].card.name}`);
+        }
       },
     },
   ],
@@ -158,6 +198,29 @@ const gardevoirEx: NamedEffect = {
         // Remove all Special Conditions from self
         ctx.removeAllStatus(ctx.source);
         return { damage: baseDamage };
+      },
+    },
+  ],
+  abilities: [
+    {
+      name: "Psychic Embrace",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Attach a Basic Psychic Energy from discard to one of your Pokemon, then put 2 damage counters on that Pokemon
+        const psychicEnergies = ctx.player.discard.cards.filter(
+          c => c.card.supertype === "Energy" && c.card.name.includes("Psychic") && c.card.subtypes.includes("Basic")
+        );
+        if (psychicEnergies.length === 0) {
+          ctx.log("Psychic Embrace: 弃牌堆没有超能量");
+          return;
+        }
+        const energy = psychicEnergies[0];
+        ctx.player.discard.cards = ctx.player.discard.cards.filter(c => c.instanceId !== energy.instanceId);
+        // Attach to active (or self if on bench)
+        const target = ctx.player.active || ctx.source;
+        target.attachedEnergy.push(energy);
+        target.damageCounters += 2; // 20 damage
+        ctx.log(`Psychic Embrace: 从弃牌堆附加超能量给 ${target.card.name}，受到 20 伤害`);
       },
     },
   ],
@@ -315,6 +378,33 @@ const miraidonEx: NamedEffect = {
       },
     },
   ],
+  abilities: [
+    {
+      name: "Tandem Unit",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Search deck for up to 2 Basic Lightning Pokemon and put them on bench
+        const benchSpace = 5 - ctx.player.bench.cards.length;
+        if (benchSpace <= 0) {
+          ctx.log("Tandem Unit: 备战区已满");
+          return;
+        }
+        const count = Math.min(2, benchSpace);
+        const basics = ctx.searchDeck(
+          (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic") && c.card.types?.includes("Lightning"),
+          count
+        );
+        for (const card of basics) {
+          card.playedThisTurn = true;
+          ctx.player.bench.cards.push(card);
+        }
+        ctx.shuffleDeck();
+        if (basics.length > 0) {
+          ctx.log(`Tandem Unit: 搜索了 ${basics.map(c => c.card.name).join(", ")} 到备战区`);
+        }
+      },
+    },
+  ],
 };
 
 // ───────────────────────────────────────────────
@@ -379,6 +469,23 @@ const comfey: NamedEffect = {
         // Flip coin, +20 if heads
         const heads = ctx.flipCoin();
         return { damage: baseDamage + (heads ? 20 : 0) };
+      },
+    },
+  ],
+  abilities: [
+    {
+      name: "Flower Selecting",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Look at top 2 cards, put 1 in hand, put the other in Lost Zone. Then end turn.
+        const top2 = ctx.revealTopCards(2);
+        if (top2.length === 0) return;
+        // Take first, Lost Zone second
+        ctx.player.hand.cards.push(top2[0]);
+        if (top2.length > 1) {
+          ctx.moveToLostZone(top2[1]);
+        }
+        ctx.log(`Flower Selecting: ${top2[0].card.name} 加入手牌${top2.length > 1 ? `，${top2[1].card.name} 放入失落区` : ""}`);
       },
     },
   ],
@@ -487,12 +594,48 @@ const lumineonV: NamedEffect = {
       },
     },
   ],
+  abilities: [
+    {
+      name: "Luminous Sign",
+      type: "on_enter" as const,
+      onActivate: (ctx) => {
+        // When you play this from hand to bench, search deck for a Supporter
+        const supporters = ctx.searchDeck(
+          (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Supporter"),
+          1
+        );
+        ctx.shuffleDeck();
+        if (supporters.length > 0) {
+          ctx.log(`Luminous Sign: 搜索了支持者 ${supporters[0].card.name}`);
+        }
+      },
+    },
+  ],
 };
 
 // Radiant Greninja — Concealed Cards (ability), Moonlight Shuriken
 const radiantGreninja: NamedEffect = {
   cardId: "name:Radiant Greninja",
   cardName: "Radiant Greninja",
+  abilities: [
+    {
+      name: "Concealed Cards",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Discard 1 Energy from hand, then draw 2 cards
+        const energyInHand = ctx.player.hand.cards.filter(c => c.card.supertype === "Energy");
+        if (energyInHand.length === 0) {
+          ctx.log("Concealed Cards: 手牌中没有能量卡可弃");
+          return;
+        }
+        const toDiscard = energyInHand[0];
+        ctx.player.hand.cards = ctx.player.hand.cards.filter(c => c.instanceId !== toDiscard.instanceId);
+        ctx.player.discard.cards.push(toDiscard);
+        ctx.drawCards(2);
+        ctx.log(`Concealed Cards: 弃掉 ${toDiscard.card.name}，抽了 2 张牌`);
+      },
+    },
+  ],
   attacks: [
     {
       name: "Moonlight Shuriken",
@@ -764,6 +907,116 @@ const munkidori: NamedEffect = {
 };
 
 // ───────────────────────────────────────────────
+// Prebuilt Deck: Lugia VSTAR additions
+// ───────────────────────────────────────────────
+
+// Lugia V — Read the Wind (discard top 3, draw 3) + Aero Dive (discard stadium)
+const lugiaV: NamedEffect = {
+  cardId: "name:Lugia V",
+  cardName: "Lugia V",
+  attacks: [
+    {
+      name: "Read the Wind",
+      onAttack: (ctx, _baseDamage) => {
+        // Discard top 3 cards, then draw 3
+        const discarded = ctx.revealTopCards(3);
+        for (const c of discarded) {
+          ctx.player.discard.cards.push(c);
+        }
+        ctx.drawCards(3);
+        ctx.log(`Read the Wind: 弃掉牌组顶部 ${discarded.length} 张，抽了 3 张`);
+        return { damage: 0 };
+      },
+    },
+    {
+      name: "Aero Dive",
+      onAttack: (ctx, baseDamage) => {
+        if (ctx.state.stadium) {
+          ctx.removeStadium();
+          ctx.log("Aero Dive: 移除了场地卡");
+        }
+        return { damage: baseDamage };
+      },
+    },
+  ],
+};
+
+// Lugia VSTAR — Tempest Dive (220, discard stadium) + VSTAR Power: Summoning Star
+const lugiaVSTAR: NamedEffect = {
+  cardId: "name:Lugia VSTAR",
+  cardName: "Lugia VSTAR",
+  attacks: [
+    {
+      name: "Tempest Dive",
+      onAttack: (ctx, baseDamage) => {
+        if (ctx.state.stadium) {
+          ctx.removeStadium();
+        }
+        return { damage: baseDamage };
+      },
+    },
+  ],
+  abilities: [
+    {
+      name: "Summoning Star",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // VSTAR Power: Put up to 2 Colorless Pokemon that don't have a Rule Box from discard to bench
+        const benchSpace = 5 - ctx.player.bench.cards.length;
+        if (benchSpace <= 0) return;
+        const targets = ctx.player.discard.cards.filter(
+          c => c.card.supertype === "Pokémon" &&
+               c.card.types?.includes("Colorless") &&
+               !c.card.subtypes.some(s => ["V", "ex", "GX", "VSTAR", "VMAX"].includes(s))
+        );
+        const toPlace = targets.slice(0, Math.min(2, benchSpace));
+        for (const card of toPlace) {
+          ctx.player.discard.cards = ctx.player.discard.cards.filter(c => c.instanceId !== card.instanceId);
+          card.playedThisTurn = true;
+          ctx.player.bench.cards.push(card);
+        }
+        if (toPlace.length > 0) {
+          ctx.log(`Summoning Star (VSTAR): 从弃牌堆放置 ${toPlace.map(c => c.card.name).join(", ")} 到备战区`);
+        }
+      },
+    },
+  ],
+};
+
+// Archeops — Primal Turbo ability (attach 2 Special Energy from deck to 1 Pokemon)
+const archeops: NamedEffect = {
+  cardId: "name:Archeops",
+  cardName: "Archeops",
+  attacks: [
+    {
+      name: "Primal Wingbeat",
+      onAttack: (_ctx, baseDamage) => ({ damage: baseDamage }),
+    },
+  ],
+  abilities: [
+    {
+      name: "Primal Turbo",
+      type: "activated" as const,
+      onActivate: (ctx) => {
+        // Search deck for up to 2 Special Energy and attach to 1 of your Pokemon
+        const specials = ctx.player.deck.cards.filter(
+          c => c.card.supertype === "Energy" && !c.card.subtypes.includes("Basic")
+        );
+        const toAttach = specials.slice(0, 2);
+        const target = ctx.player.active || ctx.player.bench.cards[0];
+        if (!target || toAttach.length === 0) return;
+        for (const energy of toAttach) {
+          ctx.player.deck.cards = ctx.player.deck.cards.filter(c => c.instanceId !== energy.instanceId);
+          target.attachedEnergy.push(energy);
+        }
+        ctx.shuffleDeck();
+        ctx.log(`Primal Turbo: 附加了 ${toAttach.length} 张特殊能量给 ${target.card.name}`);
+      },
+    },
+  ],
+};
+
+// ───────────────────────────────────────────────
 // Exports
 // ───────────────────────────────────────────────
 
@@ -794,4 +1047,7 @@ export const metaAttackEffects: NamedEffect[] = [
   lugiaEx,
   fezandipitiEx,
   munkidori,
+  lugiaV,
+  lugiaVSTAR,
+  archeops,
 ];
