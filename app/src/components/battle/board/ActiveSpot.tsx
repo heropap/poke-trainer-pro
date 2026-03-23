@@ -270,6 +270,8 @@ export function ActiveSpot({
             const disabledReason = getAttackDisabledReason(gameState, playerIndex, card, attack.name);
             const isUsable = !disabledReason;
             const isHovered = hoveredAttack === attack.name;
+            // Detect VSTAR Power attacks
+            const isVstarAttack = card.card.subtypes?.includes("VSTAR") && /\bStar\b/.test(attack.name);
 
             return (
               <div key={i} className="relative">
@@ -281,7 +283,9 @@ export function ActiveSpot({
                   className={`w-full rounded-lg px-3 font-bold text-white transition-colors ${
                     compact ? "py-1.5 text-[10px]" : "py-2.5 text-sm"
                   } ${
-                    isUsable
+                    isVstarAttack && isUsable
+                      ? "cursor-pointer bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 shadow-md shadow-yellow-500/20 ring-1 ring-yellow-500/30"
+                      : isUsable
                       ? "cursor-pointer bg-red-600 hover:bg-red-500 active:bg-red-700 shadow-md"
                       : "cursor-not-allowed bg-zinc-600 opacity-60"
                   }`}
@@ -301,7 +305,10 @@ export function ActiveSpot({
                       )}
                     </div>
                     {/* Attack name and damage — never truncate, children need to read it */}
-                    <span className={`mx-1 flex-1 text-left leading-tight ${compact ? "truncate" : "break-words min-w-0"}`}>{attack.name}</span>
+                    <span className={`mx-1 flex-1 text-left leading-tight ${compact ? "truncate" : "break-words min-w-0"}`}>
+                      {attack.name}
+                      {isVstarAttack && <span className="ml-1 text-[8px] text-yellow-300 font-mono">V★</span>}
+                    </span>
                     {/* Effect source indicator */}
                     {(() => {
                       const src = getEffectSource(card.cardId, card.card.name);

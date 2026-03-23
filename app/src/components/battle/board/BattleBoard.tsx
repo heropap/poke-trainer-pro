@@ -94,6 +94,30 @@ interface TargetingState {
   validTargetIds: string[]; // instanceIds of valid target Pokemon
 }
 
+/** Pending confirmation for VSTAR Power or other once-per-game actions */
+interface PendingConfirm {
+  type: "vstar_attack" | "vstar_ability";
+  title: string;
+  message: string;
+  action: any; // The action to dispatch if confirmed
+}
+
+/** Check if an attack is a VSTAR Power (contains "Star" in name and card is VSTAR) */
+function isVstarPowerAttack(card: GameCard | null, attackName: string): boolean {
+  if (!card) return false;
+  const isVstar = card.card.subtypes?.includes("VSTAR");
+  const hasStarInName = /\bStar\b/.test(attackName);
+  return !!(isVstar && hasStarInName);
+}
+
+/** Check if an ability is a VSTAR Power */
+function isVstarPowerAbility(card: GameCard | null, abilityName: string): boolean {
+  if (!card) return false;
+  const isVstar = card.card.subtypes?.includes("VSTAR");
+  const hasStarInName = /\bStar\b/.test(abilityName);
+  return !!(isVstar && hasStarInName);
+}
+
 // ────────────────────────────────────────────────
 // Helper: compute which cards in hand are playable
 // ────────────────────────────────────────────────
@@ -261,6 +285,9 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   // Card Detail Modal state
   const [viewingCard, setViewingCard] = React.useState<GameCard | null>(null);
+
+  // VSTAR / once-per-game confirmation
+  const [pendingConfirm, setPendingConfirm] = React.useState<PendingConfirm | null>(null);
 
   // Zone Browser Modal state
   const [browsingZone, setBrowsingZone] = React.useState<{ title: string; cards: GameCard[] } | null>(null);
@@ -1036,11 +1063,32 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                  playerIndex={myIndex as 0 | 1}
                  showActions={isMyTurn && !targeting && !retreatSelecting}
                  onAttack={(attackName) => {
+                   // P0: VSTAR Power confirmation before dispatching
+                   if (isVstarPowerAttack(me.active, attackName)) {
+                     setPendingConfirm({
+                       type: "vstar_attack",
+                       title: "V★STAR 力量确认",
+                       message: `「${attackName}」是 VSTAR 力量，本局只能使用一次。确定要现在使用吗？`,
+                       action: { type: "attack", attackName },
+                     });
+                     return;
+                   }
                    setAttackingPlayer(myIndex);
                    setTimeout(() => setAttackingPlayer(null), 400);
                    dispatchAction({ type: "attack", attackName });
                  }}
                  onUseAbility={(cardInstanceId, abilityName) => {
+                   // P0: VSTAR Power ability confirmation
+                   const abilityCard = me.active?.instanceId === cardInstanceId ? me.active : me.bench.cards.find(c => c.instanceId === cardInstanceId);
+                   if (isVstarPowerAbility(abilityCard ?? null, abilityName)) {
+                     setPendingConfirm({
+                       type: "vstar_ability",
+                       title: "V★STAR 力量确认",
+                       message: `「${abilityName}」是 VSTAR 力量，本局只能使用一次。确定要现在使用吗？`,
+                       action: { type: "use_ability", cardId: cardInstanceId, abilityName },
+                     });
+                     return;
+                   }
                    dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
                  }}
                  onRetreat={handleRetreat}
@@ -1084,6 +1132,16 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                      gameState={gameState}
                      playerIndex={myIndex as 0 | 1}
                      onUseAbility={(cardInstanceId, abilityName) => {
+                       const benchAbilityCard = me.bench.cards.find(c => c.instanceId === cardInstanceId);
+                       if (isVstarPowerAbility(benchAbilityCard ?? null, abilityName)) {
+                         setPendingConfirm({
+                           type: "vstar_ability",
+                           title: "V★STAR 力量确认",
+                           message: `「${abilityName}」是 VSTAR 力量，本局只能使用一次。确定要现在使用吗？`,
+                           action: { type: "use_ability", cardId: cardInstanceId, abilityName },
+                         });
+                         return;
+                       }
                        dispatchAction({ type: "use_ability", cardId: cardInstanceId, abilityName });
                        setSelectedBenchId(null);
                      }}
@@ -1203,6 +1261,49 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             prompt={gameState.prompt}
             onConfirm={(yes) => onAction?.({ type: "prompt_response", data: { confirmed: yes } })}
           />
+        )}
+
+        {/* VSTAR Power Confirmation Modal */}
+        {pendingConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+            <div className="w-[400px] rounded-2xl bg-zinc-900 border border-yellow-500/30 p-6 shadow-2xl">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="text-2xl">⭐</span>
+                <h3 className="text-lg font-bold text-yellow-400">{pendingConfirm.title}</h3>
+                <span className="text-2xl">⭐</span>
+              </div>
+              <p className="text-center text-sm text-zinc-300 mb-6 leading-relaxed">
+                {pendingConfirm.message}
+              </p>
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <div className="px-3 py-1 rounded bg-red-900/40 text-[11px] text-red-400 border border-red-800/50">
+                  使用后本局无法再次使用任何 VSTAR 力量
+                </div>
+              </div>
+              <div className="flex gap-3 justify-center mt-4">
+                <button
+                  onClick={() => {
+                    const action = pendingConfirm.action;
+                    setPendingConfirm(null);
+                    if (action.type === "attack") {
+                      setAttackingPlayer(myIndex);
+                      setTimeout(() => setAttackingPlayer(null), 400);
+                    }
+                    dispatchAction(action);
+                  }}
+                  className="rounded-lg bg-gradient-to-r from-yellow-600 to-orange-600 px-8 py-2.5 text-sm font-bold text-white hover:from-yellow-500 hover:to-orange-500 shadow-lg"
+                >
+                  确认使用 V★STAR
+                </button>
+                <button
+                  onClick={() => setPendingConfirm(null)}
+                  className="rounded-lg bg-zinc-700 px-6 py-2.5 text-sm font-medium text-zinc-200 hover:bg-zinc-600"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Order Cards Modal */}
