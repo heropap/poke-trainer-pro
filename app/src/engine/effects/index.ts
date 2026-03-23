@@ -123,6 +123,16 @@ import { vstarPowerEffects } from "./cards/vstar-powers";
 import { aceSpecEffects } from "./cards/ace-spec-trainers";
 import { metaAttackersW3Effects } from "./cards/meta-attackers-w3";
 import { metaTrainersW4Effects } from "./cards/meta-trainers-w4";
+import { lostZoneW5Effects } from "./cards/lost-zone-w5";
+import { fireCoreW6Effects } from "./cards/fire-core-w6";
+import { psychicCoreW7Effects } from "./cards/psychic-core-w7";
+import { waterCoreW8Effects } from "./cards/water-core-w8";
+import { electricFutureW9Effects } from "./cards/electric-future-w9";
+import { fightingDarkW10Effects } from "./cards/fighting-dark-w10";
+import { dragonMetalW11Effects } from "./cards/dragon-metal-w11";
+import { grassLugiaW12Effects } from "./cards/grass-lugia-w12";
+import { trainersW13Effects } from "./cards/trainers-w13";
+import { competitiveW14Effects } from "./cards/competitive-w14";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
@@ -168,6 +178,16 @@ export function initializeEffects(
   registerAllByName(aceSpecEffects, "L2");
   registerAllByName(metaAttackersW3Effects, "L2");
   registerAllByName(metaTrainersW4Effects, "L2");
+  registerAllByName(lostZoneW5Effects, "L2");
+  registerAllByName(fireCoreW6Effects, "L2");
+  registerAllByName(psychicCoreW7Effects, "L2");
+  registerAllByName(waterCoreW8Effects, "L2");
+  registerAllByName(electricFutureW9Effects, "L2");
+  registerAllByName(fightingDarkW10Effects, "L2");
+  registerAllByName(dragonMetalW11Effects, "L2");
+  registerAllByName(grassLugiaW12Effects, "L2");
+  registerAllByName(trainersW13Effects, "L2");
+  registerAllByName(competitiveW14Effects, "L2");
 
   // Layer 2.5: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
@@ -213,6 +233,16 @@ export function getBuiltInEffectCount(): number {
     vstarPowerEffects.length +
     aceSpecEffects.length +
     metaAttackersW3Effects.length +
-    metaTrainersW4Effects.length
+    metaTrainersW4Effects.length +
+    lostZoneW5Effects.length +
+    fireCoreW6Effects.length +
+    psychicCoreW7Effects.length +
+    waterCoreW8Effects.length +
+    electricFutureW9Effects.length +
+    fightingDarkW10Effects.length +
+    dragonMetalW11Effects.length +
+    grassLugiaW12Effects.length +
+    trainersW13Effects.length +
+    competitiveW14Effects.length
   );
 }
