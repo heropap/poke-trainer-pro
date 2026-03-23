@@ -133,6 +133,12 @@ import { dragonMetalW11Effects } from "./cards/dragon-metal-w11";
 import { grassLugiaW12Effects } from "./cards/grass-lugia-w12";
 import { trainersW13Effects } from "./cards/trainers-w13";
 import { competitiveW14Effects } from "./cards/competitive-w14";
+import { wave15HStandardEffects } from "./cards/wave15-h-standard";
+import { wave16IStandardEffects } from "./cards/wave16-i-standard";
+import { wave17ExAttackersEffects } from "./cards/wave17-ex-attackers";
+import { wave18AbilitiesBatchEffects } from "./cards/wave18-abilities-batch";
+import { wave19TrainersExtendedEffects } from "./cards/wave19-trainers-extended";
+import { wave20BasicsBatchEffects } from "./cards/wave20-basics-batch";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
@@ -188,6 +194,12 @@ export function initializeEffects(
   registerAllByName(grassLugiaW12Effects, "L2");
   registerAllByName(trainersW13Effects, "L2");
   registerAllByName(competitiveW14Effects, "L2");
+  registerAllByName(wave15HStandardEffects, "L2");
+  registerAllByName(wave16IStandardEffects, "L2");
+  registerAllByName(wave17ExAttackersEffects, "L2");
+  registerAllByName(wave18AbilitiesBatchEffects, "L2");
+  registerAllByName(wave19TrainersExtendedEffects, "L2");
+  registerAllByName(wave20BasicsBatchEffects, "L2");
 
   // Layer 2.5: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
@@ -243,6 +255,12 @@ export function getBuiltInEffectCount(): number {
     dragonMetalW11Effects.length +
     grassLugiaW12Effects.length +
     trainersW13Effects.length +
-    competitiveW14Effects.length
+    competitiveW14Effects.length +
+    wave15HStandardEffects.length +
+    wave16IStandardEffects.length +
+    wave17ExAttackersEffects.length +
+    wave18AbilitiesBatchEffects.length +
+    wave19TrainersExtendedEffects.length +
+    wave20BasicsBatchEffects.length
   );
 }

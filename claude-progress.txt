@@ -2136,3 +2136,17 @@ UI改进:
 
 总效果数: 175 → 200+（190个name-based + 10个ID-based + text-parser自动生成）
 测试: 1478 个测试通过。
+
+
+=== Session 40 | 2026-03-23 ===
+Feature: Wave 5-14 批量卡效果实现 (116张新效果)
+Status: completed
+Notes: 
+- 10个Wave文件一次性实现: lost-zone-w5, fire-core-w6, psychic-core-w7, water-core-w8, electric-future-w9, fighting-dark-w10, dragon-metal-w11, grass-lugia-w12, trainers-w13, competitive-w14
+- 116张独立新效果 (去重后，不与已有效果冲突)
+- 覆盖体系: 失落区、火系、超能力、水系、电系/未来、格斗/暗系、龙/金属、草系、通用训练师、竞技宝可梦
+- 关键实现: Darkrai VSTAR, Charizard VSTAR, Leafeon VSTAR, Arceus V, Mew ex, Genesect V, Crobat V, Regieleki VMAX, Duraludon VMAX, Kyurem VMAX
+- 工具效果: Defiance Band, Rescue Board, Booster Energy Future, Ancient Capsule, Tool Jammer
+- 特殊能量: Jet, Therapeutic, Mist, Powerful Colorless, Lucky, Capture, Luminous Energy
+- 测试: 61个新测试，总计1538通过
+- 总效果数: ~310+ (原200+ → 现316+)
