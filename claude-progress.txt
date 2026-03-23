@@ -1975,3 +1975,23 @@ Notes: 创建 TurnBanner 组件，在回合切换时显示全屏横幅动画提�
    - triggerKey = `${turn}-${currentPlayer}` 自动检测回合切换
 
 测试: 1436 个测试全部通过。
+
+=== Session 33 | 2026-03-23 ===
+Feature: 游戏结算统计画面 — 胜负后显示对局数据统计
+Status: completed
+Notes: 创建 GameResultsOverlay 组件，替换旧的简单 Game Over 覆盖层。
+
+实现内容:
+1. components/battle/board/GameResultsOverlay.tsx（全新组件）:
+   - 从 gameState.log 提取对局统计（击倒数、奖赏卡、训练师使用、贴能次数）
+   - 双方统计对比表格，较高数值黄色高亮
+   - Victory/Defeat 主标题 + 胜利条件文字 + 回合数
+   - Framer Motion 弹入动画
+   - AI 模式提供"再来一局"按钮（快速重开）
+   - "返回大厅"按钮
+
+2. BattlePageClient.tsx:
+   - 替换旧的内联 Game Over overlay 为 GameResultsOverlay
+   - onRematch 回调：清理状态 → 延迟启动新对局
+
+测试: 1436 个测试全部通过。

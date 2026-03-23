@@ -20,6 +20,7 @@ import { preloadDeckImages, addPreloadLinks } from "@/lib/image-preloader";
 import { setPromptStateChangeCallback, pendingPrompts } from "@/engine/effects/effect-context";
 import { OpeningSequenceModal } from "@/components/battle/board/OpeningSequenceModal";
 import { PokemonPlacementModal } from "@/components/battle/board/PokemonPlacementModal";
+import { GameResultsOverlay } from "@/components/battle/board/GameResultsOverlay";
 import { setFirstPlayer, finalizeManualPlacement, PlacementChoice } from "@/engine/battle-prepare";
 
 // ─── Battle Mode Types ───
@@ -977,36 +978,21 @@ export default function BattlePageClient() {
           </div>
         )}
 
-        {/* Game Over Overlay */}
-        {gameState.phase === GamePhase.GAME_OVER && gameState.winner && (() => {
-          // Determine if the local player won
-          const localPlayerIndex = myPlayerId ?? 0;
-          const iWon = gameState.winner!.playerIndex === localPlayerIndex;
-          return (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70">
-              <div className="rounded-2xl bg-zinc-900 p-8 text-center shadow-2xl">
-                <h2 className="text-3xl font-bold text-yellow-400">
-                  {iWon ? "🏆 胜利！" : "💔 失败"}
-                </h2>
-                <p className="mt-4 text-xl text-zinc-100">
-                  {gameState.players[gameState.winner!.playerIndex].name} 获胜！
-                </p>
-                <p className="mt-2 text-sm text-zinc-400">
-                  {gameState.winner!.condition === "prizes_taken" && "拿完了所有奖励卡"}
-                  {gameState.winner!.condition === "no_bench_pokemon" && "对方场上没有宝可梦了"}
-                  {gameState.winner!.condition === "deck_out" && "对方无法抽牌"}
-                  {gameState.winner!.condition === "concede" && "对方认输"}
-                </p>
-                <button
-                  onClick={handleReturnToLobby}
-                  className="mt-6 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500"
-                >
-                  返回大厅
-                </button>
-              </div>
-            </div>
-          );
-        })()}
+        {/* Game Results Overlay */}
+        {gameState.phase === GamePhase.GAME_OVER && gameState.winner && (
+          <GameResultsOverlay
+            gameState={gameState}
+            localPlayerIndex={myPlayerId ?? 0}
+            onReturnToLobby={handleReturnToLobby}
+            onRematch={battleMode === "ai" ? () => {
+              handleReturnToLobby();
+              // Small delay to let state reset, then start new game
+              setTimeout(() => {
+                handleStartBattle(undefined, "ai");
+              }, 100);
+            } : undefined}
+          />
+        )}
       </div>
     );
   }
