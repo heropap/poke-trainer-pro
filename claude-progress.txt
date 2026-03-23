@@ -1897,3 +1897,32 @@ Notes: 创建了专用的 PromotionModal 组件，替换了之前「点击备战
 测试: 新增 8 个测试（promotion-modal.test.ts），总计 1397 个测试全部通过（63 个测试套件）。
 
 关键里程碑: feature_list.json 28/28 功能全部完成！项目进入内测打磨阶段。
+
+=== Session 29 | 2026-03-23 ===
+Feature: 预置示例卡组 — 内置5套可直接使用的Standard卡组
+Status: completed
+Notes: 新增5套预置Standard卡组，用户无需手动粘贴代码即可一键导入开始对战。
+
+实现内容:
+1. data/prebuilt-decks.ts — 5套预置卡组:
+   - Charizard ex (Fire/Evolution) — 火系进化打击
+   - Lugia VSTAR (Colorless/VSTAR) — 无色大攻击力
+   - Gardevoir ex (Psychic/Ability) — 超能能量加速
+   - Miraidon ex (Lightning/Speed) — 雷系快攻铺场
+   - Lost Zone Box (Multi-type/Lost Zone) — 失落区战术
+   - 每套60张，PTCG Live标准格式
+
+2. DeckPageClient.tsx — 示例卡组快捷导入:
+   - 卡片式网格布局（2-3列响应式）
+   - 每张卡片显示：名称、类型标签、策略描述、导入按钮
+   - 一键导入：parseDeckList → validateDeck → importDeck
+   - 已导入检测：重复卡组显示"已导入"绿色标签
+
+新增内测打磨 feature_list:
+- #28 预置卡组（本次完成）
+- #29 回合切换视觉提示
+- #30 先攻首回合规则验证
+- #31 Deck Out胜利条件修复
+- #32 游戏结算统计画面
+
+测试: 新增 23 个测试（prebuilt-decks.test.ts），总计 1420 个测试全部通过（64 个套件）。

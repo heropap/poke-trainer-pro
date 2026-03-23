@@ -6,6 +6,8 @@ import DeckImport from "@/components/deck/DeckImport";
 import { useDeckContext } from "@/components/deck/DeckContext";
 import { DeckValidation } from "@/lib/deck-parser";
 import { StoredDeck } from "@/services/deck-storage";
+import { parseDeckList, validateDeck } from "@/lib/deck-parser";
+import { PREBUILT_DECKS, PrebuiltDeck } from "@/data/prebuilt-decks";
 import Link from "next/link";
 
 export default function DeckPageClient() {
@@ -54,6 +56,16 @@ export default function DeckPageClient() {
     [importDeck]
   );
 
+  const handleImportPrebuilt = useCallback(
+    (prebuilt: PrebuiltDeck) => {
+      const parsed = parseDeckList(prebuilt.deckText);
+      const result = validateDeck(parsed, cardLookup, nameLookup);
+      const saved = importDeck(result, prebuilt.deckText);
+      setLastSaved(saved);
+    },
+    [cardLookup, nameLookup, importDeck]
+  );
+
   if (loading) {
     return (
       <div className="py-16 text-center text-zinc-500">
@@ -64,6 +76,54 @@ export default function DeckPageClient() {
 
   return (
     <div className="space-y-8">
+      {/* Prebuilt Decks — Quick Import */}
+      <div>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+          示例卡组
+        </h3>
+        <p className="mt-1 text-sm text-zinc-500">
+          一键导入预置卡组，无需手动粘贴代码即可开始对战。
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {PREBUILT_DECKS.map((prebuilt) => {
+            const alreadyImported = decks.some(
+              (d) => d.name === `${prebuilt.name} 卡组` || d.deckText.trim() === prebuilt.deckText.trim()
+            );
+            return (
+              <div
+                key={prebuilt.name}
+                className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {prebuilt.name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {prebuilt.archetype}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleImportPrebuilt(prebuilt)}
+                    disabled={alreadyImported}
+                    className={`shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                      alreadyImported
+                        ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                        : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                    }`}
+                  >
+                    {alreadyImported ? "已导入" : "导入"}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-zinc-400">
+                  {prebuilt.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <DeckImport cardLookup={cardLookup} nameLookup={nameLookup} onDeckImported={handleDeckImported} />
 
       {/* Save confirmation */}
