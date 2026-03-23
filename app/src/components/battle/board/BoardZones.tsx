@@ -126,14 +126,30 @@ interface LostZoneProps {
 
 export function LostZone({ cards, count, className = "", onClick }: LostZoneProps) {
   const displayCount = cards?.length ?? count ?? 0;
+  const threshold7 = displayCount >= 7;
+  const threshold10 = displayCount >= 10;
   return (
     <div
       className={`flex flex-col items-center justify-center ${displayCount > 0 ? "cursor-pointer" : ""} ${className}`}
       onClick={() => displayCount > 0 && onClick?.()}
     >
-      <div className="relative flex h-[80px] w-[80px] items-center justify-center rounded-full border-2 border-purple-900/50 bg-purple-900/20 shadow-inner hover:border-purple-700/60 transition-colors">
+      <div className={`relative flex h-[80px] w-[80px] items-center justify-center rounded-full border-2 shadow-inner transition-all ${
+        threshold10
+          ? "border-red-500/70 bg-red-900/30 shadow-red-500/20"
+          : threshold7
+          ? "border-green-500/50 bg-green-900/20 shadow-green-500/10"
+          : "border-purple-900/50 bg-purple-900/20"
+      } hover:border-purple-700/60`}>
         <div className="absolute inset-0 animate-spin-slow rounded-full border-t-2 border-purple-500 opacity-30"></div>
-        <span className="text-xl font-bold text-purple-400">{displayCount}</span>
+        <span className={`text-xl font-bold ${threshold10 ? "text-red-400" : threshold7 ? "text-green-400" : "text-purple-400"}`}>
+          {displayCount}
+        </span>
+        {threshold7 && !threshold10 && (
+          <span className="absolute -right-1 -top-1 rounded-full bg-green-600 px-1 py-0.5 text-[8px] font-bold text-white">7+</span>
+        )}
+        {threshold10 && (
+          <span className="absolute -right-1 -top-1 animate-pulse rounded-full bg-red-600 px-1 py-0.5 text-[8px] font-bold text-white">10+</span>
+        )}
       </div>
       <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-purple-900">失落区</span>
     </div>

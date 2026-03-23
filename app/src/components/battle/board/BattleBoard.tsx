@@ -973,12 +973,21 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
            {/* Right: Tools / Actions */}
            <div className="w-[120px] flex flex-col items-end gap-1">
-              {/* VSTAR Marker Placeholder */}
-              <div className="flex w-full justify-end mb-1 opacity-50">
-                <div className="px-2 py-0.5 bg-white/5 rounded border border-white/10 text-[10px] text-zinc-500 font-mono tracking-widest">
-                  VSTAR
-                </div>
-              </div>
+              {/* VSTAR Power Indicator */}
+              {(() => {
+                const vstarUsed = myIndex === 0 ? gameState.turnStatus.p1VstarUsed : gameState.turnStatus.p2VstarUsed;
+                return (
+                  <div className="flex w-full justify-end mb-1">
+                    <div className={`px-2 py-0.5 rounded border text-[10px] font-mono tracking-widest transition-all ${
+                      vstarUsed
+                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 line-through opacity-40"
+                        : "bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/40 text-yellow-400"
+                    }`}>
+                      V★STAR
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="flex gap-1">
                  {/* Coin Area Placeholder */}

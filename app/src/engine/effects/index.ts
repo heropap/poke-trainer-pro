@@ -119,6 +119,10 @@ import { stadiumNameEffects } from "./cards/stadiums";
 import { metaAttackEffects } from "./cards/meta-attacks";
 import { expandedTrainerEffects } from "./cards/trainers-expanded";
 import { svAbilityEffects } from "./cards/sv-abilities";
+import { vstarPowerEffects } from "./cards/vstar-powers";
+import { aceSpecEffects } from "./cards/ace-spec-trainers";
+import { metaAttackersW3Effects } from "./cards/meta-attackers-w3";
+import { metaTrainersW4Effects } from "./cards/meta-trainers-w4";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
@@ -160,6 +164,10 @@ export function initializeEffects(
   registerAllByName(metaAttackEffects, "L2");
   registerAllByName(expandedTrainerEffects, "L2");
   registerAllByName(svAbilityEffects, "L2");
+  registerAllByName(vstarPowerEffects, "L2");
+  registerAllByName(aceSpecEffects, "L2");
+  registerAllByName(metaAttackersW3Effects, "L2");
+  registerAllByName(metaTrainersW4Effects, "L2");
 
   // Layer 2.5: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
@@ -201,6 +209,10 @@ export function getBuiltInEffectCount(): number {
     stadiumNameEffects.length +
     metaAttackEffects.length +
     expandedTrainerEffects.length +
-    svAbilityEffects.length
+    svAbilityEffects.length +
+    vstarPowerEffects.length +
+    aceSpecEffects.length +
+    metaAttackersW3Effects.length +
+    metaTrainersW4Effects.length
   );
 }

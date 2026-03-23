@@ -48,12 +48,18 @@ export function getAttackDisabledReason(
   if (card.markers[CANT_ATTACK_NEXT_TURN] > 0) return "被效果封锁，不能攻击";
   if (card.markers[cantUseAttackMarker(attackName)] > 0) return `不能使用 ${attackName}`;
 
+  // VSTAR Power attack check (Star Requiem, Star Chronos, etc.)
+  const attack = card.card.attacks?.find((a) => a.name === attackName);
+  if (attack?.text?.includes("VSTAR") || attack?.text?.includes("V STAR")) {
+    const vstarKey = playerIndex === 0 ? "p1VstarUsed" : "p2VstarUsed";
+    if (state.turnStatus[vstarKey]) return "本局已使用过VSTAR力量";
+  }
+
   // V2: Modifier query — field abilities blocking attacks
   const mods = queryActiveModifiers(state, playerIndex);
   if (mods.preventAttack) return "场上能力封锁了攻击";
 
   // Energy cost check (pure math, V2-compatible)
-  const attack = card.card.attacks?.find((a) => a.name === attackName);
   if (attack && !checkEnergyCost(card.attachedEnergy, attack.cost || [])) {
     return "能量不足";
   }
@@ -117,6 +123,14 @@ export function getAbilityDisabledReason(
   // Turn state (derived from state)
   if (state.turnStatus.hasAttacked) return "攻击后不能使用特性";
   if (card.abilityUsedThisTurn) return "本回合已使用特性";
+
+  // VSTAR Power ability check
+  const abilityData = card.card.abilities?.find((a: any) => a.name === abilityName);
+  if (abilityData?.text?.includes("VSTAR") || abilityData?.text?.includes("V STAR") ||
+      abilityName.includes("Star") && card.card.subtypes?.includes("VSTAR")) {
+    const vstarKey = playerIndex === 0 ? "p1VstarUsed" : "p2VstarUsed";
+    if (state.turnStatus[vstarKey]) return "本局已使用过VSTAR力量";
+  }
 
   // Marker check
   if (card.markers[ABILITY_BLOCKED] > 0 || card.markers[ABILITY_BLOCKED_TEMP] > 0) return "特性被封锁";

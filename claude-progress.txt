@@ -2104,3 +2104,35 @@ Notes: 新建 sv-abilities.ts，批量实现了47个新效果，覆盖 SV 时代
 总注册效果: 128 → 175+ 张（含 text-parser 自动生成预计 200+）
 
 测试: 1478 个测试通过。
+
+=== Session 39 | 2026-03-23 ===
+Feature: S/A级竞技卡效果 + VSTAR/Lost Zone UI — Wave 1-4 批量实现
+Status: completed
+Notes: 实现了中国PTCG Standard环境的核心竞技卡效果，总效果数达到200+。
+
+Wave 1 — VSTAR基础设施 + 万金油引擎:
+- VSTAR Power 攻击/能力双重限制检查 (action-availability.ts)
+- Arceus VSTAR: Starbirth(搜索任意2张) + Trinity Nova(附加3基本能量)
+- ACE SPEC: Master Ball, Secret Box, Scoop Up Cyclone, Scramble Switch
+
+Wave 2 — 顶级卡组VSTAR核心:
+- Giratina VSTAR: Lost Impact(弃2能量到失落区) + Star Requiem(10+失落区无条件KO)
+- Palkia VSTAR: Star Portal(弃牌堆附加3水能量) + Subspace Swell(按备战区缩放)
+- Dialga VSTAR: Metal Blast(按钢能量缩放) + Star Chronos(额外回合)
+- Regidrago VSTAR: Legacy Star(弃7搜2) + Apex Dragon(复制龙系攻击)
+
+Wave 3 — 当前环境攻击手 (8张):
+- Iron Valiant ex(备战区伤害), Iron Crown ex(Future加成), Gouging Fire ex(弃牌顶5)
+- Great Tusk ex(翻币+弃能量), Walking Wake ex(抽到8+狙击120), Ceruledge ex(全回复)
+- Gallade(Buddy Catch搜索支持者), Mimikyu(Safeguard防V/ex伤害)
+
+Wave 4 — 关键训练师 (10张):
+- Irida, Erika's Invitation, Unfair Stamp, Dark Patch, Superior Energy Retrieval
+- Luxurious Cape, Supereffective Glasses, Heavy Baton, Night Stretcher, Buddy-Buddy Poffin
+
+UI改进:
+- VSTAR Power 使用状态指示器（金色可用/灰色已用+删除线）
+- Lost Zone 阈值指示器（7+绿色/10+红色脉冲）
+
+总效果数: 175 → 200+（190个name-based + 10个ID-based + text-parser自动生成）
+测试: 1478 个测试通过。
