@@ -22,6 +22,8 @@ import { OpeningSequenceModal } from "@/components/battle/board/OpeningSequenceM
 import { PokemonPlacementModal } from "@/components/battle/board/PokemonPlacementModal";
 import { GameResultsOverlay } from "@/components/battle/board/GameResultsOverlay";
 import { setFirstPlayer, finalizeManualPlacement, PlacementChoice } from "@/engine/battle-prepare";
+import { PREBUILT_DECKS } from "@/data/prebuilt-decks";
+import { parseDeckList, validateDeck } from "@/lib/deck-parser";
 
 // ─── Battle Mode Types ───
 
@@ -34,7 +36,7 @@ const AI_TURN_START_DELAY = 600;
 const AI_MAX_ACTIONS_PER_TURN = 30;
 
 export default function BattlePageClient() {
-  const { validDecks, loading: decksLoading } = useDeckContext();
+  const { validDecks, loading: decksLoading, importDeck } = useDeckContext();
   const { socket, isConnected, playerId, setPlayerId, isReconnecting, opponentDisconnected, opponentGraceMs } = useSocket();
   const [cardIndex, setCardIndex] = useState<Map<string, Card>>(new Map());
   const [cardsLoading, setCardsLoading] = useState(true);
@@ -789,6 +791,23 @@ export default function BattlePageClient() {
     setMyPlayerId(null);
   }, []);
 
+  // Quick import prebuilt decks helper (must be before conditional returns)
+  const handleQuickImport = useCallback(() => {
+    if (cardIndex.size === 0) return;
+    const nameLookup = (name: string) => {
+      const results: Card[] = [];
+      cardIndex.forEach((card) => {
+        if (card.name.toLowerCase() === name.toLowerCase()) results.push(card);
+      });
+      return results;
+    };
+    for (const prebuilt of PREBUILT_DECKS) {
+      const parsed = parseDeckList(prebuilt.deckText);
+      const validation = validateDeck(parsed, cardLookup, nameLookup);
+      importDeck(validation, prebuilt.deckText);
+    }
+  }, [cardIndex, cardLookup, importDeck]);
+
   const isLoading = decksLoading || cardsLoading;
 
   if (isLoading) {
@@ -797,7 +816,7 @@ export default function BattlePageClient() {
     );
   }
 
-  // No decks available
+  // No decks available — offer quick import
   if (validDecks.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
@@ -805,14 +824,22 @@ export default function BattlePageClient() {
           尚未导入卡组
         </p>
         <p className="mt-2 text-sm text-zinc-500">
-          请先在卡组页面导入至少一副合法卡组，才能开始对战。
+          导入预置示例卡组即可立即开始对战。
         </p>
-        <Link
-          href="/deck"
-          className="mt-4 inline-block rounded-lg bg-zinc-900 px-6 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          前往导入卡组 →
-        </Link>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <button
+            onClick={handleQuickImport}
+            className="rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-6 py-2 text-sm font-bold text-white shadow-lg hover:from-orange-600 hover:to-red-600"
+          >
+            一键导入示例卡组
+          </button>
+          <Link
+            href="/deck"
+            className="rounded-lg border border-zinc-300 px-6 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            手动导入 →
+          </Link>
+        </div>
       </div>
     );
   }

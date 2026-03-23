@@ -41,6 +41,7 @@ import { OrderCardsModal } from "./OrderCardsModal";
 import { SelectPokemonModal } from "./SelectPokemonModal";
 import { PromotionModal } from "./PromotionModal";
 import { TurnBanner } from "./TurnBanner";
+import { PrizeRevealOverlay } from "./PrizeRevealOverlay";
 import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
 import { ZoneBrowserModal } from "./ZoneBrowserModal";
 
@@ -269,6 +270,22 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   // KO Promotion: detect when active is empty but bench has Pokemon
   const promotionRequired = !me.active && me.bench.cards.length > 0;
+
+  // Prize reveal: detect new prize_taken events
+  const lastPrizeEvent = React.useMemo(() => {
+    const prizeEvents = gameState.log.filter(e => e.type === "prize_taken");
+    return prizeEvents.length > 0 ? prizeEvents[prizeEvents.length - 1] : null;
+  }, [gameState.log.length]);
+
+  // Track which cards were most recently added to hand (from prizes)
+  const prizeRevealCards = React.useMemo(() => {
+    if (!lastPrizeEvent) return [];
+    // Show the player's last few hand cards as "revealed" prizes
+    const playerIdx = lastPrizeEvent.playerIndex;
+    const count = (lastPrizeEvent.data?.count as number) || 1;
+    const hand = gameState.players[playerIdx].hand.cards;
+    return hand.slice(-count);
+  }, [lastPrizeEvent, gameState.players]);
 
   // Retreat energy selection state (after bench target is chosen)
   const [retreatEnergyPending, setRetreatEnergyPending] = React.useState<{ benchInstanceId: string } | null>(null);
@@ -1203,6 +1220,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             text={isMyTurn ? "你的回合" : "对手回合"}
             isMyTurn={isMyTurn}
             triggerKey={`${gameState.turn}-${gameState.currentPlayer}`}
+          />
+        )}
+
+        {/* Prize Reveal Overlay */}
+        {lastPrizeEvent && prizeRevealCards.length > 0 && (
+          <PrizeRevealOverlay
+            cards={prizeRevealCards}
+            playerName={gameState.players[lastPrizeEvent.playerIndex].name}
+            triggerKey={lastPrizeEvent.timestamp}
           />
         )}
 

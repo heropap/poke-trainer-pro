@@ -159,7 +159,7 @@ export function processAction(
 
     let result: ActionResult;
 
-    switch (action.type) {
+      switch (action.type) {
       case "play_card":
         result = await handlePlayCard(state, playerIndex, action);
         break;
@@ -269,7 +269,16 @@ export function processAction(
     }
 
     return result;
-  })();
+  })().catch((err) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[Engine Error] processAction(${action.type}) threw:`, err);
+    logEvent(state, playerIndex, "game_over", `引擎错误: ${message}`);
+    return {
+      success: false,
+      error: `引擎内部错误: ${message}`,
+      newState: { ...state },
+    } as ActionResult;
+  });
 }
 
 // ───────────────────────────────────────────────

@@ -1995,3 +1995,19 @@ Notes: 创建 GameResultsOverlay 组件，替换旧的简单 Game Over 覆盖层
    - onRematch 回调：清理状态 → 延迟启动新对局
 
 测试: 1436 个测试全部通过。
+
+=== Session 34 | 2026-03-23 ===
+Feature: 内测打磨批量实现 (#33-#36)
+Status: completed
+Notes: 一次性完成4个内测打磨功能。
+
+#33 对手手牌遮罩: 已有实现（Hand组件isOpponent=true渲染卡背），编写验证测试确认。
+#34 引擎错误恢复: processAction添加.catch()错误捕获，异常时返回error而非崩溃，日志记录错误信息。
+#35 奖赏卡翻开动画: 创建PrizeRevealOverlay组件，检测prize_taken事件后显示翻转动画，2秒自动消失。
+#36 对战页快速开始: 对战页无卡组时显示"一键导入示例卡组"按钮，自动导入5套预置卡组。
+
+修复:
+- processAction try-catch改为.catch()模式解决turbopack解析兼容性
+- handleQuickImport useCallback移到条件渲染之前避免hooks顺序问题
+
+测试: 1443 个测试全部通过（68 个套件）。
