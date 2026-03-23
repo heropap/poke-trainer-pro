@@ -19,7 +19,7 @@
  * 15. Palkia V — Subspace Swell (V版本)
  */
 
-import { CardEffectDef, AttackResult } from "../effect-types";
+import { CardEffectDef } from "../effect-types";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -80,60 +80,9 @@ const capaciousBucket: NamedEffect = {
   },
 };
 
-const earthenVessel: NamedEffect = {
-  cardId: "name:Earthen Vessel",
-  cardName: "Earthen Vessel",
-  trainer: {
-    canPlay: (ctx) => ctx.player.hand.cards.length >= 1,
-    onPlay: (ctx) => {
-      // Discard 1 card from hand
-      if (ctx.player.hand.cards.length > 0) {
-        const toDiscard = ctx.player.hand.cards[ctx.player.hand.cards.length - 1];
-        ctx.player.hand.cards = ctx.player.hand.cards.filter(c => c.instanceId !== toDiscard.instanceId);
-        ctx.player.discard.cards.push(toDiscard);
-      }
-      // Search deck for up to 2 Basic Energy of different types
-      const found: any[] = [];
-      const usedTypes = new Set<string>();
-      for (const c of ctx.player.deck.cards) {
-        if (found.length >= 2) break;
-        if (c.card.supertype === "Energy" && c.card.subtypes?.includes("Basic")) {
-          const type = c.card.name || "";
-          if (!usedTypes.has(type)) {
-            usedTypes.add(type);
-            found.push(c);
-          }
-        }
-      }
-      for (const c of found) {
-        ctx.player.deck.cards = ctx.player.deck.cards.filter((d: any) => d.instanceId !== c.instanceId);
-        ctx.player.hand.cards.push(c);
-      }
-      ctx.shuffleDeck();
-      ctx.log(`Earthen Vessel: 弃1手牌，搜索了 ${found.length} 张不同类型基础能量`);
-    },
-  },
-};
+// Earthen Vessel — already implemented with interactive prompts in trainers.ts
 
-const superRod: NamedEffect = {
-  cardId: "name:Super Rod",
-  cardName: "Super Rod",
-  trainer: {
-    onPlay: (ctx) => {
-      // Choose up to 3 Pokemon and/or Basic Energy from discard, shuffle into deck
-      const candidates = ctx.player.discard.cards.filter(
-        c => c.card.supertype === "Pokémon" || (c.card.supertype === "Energy" && c.card.subtypes?.includes("Basic"))
-      );
-      const toReturn = candidates.slice(0, 3);
-      for (const c of toReturn) {
-        ctx.player.discard.cards = ctx.player.discard.cards.filter(d => d.instanceId !== c.instanceId);
-        ctx.player.deck.cards.push(c);
-      }
-      ctx.shuffleDeck();
-      ctx.log(`Super Rod: 将 ${toReturn.map(c => c.card.name).join(", ")} 洗回牌组`);
-    },
-  },
-};
+// Super Rod — already implemented with interactive prompts in trainers.ts
 
 const crossSwitcher: NamedEffect = {
   cardId: "name:Cross Switcher",
@@ -195,6 +144,6 @@ const palkiaV: NamedEffect = {
 
 export const waterCoreW8Effects: NamedEffect[] = [
   frigibax, arctibax, kyuremVMAX, capaciousBucket,
-  earthenVessel, superRod, crossSwitcher,
+  crossSwitcher,
   bidoof, palkiaV,
 ];

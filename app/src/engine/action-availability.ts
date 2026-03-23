@@ -11,7 +11,7 @@
 
 import { GameState, GameCard, GamePhase } from "./game-state";
 import { queryActiveModifiers } from "./effects/modifier-query";
-import { checkEnergyCost } from "./game-actions";
+import { checkEnergyCost, getProvidedEnergy, checkEnergyCostWithProvided } from "./game-actions";
 import { getEffectiveRetreatCost } from "./turn-actions";
 import { getEffect } from "./effects/effect-registry";
 import {
@@ -98,9 +98,15 @@ export function getRetreatDisabledReason(
   if (mods.preventRetreat) return "场上能力阻止了撤退";
 
   // Energy sufficiency with effective cost (tools/abilities/stadium modifiers applied)
+  // Use proper energy check that accounts for multi-energy cards (Double Turbo, etc.)
   const retreatCost = getEffectiveRetreatCost(state, playerIndex, card);
-  if (retreatCost > 0 && card.attachedEnergy.length < retreatCost) {
-    return `能量不足 (需要 ${retreatCost}，当前 ${card.attachedEnergy.length})`;
+  if (retreatCost > 0) {
+    const provided = getProvidedEnergy(card.attachedEnergy);
+    const cost = Array.from({ length: retreatCost }, () => "Colorless");
+    const energyCheck = checkEnergyCostWithProvided(provided, cost);
+    if (!energyCheck.sufficient) {
+      return `能量不足 (需要 ${retreatCost} 点撤退能量)`;
+    }
   }
 
   return null;

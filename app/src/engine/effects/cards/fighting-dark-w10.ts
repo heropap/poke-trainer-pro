@@ -109,43 +109,11 @@ const drapionV: NamedEffect = {
   ],
 };
 
-const defianceBand: NamedEffect = {
-  cardId: "name:Defiance Band",
-  cardName: "Defiance Band",
-  tool: {
-    whileAttached: {
-      modifyDamage: (ctx, damage) => {
-        // +30 if you have more prize cards than opponent
-        if (ctx.player.prizes.cards.length > ctx.opponent.prizes.cards.length) {
-          return damage + 30;
-        }
-        return damage;
-      },
-    },
-  },
-};
+// Defiance Band — already implemented with interactive prompts in trainers.ts
 
 // Hisuian Heavy Ball — already implemented in trainers-expanded.ts
 
-const counterCatcher: NamedEffect = {
-  cardId: "name:Counter Catcher",
-  cardName: "Counter Catcher",
-  trainer: {
-    canPlay: (ctx) => {
-      return ctx.player.prizes.cards.length > ctx.opponent.prizes.cards.length &&
-             ctx.opponent.bench.cards.length > 0;
-    },
-    onPlay: (ctx) => {
-      if (ctx.opponent.bench.cards.length === 0 || !ctx.opponent.active) return;
-      const target = ctx.opponent.bench.cards[0];
-      const oldActive = ctx.opponent.active;
-      ctx.opponent.active = target;
-      ctx.opponent.bench.cards = ctx.opponent.bench.cards.filter(c => c.instanceId !== target.instanceId);
-      ctx.opponent.bench.cards.push(oldActive);
-      ctx.log(`Counter Catcher: 将对手的 ${target.card.name} 拉到战斗区`);
-    },
-  },
-};
+// Counter Catcher — already implemented with interactive prompts in trainers.ts
 
 const pathToThePeak: NamedEffect = {
   cardId: "name:Path to the Peak",
@@ -245,7 +213,7 @@ const radiantHawlucha: NamedEffect = {
 };
 
 export const fightingDarkW10Effects: NamedEffect[] = [
-  darkraiVSTAR, galarianMoltresV, drapionV, defianceBand,
-  counterCatcher, pathToThePeak, trainingCourt,
+  darkraiVSTAR, galarianMoltresV, drapionV,
+  pathToThePeak, trainingCourt,
   medichamV, lucario, stonjourner, radiantHawlucha,
 ];

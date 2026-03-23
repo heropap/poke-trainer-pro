@@ -30,41 +30,9 @@ type NamedEffect = CardEffectDef & { cardName: string };
 
 // Cyllene — already implemented in trainers-expanded.ts
 
-const jacq: NamedEffect = {
-  cardId: "name:Jacq",
-  cardName: "Jacq",
-  trainer: {
-    onPlay: (ctx) => {
-      const found = ctx.searchDeck(
-        (c) => c.card.supertype === "Pokémon" && !c.card.subtypes?.includes("Basic"),
-        2
-      );
-      ctx.shuffleDeck();
-      if (found.length > 0) ctx.log(`Jacq: 搜索了 ${found.map(c => c.card.name).join(", ")}`);
-    },
-  },
-};
+// Jacq — already implemented with interactive prompts in trainers.ts
 
-const tulip: NamedEffect = {
-  cardId: "name:Tulip",
-  cardName: "Tulip",
-  trainer: {
-    onPlay: (ctx) => {
-      // Up to 2 Pokemon from discard
-      const pokemon = ctx.searchDiscard(
-        c => c.card.supertype === "Pokémon",
-        2
-      );
-      // Up to 2 Basic Energy from discard
-      const energy = ctx.searchDiscard(
-        c => c.card.supertype === "Energy" && c.card.subtypes?.includes("Basic"),
-        2
-      );
-      const all = [...pokemon, ...energy];
-      if (all.length > 0) ctx.log(`Tulip: 从弃牌堆取回了 ${all.map(c => c.card.name).join(", ")}`);
-    },
-  },
-};
+// Tulip — already implemented with interactive prompts in trainers.ts
 
 // Worker — already implemented in trainers-expanded.ts
 
@@ -228,7 +196,7 @@ const allister: NamedEffect = {
 };
 
 export const trainersW13Effects: NamedEffect[] = [
-  jacq, tulip, zinniasResolve, larry,
+  zinniasResolve, larry,
   pokeStop, townStore, toolJammer, rescueBoard,
   boosterEnergyFuture, ancientBoosterEnergyCapsule,
   powerglass, bruno, allister,

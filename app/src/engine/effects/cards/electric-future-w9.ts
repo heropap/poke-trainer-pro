@@ -66,100 +66,16 @@ const mareep: NamedEffect = {
   ],
 };
 
-const electricGenerator: NamedEffect = {
-  cardId: "name:Electric Generator",
-  cardName: "Electric Generator",
-  trainer: {
-    onPlay: (ctx) => {
-      // Look at top 5, attach up to 2 Lightning energy to bench
-      const top5 = ctx.revealTopCards(5);
-      const lightning: any[] = [];
-      const rest: any[] = [];
-      for (const c of top5) {
-        if (c.card.supertype === "Energy" && c.card.name?.includes("Lightning") && c.card.subtypes?.includes("Basic") && lightning.length < 2) {
-          lightning.push(c);
-        } else {
-          rest.push(c);
-        }
-      }
-      // Attach lightning to bench
-      const targets = ctx.player.bench.cards.filter(Boolean);
-      for (let i = 0; i < lightning.length; i++) {
-        const target = targets[i % Math.max(1, targets.length)] || ctx.player.active;
-        if (target) target.attachedEnergy.push(lightning[i]);
-      }
-      // Put rest back on bottom of deck
-      for (const c of rest) ctx.player.deck.cards.push(c);
-      ctx.log(`Electric Generator: 翻了5张牌，附加了 ${lightning.length} 张电能量`);
-    },
-  },
-};
+// Electric Generator — already implemented with interactive prompts in trainers.ts
 
 // Techno Radar — already implemented in trainers-expanded.ts
 // Forest Seal Stone — already implemented in trainers-expanded.ts
 
-const palPad: NamedEffect = {
-  cardId: "name:Pal Pad",
-  cardName: "Pal Pad",
-  trainer: {
-    onPlay: (ctx) => {
-      const supporters = ctx.player.discard.cards.filter(
-        c => c.card.supertype === "Trainer" && c.card.subtypes?.includes("Supporter")
-      );
-      const toReturn = supporters.slice(0, 2);
-      for (const c of toReturn) {
-        ctx.player.discard.cards = ctx.player.discard.cards.filter(d => d.instanceId !== c.instanceId);
-        ctx.player.deck.cards.push(c);
-      }
-      ctx.shuffleDeck();
-      ctx.log(`Pal Pad: 将 ${toReturn.map(c => c.card.name).join(", ")} 洗回牌组`);
-    },
-  },
-};
+// Pal Pad — already implemented with interactive prompts in trainers.ts
 
-const penny: NamedEffect = {
-  cardId: "name:Penny",
-  cardName: "Penny",
-  trainer: {
-    canPlay: (ctx) => {
-      return ctx.player.bench.cards.some(c => c.card.subtypes?.includes("Basic"));
-    },
-    onPlay: (ctx) => {
-      const target = ctx.player.bench.cards.find(c => c.card.subtypes?.includes("Basic"));
-      if (!target) return;
-      // Return Pokemon and all attached cards to hand
-      ctx.player.bench.cards = ctx.player.bench.cards.filter(c => c.instanceId !== target.instanceId);
-      for (const e of target.attachedEnergy) ctx.player.hand.cards.push(e);
-      for (const t of target.attachedTools) ctx.player.hand.cards.push(t);
-      target.attachedEnergy = [];
-      target.attachedTools = [];
-      target.damageCounters = 0;
-      target.statusConditions = [];
-      ctx.player.hand.cards.push(target);
-      ctx.log(`Penny: 将 ${target.card.name} 和所有附加卡收回手牌`);
-    },
-  },
-};
+// Penny — already implemented with interactive prompts in trainers.ts
 
-const arven: NamedEffect = {
-  cardId: "name:Arven",
-  cardName: "Arven",
-  trainer: {
-    onPlay: async (ctx) => {
-      const item = ctx.searchDeck(
-        (c) => c.card.supertype === "Trainer" && c.card.subtypes?.includes("Item"),
-        1
-      );
-      const tool = ctx.searchDeck(
-        (c) => c.card.supertype === "Trainer" && c.card.subtypes?.includes("Pokémon Tool"),
-        1
-      );
-      ctx.shuffleDeck();
-      const names = [...item, ...tool].map(c => c.card.name).join(", ");
-      if (names) ctx.log(`Arven: 搜索了 ${names}`);
-    },
-  },
-};
+// Arven — already implemented with interactive prompts in trainers.ts
 
 const pokegear: NamedEffect = {
   cardId: "name:Pokégear 3.0",
@@ -276,7 +192,7 @@ const sandyShocksEx: NamedEffect = {
 };
 
 export const electricFutureW9Effects: NamedEffect[] = [
-  regielekiVMAX, mareep, electricGenerator,
-  palPad, penny, arven, pokegear, trekkingShoes,
+  regielekiVMAX, mareep,
+  pokegear, trekkingShoes,
   ironBundle, ironMothEx, sandyShocksEx,
 ];

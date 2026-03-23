@@ -211,16 +211,7 @@ const grant: NamedEffect = {
   },
 };
 
-const nemona: NamedEffect = {
-  cardId: "name:Nemona",
-  cardName: "Nemona",
-  trainer: {
-    onPlay: (ctx) => {
-      ctx.drawCards(3);
-      ctx.log("Nemona: 抽了3张");
-    },
-  },
-};
+// Nemona — already implemented with interactive prompts in trainers.ts
 
 const teamStarGrunt: NamedEffect = {
   cardId: "name:Team Star Grunt",
@@ -252,5 +243,5 @@ const leftovers: NamedEffect = {
 export const wave15HStandardEffects: NamedEffect[] = [
   tinkatonEx, dondozo, tatsugiri, palafinEx, espathraEx,
   oinkologne, toxicroakEx, houndstoneEx, cleffa, grant,
-  nemona, teamStarGrunt, leftovers,
+  teamStarGrunt, leftovers,
 ];
