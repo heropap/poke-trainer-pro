@@ -1865,3 +1865,35 @@ Notes: 实现了完整的开局宝可梦手动选择系统，替换了之前的 
 - 使用 Portal + z-100 确保 Modal 覆盖全屏
 
 测试: 新增 10 个测试（pokemon-placement.test.ts），总计 1389 个测试全部通过（62 个测试套件）。
+
+=== Session 28 | 2026-03-23 ===
+Feature: KO后备战区选择优化 — 被击倒后选择替补宝可梦的交互改进
+Status: completed
+Notes: 创建了专用的 PromotionModal 组件，替换了之前「点击备战区直接升级」的简陋交互。
+
+实现内容:
+1. components/battle/board/PromotionModal.tsx（全新组件）:
+   - 全屏 Modal，红色主题标识 KO 状态（"宝可梦被击倒" 指示器）
+   - 展示所有备战区宝可梦：卡图 + 名称 + HP 血条 + 属性 + 能量数 + 状态异常 + 招式预览
+   - HP 血条颜色根据比例变化（绿→黄→红）
+   - 工具卡 HP 加成正确计算（Bravery Charm +50, Hero's Cape +100）
+   - 点击选择 + 黄色高亮 + ✓ 标记
+   - Framer Motion 弹入动画 + 按钮交互反馈
+   - 确认按钮显示选中宝可梦名称
+   - Portal 渲染，z-100 隔离
+
+2. BattleBoard.tsx 集成:
+   - promotionRequired 状态驱动 PromotionModal 显示
+   - 移除旧的「点击备战区直接 promote」交互
+   - 移除旧的「⚡ 必须选择备战区宝可梦上场」内联 banner
+   - bench 卡不再标记为 targetable（Modal 接管选择逻辑）
+   - 选择后通过 dispatchAction({ type: "promote" }) 发送到引擎
+
+引擎层保持不变:
+- 1 只备战区时仍自动升级（autoPromoteBench）
+- 2+ 只备战区时返回 promotionRequired: true，UI 显示 Modal
+- handlePromote 完成后自动结束攻击方回合
+
+测试: 新增 8 个测试（promotion-modal.test.ts），总计 1397 个测试全部通过（63 个测试套件）。
+
+关键里程碑: feature_list.json 28/28 功能全部完成！项目进入内测打磨阶段。

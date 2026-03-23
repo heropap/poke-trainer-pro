@@ -39,6 +39,7 @@ import { ChooseOptionModal } from "./ChooseOptionModal";
 import { ConfirmModal } from "./ConfirmModal";
 import { OrderCardsModal } from "./OrderCardsModal";
 import { SelectPokemonModal } from "./SelectPokemonModal";
+import { PromotionModal } from "./PromotionModal";
 import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
 import { ZoneBrowserModal } from "./ZoneBrowserModal";
 
@@ -564,9 +565,8 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
 
   // ─── Bench click handler ─────────────────────
   function handleBenchClick(benchCard: GameCard) {
-    // In promotion mode, clicking bench should trigger promotion (not open menu)
+    // In promotion mode, the PromotionModal handles selection — don't promote directly
     if (promotionRequired) {
-      dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
       return;
     }
     if (!isMyTurn) return;
@@ -910,11 +910,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                         <button onClick={() => setRetreatSelecting(false)} className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs hover:bg-white/30">取消</button>
                       </div>
                     )}
-                    {promotionRequired && (
-                      <div className="flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg animate-bounce">
-                        <span>⚡ 必须选择备战区宝可梦上场</span>
-                      </div>
-                    )}
+                    {/* Promotion is now handled by PromotionModal */}
                     {benchTargeting && (
                       <div className="flex items-center gap-2 rounded-full bg-yellow-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg">
                         <span>从手牌选择{benchTargeting.action === "attach_energy" ? "能量" : "道具"}卡</span>
@@ -1039,7 +1035,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                    ? benchTargetableIds.has(benchCard.instanceId)
                    : false;
                  const isTargetableForRetreat = retreatSelecting && !!benchCard;
-                 const isTargetableForPromotion = promotionRequired && !!benchCard;
+                 const isTargetableForPromotion = false; // Promotion handled by PromotionModal
 
                  return (
                    <BenchSpot
@@ -1048,9 +1044,7 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
                      card={benchCard}
                      isTargetable={isTargetableForCard || isTargetableForRetreat || isTargetableForPromotion}
                      onTargetClick={() => {
-                       if (benchCard && promotionRequired) {
-                         dispatchAction({ type: "promote", benchInstanceId: benchCard.instanceId });
-                       } else if (benchCard && retreatSelecting) {
+                       if (benchCard && retreatSelecting) {
                          handleRetreatTargetClick(benchCard.instanceId);
                        } else if (benchCard) {
                          handleTargetClick(benchCard.instanceId);
@@ -1199,6 +1193,17 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             gameState={gameState}
             myIndex={myIndex}
             onConfirm={(selectedIds) => onAction?.({ type: "prompt_response", data: { selectedOptions: selectedIds } })}
+          />
+        )}
+
+        {/* Promotion Modal — shown when active is KO'd and bench has 2+ Pokemon */}
+        {promotionRequired && me.bench.cards.length > 0 && (
+          <PromotionModal
+            benchPokemon={me.bench.cards}
+            playerName={me.name}
+            onSelect={(instanceId) => {
+              dispatchAction({ type: "promote", benchInstanceId: instanceId });
+            }}
           />
         )}
 
