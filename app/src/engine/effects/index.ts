@@ -139,6 +139,11 @@ import { wave17ExAttackersEffects } from "./cards/wave17-ex-attackers";
 import { wave18AbilitiesBatchEffects } from "./cards/wave18-abilities-batch";
 import { wave19TrainersExtendedEffects } from "./cards/wave19-trainers-extended";
 import { wave20BasicsBatchEffects } from "./cards/wave20-basics-batch";
+import { wave21EeveelutionsEffects } from "./cards/wave21-eeveelutions";
+import { wave22TechCardsEffects } from "./cards/wave22-tech-cards";
+import { wave23StadiumBatchEffects } from "./cards/wave23-stadium-batch";
+import { wave24SupportersBatchEffects } from "./cards/wave24-supporters-batch";
+import { wave25RemainingAttacksEffects } from "./cards/wave25-remaining-attacks";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
@@ -200,6 +205,11 @@ export function initializeEffects(
   registerAllByName(wave18AbilitiesBatchEffects, "L2");
   registerAllByName(wave19TrainersExtendedEffects, "L2");
   registerAllByName(wave20BasicsBatchEffects, "L2");
+  registerAllByName(wave21EeveelutionsEffects, "L2");
+  registerAllByName(wave22TechCardsEffects, "L2");
+  registerAllByName(wave23StadiumBatchEffects, "L2");
+  registerAllByName(wave24SupportersBatchEffects, "L2");
+  registerAllByName(wave25RemainingAttacksEffects, "L2");
 
   // Layer 2.5: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
@@ -261,6 +271,11 @@ export function getBuiltInEffectCount(): number {
     wave17ExAttackersEffects.length +
     wave18AbilitiesBatchEffects.length +
     wave19TrainersExtendedEffects.length +
-    wave20BasicsBatchEffects.length
+    wave20BasicsBatchEffects.length +
+    wave21EeveelutionsEffects.length +
+    wave22TechCardsEffects.length +
+    wave23StadiumBatchEffects.length +
+    wave24SupportersBatchEffects.length +
+    wave25RemainingAttacksEffects.length
   );
 }

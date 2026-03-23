@@ -2150,3 +2150,22 @@ Notes:
 - 特殊能量: Jet, Therapeutic, Mist, Powerful Colorless, Lucky, Capture, Luminous Energy
 - 测试: 61个新测试，总计1538通过
 - 总效果数: ~310+ (原200+ → 现316+)
+
+=== Session 40 (cont.) | 2026-03-23 ===
+Feature: Wave 15-25 扩展卡效果实现 (158张新效果)
+Status: completed
+Notes:
+- Wave 15 (13): H标核心 — Tinkaton ex, Dondozo/Tatsugiri, Palafin ex, Houndstone ex, Cleffa
+- Wave 16 (9): I标核心 — Greninja ex, Meowscarada ex, Skeledirge ex, Quaquaval ex
+- Wave 17 (13): ex攻击手 — Gholdengo ex, Annihilape ex, Gengar ex, Gyarados ex, Scizor ex
+- Wave 18 (14): 能力批量 — Pidgeot V, Froslass, Pelipper, Slowking, Arboliva, Cinccino, Jirachi
+- Wave 19 (13): 训练师扩展 — Klara, Melony, Raihan, Quick Ball, Evolution Incense, Sky Seal Stone
+- Wave 20 (19): 基础进化线 — Magikarp, Gastly/Haunter, Horsea/Seadra, 御三家进化线, Eevee
+- Wave 21 (15): 伊布家族 — Vaporeon, Jolteon, Flareon, Umbreon V/VMAX, Sylveon V, Glaceon VSTAR
+- Wave 22 (15): Tech卡 — Sudowoodo, Aerodactyl VSTAR, Iron Treads ex, Ting-Lu ex, Banette ex
+- Wave 23 (12): 球场批量 — Mesagoza, Crystal Cave, Stormy Mountains, Tower of Darkness/Waters
+- Wave 24 (15): 支持者批量 — Serena, Cynthia's Ambition, Colress, Nessa, Kofu
+- Wave 25 (20): 剩余攻击 — Zoroark, Gallade VSTAR, Decidueye, Mew VMAX, Hisuian Zoroark VSTAR
+- 总新效果: W5-W25共274张
+- 总效果数: ~475+ (原200+ → 现~475)
+- 测试: 1538通过，70套件
