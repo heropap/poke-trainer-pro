@@ -1955,3 +1955,23 @@ Notes: 功能已在引擎层完整实现（turn-actions.ts drawCard()），game-
 - 牌组有牌时正常抽牌不触发 deck out ✓
 
 测试: 新增 4 个测试，总计 1436 个测试全部通过（66 个套件）。
+
+=== Session 32 | 2026-03-23 ===
+Feature: 回合切换视觉提示 — 回合开始/结束的Banner动画
+Status: completed
+Notes: 创建 TurnBanner 组件，在回合切换时显示全屏横幅动画提示。
+
+实现内容:
+1. components/battle/board/TurnBanner.tsx（全新组件）:
+   - Framer Motion spring 弹入动画 + 淡出
+   - "你的回合" 蓝色渐变 / "对手回合" 红色渐变
+   - 1.5秒自动消失
+   - triggerKey 基于 turn+currentPlayer 驱动重新触发
+   - pointer-events-none 不阻挡游戏操作
+   - z-55 确保显示在游戏界面上方但低于 Modal
+
+2. BattleBoard.tsx 集成:
+   - 在非 GAME_OVER 阶段渲染 TurnBanner
+   - triggerKey = `${turn}-${currentPlayer}` 自动检测回合切换
+
+测试: 1436 个测试全部通过。

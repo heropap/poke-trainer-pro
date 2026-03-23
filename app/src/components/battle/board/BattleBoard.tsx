@@ -40,6 +40,7 @@ import { ConfirmModal } from "./ConfirmModal";
 import { OrderCardsModal } from "./OrderCardsModal";
 import { SelectPokemonModal } from "./SelectPokemonModal";
 import { PromotionModal } from "./PromotionModal";
+import { TurnBanner } from "./TurnBanner";
 import { DeckPile, DiscardPile, PrizePile, LostZone, StadiumSpot } from "./BoardZones";
 import { ZoneBrowserModal } from "./ZoneBrowserModal";
 
@@ -1193,6 +1194,15 @@ export function BattleBoard({ gameState, currentPlayerId, onAction, battleMode, 
             gameState={gameState}
             myIndex={myIndex}
             onConfirm={(selectedIds) => onAction?.({ type: "prompt_response", data: { selectedOptions: selectedIds } })}
+          />
+        )}
+
+        {/* Turn Change Banner */}
+        {gameState.phase !== GamePhase.GAME_OVER && (
+          <TurnBanner
+            text={isMyTurn ? "你的回合" : "对手回合"}
+            isMyTurn={isMyTurn}
+            triggerKey={`${gameState.turn}-${gameState.currentPlayer}`}
           />
         )}
 
