@@ -16,9 +16,9 @@ beforeAll(() => {
 });
 
 describe("Prebuilt Deck Effect Coverage", () => {
-  test("effect system has 100+ registered effects", () => {
+  test("effect system has 150+ registered effects", () => {
     const count = getRegisteredCount();
-    expect(count).toBeGreaterThanOrEqual(100);
+    expect(count).toBeGreaterThanOrEqual(150);
   });
 
   const trainerNames = new Set<string>();

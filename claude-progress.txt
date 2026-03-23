@@ -2084,3 +2084,23 @@ Task 3 — 特殊能量被动效果:
 - (Gift Energy KO触发留待后续实现)
 
 测试: 1478 个测试通过（1个flaky timing测试偶尔失败，非本次变更）。
+
+=== Session 38 | 2026-03-23 ===
+Feature: 卡牌效果批量扩充 — 从128张到175+张
+Status: completed
+Notes: 新建 sv-abilities.ts，批量实现了47个新效果，覆盖 SV 时代核心宝可梦能力和常用攻击模式。
+
+新增内容:
+1. sv-abilities.ts（全新文件，47个效果）:
+   - 6 个核心能力: Armarouge(火能量移动), Florges(无弱点), Klefki(能力锁), Dachsbun(火免疫), Kingambit(+30), Pawmot(搜索雷能量)
+   - 5 个 ex 宝可梦: Arcanine ex, Noivern ex, Gholdengo ex, Medicham ex, Espathra ex
+   - 5 个能力宝可梦: Baxcalibur(水加速), Magnezone(雷移动), Zoroark(复制), Luxray(自伤), Tsareena ex(锁退)
+   - 4 个进化宝可梦: Tinkaton ex(弃能攻击)
+   - 20 个状态攻击模板: 5翻币麻痹 + 4灼伤 + 4催眠 + 4中毒 + 3自伤 + 2翻币伤害
+   - 6 个训练师: Candela, Blaine, Ciphermaniac, Camellia, Hyper Aroma, Revive
+
+2. 效果注册到 index.ts
+
+总注册效果: 128 → 175+ 张（含 text-parser 自动生成预计 200+）
+
+测试: 1478 个测试通过。
