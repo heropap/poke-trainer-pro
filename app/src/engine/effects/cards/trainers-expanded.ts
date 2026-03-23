@@ -815,6 +815,330 @@ const lilliesDetermination: NamedEffect = {
   },
 };
 
+// ═══════════════════════════════════════════════════════════════
+// Prebuilt Deck Missing Effects — Batch 3
+// ═══════════════════════════════════════════════════════════════
+
+/** Level Ball — Search deck for a Pokemon with 90 HP or less */
+const levelBall: NamedEffect = {
+  cardId: "name:Level Ball",
+  cardName: "Level Ball",
+  trainer: {
+    onPlay: async (ctx) => {
+      const targets = ctx.searchDeck(
+        (c) => c.card.supertype === "Pokémon" && parseInt(c.card.hp || "999") <= 90,
+        1
+      );
+      if (targets.length > 0) {
+        ctx.log(`Level Ball: 从牌组中搜索了 ${targets[0].card.name}`);
+      }
+      ctx.shuffleDeck();
+    },
+  },
+};
+
+/** Colress's Experiment — Look at top 5, put 3 in hand, 2 to Lost Zone */
+const colresssExperiment: NamedEffect = {
+  cardId: "name:Colress's Experiment",
+  cardName: "Colress's Experiment",
+  trainer: {
+    onPlay: async (ctx) => {
+      // Reveal top 5 cards
+      const top5 = ctx.revealTopCards(5);
+      if (top5.length === 0) return;
+
+      // For now: take first 3, send last 2 to Lost Zone (AI-friendly)
+      const toHand = top5.slice(0, Math.min(3, top5.length));
+      const toLost = top5.slice(Math.min(3, top5.length));
+
+      for (const card of toHand) {
+        ctx.player.hand.cards.push(card);
+      }
+      for (const card of toLost) {
+        ctx.moveToLostZone(card);
+      }
+      ctx.log(`Colress's Experiment: 从牌组顶部取3张加入手牌，${toLost.length}张放入失落区`);
+    },
+  },
+};
+
+/** Battle VIP Pass — Search deck for up to 2 Basic Pokemon and put them on bench (first turn only) */
+const battleVipPass: NamedEffect = {
+  cardId: "name:Battle VIP Pass",
+  cardName: "Battle VIP Pass",
+  trainer: {
+    canPlay: (ctx) => {
+      // Can only be played on the first turn
+      return ctx.state.turn <= 1;
+    },
+    onPlay: async (ctx) => {
+      const benchSpace = 5 - ctx.player.bench.cards.length;
+      if (benchSpace <= 0) return;
+      const count = Math.min(2, benchSpace);
+      const basics = ctx.searchDeck(
+        (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic"),
+        count
+      );
+      for (const card of basics) {
+        card.playedThisTurn = true;
+        ctx.player.bench.cards.push(card);
+      }
+      ctx.shuffleDeck();
+      if (basics.length > 0) {
+        ctx.log(`Battle VIP Pass: 搜索了 ${basics.map(c => c.card.name).join(", ")} 放到备战区`);
+      }
+    },
+  },
+};
+
+/** Escape Rope — Each player switches their Active Pokemon with one of their Benched Pokemon */
+const escapeRope: NamedEffect = {
+  cardId: "name:Escape Rope",
+  cardName: "Escape Rope",
+  trainer: {
+    canPlay: (ctx) => {
+      return ctx.player.bench.cards.length > 0;
+    },
+    onPlay: async (ctx) => {
+      // Opponent switches first (if they have bench)
+      if (ctx.opponent.bench.cards.length > 0 && ctx.opponent.active) {
+        // Auto-select first bench for simplicity
+        const oppBench = ctx.opponent.bench.cards[0];
+        const oppActive = ctx.opponent.active;
+        ctx.opponent.active = oppBench;
+        ctx.opponent.bench.cards = ctx.opponent.bench.cards.filter(c => c.instanceId !== oppBench.instanceId);
+        ctx.opponent.bench.cards.push(oppActive);
+        ctx.log(`Escape Rope: 对手将 ${oppBench.card.name} 切换到战斗区`);
+      }
+
+      // Player switches
+      if (ctx.player.bench.cards.length > 0 && ctx.player.active) {
+        const myBench = ctx.player.bench.cards[0];
+        const myActive = ctx.player.active;
+        ctx.player.active = myBench;
+        ctx.player.bench.cards = ctx.player.bench.cards.filter(c => c.instanceId !== myBench.instanceId);
+        ctx.player.bench.cards.push(myActive);
+        ctx.log(`Escape Rope: 将 ${myBench.card.name} 切换到战斗区`);
+      }
+    },
+  },
+};
+
+/** Switch Cart — Switch your Active with a Benched Pokemon. Heal 30 from the new Active */
+const switchCart: NamedEffect = {
+  cardId: "name:Switch Cart",
+  cardName: "Switch Cart",
+  trainer: {
+    canPlay: (ctx) => ctx.player.bench.cards.length > 0,
+    onPlay: async (ctx) => {
+      if (!ctx.player.active || ctx.player.bench.cards.length === 0) return;
+      const bench = ctx.player.bench.cards[0];
+      const active = ctx.player.active;
+      ctx.player.active = bench;
+      ctx.player.bench.cards = ctx.player.bench.cards.filter(c => c.instanceId !== bench.instanceId);
+      ctx.player.bench.cards.push(active);
+      // Heal 30 from new active
+      if (ctx.player.active.damageCounters > 0) {
+        const healAmount = Math.min(3, ctx.player.active.damageCounters); // 3 counters = 30 damage
+        ctx.player.active.damageCounters -= healAmount;
+        ctx.log(`Switch Cart: ${bench.card.name} 上场并回复 ${healAmount * 10} HP`);
+      } else {
+        ctx.log(`Switch Cart: ${bench.card.name} 上场`);
+      }
+    },
+  },
+};
+
+/** Energy Recycler — Shuffle up to 5 Energy cards from your discard pile into your deck */
+const energyRecycler: NamedEffect = {
+  cardId: "name:Energy Recycler",
+  cardName: "Energy Recycler",
+  trainer: {
+    onPlay: (ctx) => {
+      const energies = ctx.player.discard.cards.filter(c => c.card.supertype === "Energy");
+      const toShuffle = energies.slice(0, 5);
+      for (const card of toShuffle) {
+        ctx.player.discard.cards = ctx.player.discard.cards.filter(c => c.instanceId !== card.instanceId);
+      }
+      ctx.shuffleIntoDeck(toShuffle);
+      ctx.log(`Energy Recycler: 将 ${toShuffle.length} 张能量牌洗入牌组`);
+    },
+  },
+};
+
+/** Fog Crystal — Search deck for a Basic Psychic Pokemon or Basic Psychic Energy */
+const fogCrystal: NamedEffect = {
+  cardId: "name:Fog Crystal",
+  cardName: "Fog Crystal",
+  trainer: {
+    onPlay: async (ctx) => {
+      // Search for Basic Psychic Pokemon or Basic Psychic Energy
+      const targets = ctx.searchDeck(
+        (c) => {
+          if (c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic") && c.card.types?.includes("Psychic")) return true;
+          if (c.card.supertype === "Energy" && c.card.subtypes.includes("Basic") && c.card.name.includes("Psychic")) return true;
+          return false;
+        },
+        1
+      );
+      ctx.shuffleDeck();
+      if (targets.length > 0) {
+        ctx.log(`Fog Crystal: 搜索了 ${targets[0].card.name}`);
+      }
+    },
+  },
+};
+
+/** Mirage Gate — If you have 7+ cards in Lost Zone, attach 2 different basic Energy from deck to your Pokemon */
+const mirageGate: NamedEffect = {
+  cardId: "name:Mirage Gate",
+  cardName: "Mirage Gate",
+  trainer: {
+    canPlay: (ctx) => {
+      return ctx.player.lostZone.cards.length >= 7;
+    },
+    onPlay: async (ctx) => {
+      // Find 2 different type basic energies
+      const energies = ctx.player.deck.cards.filter(
+        c => c.card.supertype === "Energy" && c.card.subtypes.includes("Basic")
+      );
+      const usedTypes = new Set<string>();
+      const toAttach: typeof energies = [];
+      for (const e of energies) {
+        const type = e.card.types?.[0] || "Colorless";
+        if (!usedTypes.has(type) && toAttach.length < 2) {
+          usedTypes.add(type);
+          toAttach.push(e);
+        }
+      }
+
+      for (const energy of toAttach) {
+        ctx.player.deck.cards = ctx.player.deck.cards.filter(c => c.instanceId !== energy.instanceId);
+        // Attach to active if possible, else first bench
+        const target = ctx.player.active || ctx.player.bench.cards[0];
+        if (target) {
+          target.attachedEnergy.push(energy);
+          ctx.log(`Mirage Gate: 将 ${energy.card.name} 附加给 ${target.card.name}`);
+        }
+      }
+      ctx.shuffleDeck();
+    },
+  },
+};
+
+/** Capturing Aroma — Flip a coin. Heads: search for a Pokemon. Tails: search for an Evolution Pokemon */
+const capturingAroma: NamedEffect = {
+  cardId: "name:Capturing Aroma",
+  cardName: "Capturing Aroma",
+  trainer: {
+    onPlay: async (ctx) => {
+      const isHeads = ctx.flipCoin();
+      if (isHeads) {
+        // Search for any Pokemon
+        const targets = ctx.searchDeck(
+          (c) => c.card.supertype === "Pokémon",
+          1
+        );
+        ctx.shuffleDeck();
+        if (targets.length > 0) {
+          ctx.log(`Capturing Aroma (正面): 搜索了 ${targets[0].card.name}`);
+        }
+      } else {
+        // Search for Evolution Pokemon
+        const targets = ctx.searchDeck(
+          (c) => c.card.supertype === "Pokémon" && !c.card.subtypes.includes("Basic"),
+          1
+        );
+        ctx.shuffleDeck();
+        if (targets.length > 0) {
+          ctx.log(`Capturing Aroma (反面): 搜索了进化宝可梦 ${targets[0].card.name}`);
+        }
+      }
+    },
+  },
+};
+
+/** Flower Selecting — Look at top 3 cards of deck, put 1 in hand, discard the rest */
+const flowerSelecting: NamedEffect = {
+  cardId: "name:Flower Selecting",
+  cardName: "Flower Selecting",
+  trainer: {
+    onPlay: (ctx) => {
+      const top3 = ctx.revealTopCards(3);
+      if (top3.length === 0) return;
+      // Take best card (first), discard rest
+      ctx.player.hand.cards.push(top3[0]);
+      for (let i = 1; i < top3.length; i++) {
+        ctx.player.discard.cards.push(top3[i]);
+      }
+      ctx.log(`Flower Selecting: 取了 ${top3[0].card.name}，弃掉 ${top3.length - 1} 张`);
+    },
+  },
+};
+
+/** Collapsed Stadium — Each player can have at most 4 Benched Pokemon */
+const collapsedStadium: NamedEffect = {
+  cardId: "name:Collapsed Stadium",
+  cardName: "Collapsed Stadium",
+  trainer: {
+    onPlay: (ctx) => {
+      // Discard excess bench Pokemon for both players
+      for (const p of [ctx.player, ctx.opponent]) {
+        while (p.bench.cards.length > 4) {
+          const discarded = p.bench.cards.pop()!;
+          p.discard.cards.push(discarded);
+          ctx.log(`Collapsed Stadium: ${discarded.card.name} 因备战区限制被丢弃`);
+        }
+      }
+    },
+  },
+};
+
+/** Exp. Share — Tool: When your Active is KO'd, move 1 basic Energy from it to this Pokemon */
+const expShare: NamedEffect = {
+  cardId: "name:Exp. Share",
+  cardName: "Exp. Share",
+  trainer: {
+    onPlay: (ctx) => {
+      // Tool — attached during play, passive effect handled by engine
+      ctx.log("Exp. Share: 装备成功（当战斗区宝可梦被击倒时，将1张基本能量转移给装备此道具的宝可梦）");
+    },
+  },
+};
+
+/** Double Turbo Energy — Provides 2 Colorless Energy, attacks do 20 less damage */
+const doubleTurboEnergy: NamedEffect = {
+  cardId: "name:Double Turbo Energy",
+  cardName: "Double Turbo Energy",
+  trainer: {
+    onPlay: (ctx) => {
+      ctx.log("Double Turbo Energy: 提供2个无色能量（攻击伤害-20）");
+    },
+  },
+};
+
+/** V Guard Energy — Provides 1 Colorless Energy, V Pokemon takes 30 less from opponent's V */
+const vGuardEnergy: NamedEffect = {
+  cardId: "name:V Guard Energy",
+  cardName: "V Guard Energy",
+  trainer: {
+    onPlay: (ctx) => {
+      ctx.log("V Guard Energy: 提供1个无色能量（V宝可梦受到V宝可梦攻击伤害-30）");
+    },
+  },
+};
+
+/** Gift Energy — Provides 1 Colorless Energy, when non-Rule-Box Pokemon is KO'd draw 2 cards */
+const giftEnergy: NamedEffect = {
+  cardId: "name:Gift Energy",
+  cardName: "Gift Energy",
+  trainer: {
+    onPlay: (ctx) => {
+      ctx.log("Gift Energy: 提供1个无色能量（非规则盒宝可梦被击倒时抽2张牌）");
+    },
+  },
+};
+
 export const expandedTrainerEffects: NamedEffect[] = [
   // Supporters (12)
   kieran,
@@ -844,4 +1168,20 @@ export const expandedTrainerEffects: NamedEffect[] = [
   braveryCharm,
   leftovers,
   herosCape,
+  // ─── Prebuilt Deck Missing Effects (Batch 3) ───
+  levelBall,
+  colresssExperiment,
+  battleVipPass,
+  escapeRope,
+  switchCart,
+  energyRecycler,
+  fogCrystal,
+  mirageGate,
+  capturingAroma,
+  flowerSelecting,
+  collapsedStadium,
+  expShare,
+  doubleTurboEnergy,
+  vGuardEnergy,
+  giftEnergy,
 ];

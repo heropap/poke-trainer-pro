@@ -2011,3 +2011,27 @@ Notes: 一次性完成4个内测打磨功能。
 - handleQuickImport useCallback移到条件渲染之前避免hooks顺序问题
 
 测试: 1443 个测试全部通过（68 个套件）。
+
+=== Session 35 | 2026-03-23 ===
+Feature: 卡牌效果覆盖率扩充 — 预置卡组训练师/物品卡效果批量实现
+Status: completed
+Notes: 批量实现了预置卡组中缺失的15张训练师/物品卡效果，将预置卡组的效果覆盖率从~50%提升到~85%。
+
+新增效果 (15张):
+1. Level Ball — 搜索HP≤90的宝可梦
+2. Colress's Experiment — 顶部5张取3放2到失落区
+3. Battle VIP Pass — 首回合搜索2只基础宝可梦到备战区
+4. Escape Rope — 双方交换战斗区宝可梦
+5. Switch Cart — 切换战斗区+回复30HP
+6. Energy Recycler — 弃牌堆5张能量洗回牌组
+7. Fog Crystal — 搜索超能系基础宝可梦或超能量
+8. Mirage Gate — 失落区7张以上时从牌组附加2张不同能量
+9. Capturing Aroma — 翻币搜索宝可梦或进化宝可梦
+10. Flower Selecting — 顶部3张取1弃2
+11. Collapsed Stadium — 备战区上限缩减到4只
+12. Exp. Share — 工具卡（被击倒时转移能量）
+13. Double Turbo Energy — 提供2无色能量（伤害-20）
+14. V Guard Energy — V宝可梦受V攻击-30
+15. Gift Energy — 非规则盒被击倒时抽2
+
+测试: 新增 35 个覆盖率验证测试，总计 1478 个测试通过（69 套件）。
