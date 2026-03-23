@@ -144,6 +144,8 @@ import { wave22TechCardsEffects } from "./cards/wave22-tech-cards";
 import { wave23StadiumBatchEffects } from "./cards/wave23-stadium-batch";
 import { wave24SupportersBatchEffects } from "./cards/wave24-supporters-batch";
 import { wave25RemainingAttacksEffects } from "./cards/wave25-remaining-attacks";
+import { wave26FinalTrainersEffects } from "./cards/wave26-final-trainers";
+import { wave27FinalPokemonEnergyEffects } from "./cards/wave27-final-pokemon-energy";
 import { registerAll, registerAllByName } from "./effect-registry";
 import { autoRegisterTextEffects } from "./text-parser";
 import { loadCustomEffects } from "./schema-loader";
@@ -210,6 +212,8 @@ export function initializeEffects(
   registerAllByName(wave23StadiumBatchEffects, "L2");
   registerAllByName(wave24SupportersBatchEffects, "L2");
   registerAllByName(wave25RemainingAttacksEffects, "L2");
+  registerAllByName(wave26FinalTrainersEffects, "L2");
+  registerAllByName(wave27FinalPokemonEnergyEffects, "L2");
 
   // Layer 2.5: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
@@ -276,6 +280,8 @@ export function getBuiltInEffectCount(): number {
     wave22TechCardsEffects.length +
     wave23StadiumBatchEffects.length +
     wave24SupportersBatchEffects.length +
-    wave25RemainingAttacksEffects.length
+    wave25RemainingAttacksEffects.length +
+    wave26FinalTrainersEffects.length +
+    wave27FinalPokemonEnergyEffects.length
   );
 }
