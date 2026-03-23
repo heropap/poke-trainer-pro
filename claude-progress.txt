@@ -1942,3 +1942,16 @@ Notes: 功能已在引擎层完整实现（action-availability.ts、base-rules.t
 - 贴能/放基础宝可梦/结束回合不受限制 ✓
 
 测试: 新增 12 个测试，总计 1432 个测试全部通过（65 个套件）。
+
+=== Session 31 | 2026-03-23 ===
+Feature: Deck Out 胜利条件修复 — 牌组抽空时正确判定胜负
+Status: completed
+Notes: 功能已在引擎层完整实现（turn-actions.ts drawCard()），game-controller 在所有自动抽牌点都正确检测 GAME_OVER。本次编写了4个验证测试确认全路径正确。
+
+验证覆盖:
+- drawCard 牌组为空时设置 GAME_OVER + winner.condition = deck_out ✓
+- game-controller end_turn 自动抽牌时检测 deck out ✓
+- 游戏日志包含"无法抽牌"消息 ✓
+- 牌组有牌时正常抽牌不触发 deck out ✓
+
+测试: 新增 4 个测试，总计 1436 个测试全部通过（66 个套件）。
