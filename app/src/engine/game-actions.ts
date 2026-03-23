@@ -805,6 +805,18 @@ export function performAttack(
     baseDamage = applyAttackerToolDamageModifiers(state, attacker.active, baseDamage);
   }
 
+  // 3c. Apply attacker energy modifiers (e.g. Double Turbo Energy -20)
+  if (baseDamage > 0 && attacker.active) {
+    for (const energy of attacker.active.attachedEnergy) {
+      if (energy.card.name === "Double Turbo Energy") {
+        baseDamage = Math.max(0, baseDamage - 20);
+        logEvent(state, playerIndex, "damage" as any,
+          `Double Turbo Energy: 攻击伤害 -20`);
+        break; // Only apply once even if multiple attached
+      }
+    }
+  }
+
   // 4. Apply Weakness/Resistance
   let finalDamage = baseDamage;
   let weaknessApplied = false;
@@ -831,6 +843,23 @@ export function performAttack(
   if (finalDamage > 0 && defender.active) {
     finalDamage = applyToolDamageModifiers(state, defender.active, finalDamage);
     if (finalDamage < 0) finalDamage = 0;
+  }
+
+  // 5a. Apply defender energy modifiers (e.g. V Guard Energy -30 from V attacks)
+  if (finalDamage > 0 && defender.active && attacker.active) {
+    for (const energy of defender.active.attachedEnergy) {
+      if (energy.card.name === "V Guard Energy") {
+        // Only reduces damage if BOTH attacker and defender are Pokemon V/VSTAR/VMAX
+        const defenderIsV = defender.active.card.subtypes?.some(s => ["V", "VSTAR", "VMAX"].includes(s));
+        const attackerIsV = attacker.active.card.subtypes?.some(s => ["V", "VSTAR", "VMAX"].includes(s));
+        if (defenderIsV && attackerIsV) {
+          finalDamage = Math.max(0, finalDamage - 30);
+          logEvent(state, playerIndex === 0 ? 1 : 0, "damage" as any,
+            `V Guard Energy: 受到V宝可梦攻击伤害 -30`);
+        }
+        break;
+      }
+    }
   }
 
   // 5b. Apply passive ability damage modifiers from all Pokemon in play

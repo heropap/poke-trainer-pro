@@ -18,6 +18,16 @@ const __dirname = path.dirname(__filename);
 const BASE_URL =
   "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en";
 
+// ─── Regulation Mark D/E sets (Sword & Shield early-mid era, needed for prebuilt decks) ───
+const DE_MARK_SETS = [
+  "swsh5",       // Battle Styles (Level Ball, Escape Rope, Energy Recycler)
+  "swsh6",       // Chilling Reign (Fog Crystal)
+  "swsh7",       // Evolving Skies (Flaaffy, Mareep)
+  "swsh8",       // Fusion Strike (Battle VIP Pass, Dunsparce)
+  "swsh45",      // Shining Fates (Yveltal)
+  "cel25",       // Celebrations (Mew, Zacian V, Kyogre)
+];
+
 // ─── Regulation Mark F sets (Sword & Shield late era) ───
 const F_MARK_SETS = [
   "swsh9",       // Brilliant Stars
@@ -54,6 +64,7 @@ const SPECULATIVE_SETS = [
 
 // Combine all sets to download
 const ALL_SETS = [
+  ...DE_MARK_SETS,
   ...F_MARK_SETS,
   ...SV_SETS,
   ...ME_SETS,
@@ -61,7 +72,7 @@ const ALL_SETS = [
 ];
 
 // Allowed regulation marks (F and later; empty string / undefined also kept for ME sets)
-const ALLOWED_REG_MARKS = new Set(["F", "G", "H", "I", "J", "K", "L"]);
+const ALLOWED_REG_MARKS = new Set(["D", "E", "F", "G", "H", "I", "J", "K", "L"]);
 
 const OUTPUT_DIR = path.join(__dirname, "..", "src", "data", "cards");
 
@@ -190,8 +201,14 @@ async function main() {
   // Ensure output directory exists
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
+  // Download D/E-mark sets (prebuilt deck dependencies)
+  console.log("── D/E-mark sets (prebuilt deck cards) ──");
+  for (const setId of DE_MARK_SETS) {
+    await downloadSet(setId);
+  }
+
   // Download F-mark sets
-  console.log("── F-mark sets (Sword & Shield late era) ──");
+  console.log("\n── F-mark sets (Sword & Shield late era) ──");
   for (const setId of F_MARK_SETS) {
     await downloadSet(setId);
   }

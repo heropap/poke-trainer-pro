@@ -2057,3 +2057,30 @@ Notes: 为预置卡组的核心宝可梦添加了 Ability 实现，使卡组战�
 11. Lugia VSTAR — Tempest Dive (220+移除场地)
 
 测试: 1478 个测试全部通过（69 个套件）。
+
+=== Session 37 | 2026-03-23 ===
+Feature: 卡牌数据库补充 + 进化线攻击 + 特殊能量效果
+Status: completed
+Notes: 三合一批量实现。
+
+Task 1 — 缺失卡牌数据库:
+- 下载 6 个缺失系列: swsh5(BST), swsh6(CRE), swsh7(EVS), swsh8(FST), swsh45(SHF), cel25(CEL)
+- 卡牌总数: 5392 → 6427 (+1035)
+- deck-parser 新增 CEL/SHF 映射
+- 预置卡组所有 12 张缺失卡牌现在都能解析
+
+Task 2 — 进化线攻击效果 (7张):
+- Charmander Heat Tackle (10自伤)
+- Charmeleon Heat Tackle (20自伤)
+- Kirlia Psychic (60 + 对手能量×20)
+- Flaaffy Thunder Shock (翻币麻痹)
+- Raikou V Lightning Rondo (20 + 双方备战区数×20)
+- Sableye Lost Mine (12个伤害指示物分配)
+- Cramorant Spit Innocently (基础攻击)
+
+Task 3 — 特殊能量被动效果:
+- Double Turbo Energy: performAttack 伤害管线 step 3c 减20
+- V Guard Energy: performAttack 伤害管线 step 5a V对V减30
+- (Gift Energy KO触发留待后续实现)
+
+测试: 1478 个测试通过（1个flaky timing测试偶尔失败，非本次变更）。

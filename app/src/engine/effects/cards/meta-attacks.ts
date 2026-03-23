@@ -907,6 +907,129 @@ const munkidori: NamedEffect = {
 };
 
 // ───────────────────────────────────────────────
+// Prebuilt Deck: Evolution Line Attack Effects
+// ───────────────────────────────────────────────
+
+// Charmander — Heat Tackle (30 damage, 10 self-damage)
+const charmander: NamedEffect = {
+  cardId: "name:Charmander",
+  cardName: "Charmander",
+  attacks: [
+    {
+      name: "Heat Tackle",
+      onAttack: (_ctx, baseDamage) => ({ damage: baseDamage, selfDamage: 10 }),
+    },
+  ],
+};
+
+// Charmeleon — Heat Tackle (70 damage, 20 self-damage)
+const charmeleon: NamedEffect = {
+  cardId: "name:Charmeleon",
+  cardName: "Charmeleon",
+  attacks: [
+    {
+      name: "Heat Tackle",
+      onAttack: (_ctx, baseDamage) => ({ damage: baseDamage, selfDamage: 20 }),
+    },
+  ],
+};
+
+// Kirlia — Psychic (60 + 20 per energy on opponent's active)
+const kirlia: NamedEffect = {
+  cardId: "name:Kirlia",
+  cardName: "Kirlia",
+  attacks: [
+    {
+      name: "Psychic",
+      onAttack: (ctx, baseDamage) => {
+        const energyCount = ctx.opponent.active?.attachedEnergy.length ?? 0;
+        return { damage: baseDamage + energyCount * 20 };
+      },
+    },
+  ],
+};
+
+// Flaaffy — Thunder Shock (flip coin, paralyze if heads)
+const flaaffy: NamedEffect = {
+  cardId: "name:Flaaffy",
+  cardName: "Flaaffy",
+  attacks: [
+    {
+      name: "Thunder Shock",
+      onAttack: (ctx, baseDamage) => {
+        const heads = ctx.flipCoin();
+        return {
+          damage: baseDamage,
+          ...(heads ? { statusEffects: [{ status: "paralyzed" as const, target: "defender" as const }] } : {}),
+        };
+      },
+    },
+  ],
+};
+
+// Raikou V — Lightning Rondo (20 + 20 per benched Pokemon on both sides)
+const raikouV: NamedEffect = {
+  cardId: "name:Raikou V",
+  cardName: "Raikou V",
+  attacks: [
+    {
+      name: "Lightning Rondo",
+      onAttack: (ctx, baseDamage) => {
+        const benchCount = ctx.player.bench.cards.length + ctx.opponent.bench.cards.length;
+        return { damage: baseDamage + benchCount * 20 };
+      },
+    },
+  ],
+};
+
+// Sableye — Lost Mine (put 12 damage counters on opponent's Pokemon in any way, requires 7+ Lost Zone)
+const sableye: NamedEffect = {
+  cardId: "name:Sableye",
+  cardName: "Sableye",
+  attacks: [
+    {
+      name: "Lost Mine",
+      onAttack: (ctx, _baseDamage) => {
+        // Place 12 damage counters (120 damage) distributed among opponent's Pokemon
+        // Auto: spread to benched Pokemon closest to KO
+        const allOpp = [ctx.opponent.active, ...ctx.opponent.bench.cards].filter(Boolean) as any[];
+        let remaining = 12;
+        const benchDamage: { target: any; damage: number }[] = [];
+
+        for (const target of allOpp) {
+          if (remaining <= 0) break;
+          const hp = parseInt(target.card.hp || "0");
+          const currentHp = hp - target.damageCounters * 10;
+          const countersNeeded = Math.ceil(currentHp / 10);
+          const toPlace = Math.min(remaining, countersNeeded);
+          if (target === ctx.opponent.active) {
+            // Active damage handled by main damage
+          } else {
+            benchDamage.push({ target, damage: toPlace * 10 });
+          }
+          remaining -= toPlace;
+        }
+        // Put remaining counters on active
+        const activeDamage = (12 - remaining - benchDamage.reduce((s, b) => s + b.damage / 10, 0)) * 10;
+        return { damage: Math.max(0, activeDamage), benchDamage };
+      },
+    },
+  ],
+};
+
+// Cramorant — Spit Innocently (110, no weakness applied — but engine handles W/R separately)
+const cramorant: NamedEffect = {
+  cardId: "name:Cramorant",
+  cardName: "Cramorant",
+  attacks: [
+    {
+      name: "Spit Innocently",
+      onAttack: (_ctx, baseDamage) => ({ damage: baseDamage }),
+    },
+  ],
+};
+
+// ───────────────────────────────────────────────
 // Prebuilt Deck: Lugia VSTAR additions
 // ───────────────────────────────────────────────
 
@@ -1050,4 +1173,12 @@ export const metaAttackEffects: NamedEffect[] = [
   lugiaV,
   lugiaVSTAR,
   archeops,
+  // Evolution line effects
+  charmander,
+  charmeleon,
+  kirlia,
+  flaaffy,
+  raikouV,
+  sableye,
+  cramorant,
 ];

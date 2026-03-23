@@ -74,6 +74,8 @@ const SET_CODE_MAP: Record<string, string> = {
   SIT: "swsh12",
   CRZ: "swsh12pt5",
   PGO: "pgo",
+  CEL: "cel25",     // Celebrations
+  SHF: "swsh45",    // Shining Fates
 
   // Promo sets (Chinese PTCG Live uses SWSH for Black Star Promos)
   SWSH: "swshp", // SWSH Black Star Promos (not in our DB — triggers name fallback)
