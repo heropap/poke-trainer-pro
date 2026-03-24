@@ -125,6 +125,14 @@ async function runTrainerEffect(state: GameState, playerIndex: 0 | 1, card: Game
   if (cardEffect?.trainer?.onPlay) {
     const ctx = createEffectContext(state, playerIndex, card);
     await cardEffect.trainer.onPlay(ctx);
+  } else if (!cardEffect) {
+    console.warn(`[EFFECT MISSING] Trainer "${card.card.name}" (id: ${card.cardId}) has no registered effect`);
+    logEvent(state, playerIndex, "use_trainer",
+      `⚠ ${card.card.name} 没有注册效果实现`,
+      { cardName: card.card.name, cardId: card.cardId }
+    );
+  } else if (cardEffect && !cardEffect.trainer?.onPlay) {
+    console.warn(`[EFFECT NO-OP] Trainer "${card.card.name}" has effect but no onPlay handler`);
   }
 }
 

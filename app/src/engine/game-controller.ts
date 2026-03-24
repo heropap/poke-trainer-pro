@@ -43,7 +43,7 @@ import {
   checkWinCondition,
 } from "./game-actions";
 import { getEffect } from "./effects/effect-registry";
-import { createEffectContext, pendingPrompts } from "./effects/effect-context";
+import { createEffectContext, pendingPrompts, activateNextQueuedPrompt } from "./effects/effect-context";
 import { ABILITY_BLOCKED, ABILITY_BLOCKED_TEMP } from "./effects/markers";
 // resolveAttack in attack-system.ts is a @deprecated alternative pipeline (kept for test coverage)
 import { executeManualOverride, ManualOverrideAction, ManualOverrideType } from "./manual-override";
@@ -212,9 +212,12 @@ export function processAction(
             resolve(action.selectedIds || []);
             pendingPrompts.delete(state.prompt.id);
             state.prompt = null;
+            // Check for queued nested prompts (chain reactions may have queued more)
+            activateNextQueuedPrompt(state);
             result = { success: true, newState: { ...state } };
           } else {
             state.prompt = null;
+            activateNextQueuedPrompt(state);
             result = { success: true, newState: { ...state } };
           }
         }

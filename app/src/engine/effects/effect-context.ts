@@ -13,6 +13,7 @@ import { flipCoin as coinFlip, flipCoins as coinFlips } from "./coin";
 import { checkKnockout, takePrizes, getPrizeCount, checkWinCondition, getEffectiveHp } from "../game-actions";
 import { EffectContext } from "./effect-types";
 import { isStatusImmune, isEnergyRemovalBlocked } from "./modifier-query";
+import { emitEvent } from "./event-bus";
 
 /**
  * Global store for pending prompt resolvers.
@@ -20,6 +21,21 @@ import { isStatusImmune, isEnergyRemovalBlocked } from "./modifier-query";
  * Key: promptId, Value: resolve function
  */
 export const pendingPrompts = new Map<string, (ids: string[]) => void>();
+
+/**
+ * Prompt queue for nested prompts during chain reactions.
+ * When a prompt is already active and a new one is needed (e.g., ability
+ * triggered by damage during another effect's resolution), the new prompt
+ * is queued rather than being silently auto-resolved.
+ *
+ * Format: { prompt: PromptData, resolve: (ids: string[]) => void }
+ */
+interface QueuedPrompt {
+  prompt: NonNullable<GameState["prompt"]>;
+  resolve: (ids: string[]) => void;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+export const promptQueue: QueuedPrompt[] = [];
 
 /**
  * Callback to notify the UI when a prompt is set during effect execution.
@@ -35,6 +51,26 @@ export let onPromptStateChange: ((state: GameState) => void) | null = null;
  */
 export function setPromptStateChangeCallback(cb: ((state: GameState) => void) | null) {
   onPromptStateChange = cb;
+}
+
+/**
+ * After a prompt is resolved, check if there are queued prompts waiting.
+ * If so, activate the next one. Called from processAction after
+ * handling select_cards_response.
+ */
+export function activateNextQueuedPrompt(state: GameState): void {
+  if (promptQueue.length === 0) return;
+  const next = promptQueue.shift()!;
+  clearTimeout(next.timeoutId);
+
+  // Install the next prompt
+  state.prompt = next.prompt;
+  pendingPrompts.set(next.prompt.id, next.resolve);
+
+  // Notify UI
+  if (onPromptStateChange) {
+    onPromptStateChange({ ...state });
+  }
 }
 
 /**
@@ -71,6 +107,15 @@ export function createEffectContext(
         `${source.card.name} 的效果对 ${t.card.name} 造成了 ${amount} 点伤害`,
         { amount, targetName: t.card.name }
       );
+
+      // Emit DAMAGE_DEALT event for chain reactions (passive abilities listening)
+      emitEvent(state, {
+        type: "DAMAGE_DEALT",
+        source,
+        target: t,
+        amount,
+        playerIndex,
+      });
     },
 
     damageAll(amount: number, targets: GameCard[]): void {
@@ -81,6 +126,14 @@ export function createEffectContext(
           `${source.card.name} 的效果对 ${t.card.name} 造成了 ${amount} 点伤害`,
           { amount, targetName: t.card.name }
         );
+
+        emitEvent(state, {
+          type: "DAMAGE_DEALT",
+          source,
+          target: t,
+          amount,
+          playerIndex,
+        });
       }
     },
 
@@ -578,6 +631,14 @@ export function createEffectContext(
         { energyName: energy.card.name, targetName: target.card.name }
       );
 
+      // Emit ENERGY_ATTACHED for chain reactions
+      emitEvent(state, {
+        type: "ENERGY_ATTACHED",
+        pokemon: target,
+        energy,
+        playerIndex,
+      });
+
       return true;
     },
 
@@ -655,6 +716,14 @@ export function createEffectContext(
         `${target.card.name} 陷入了 ${statusToText(status)} 状态!`,
         { status, targetName: target.card.name }
       );
+
+      // Emit STATUS_APPLIED for chain reactions
+      emitEvent(state, {
+        type: "STATUS_APPLIED",
+        pokemon: target,
+        status,
+        playerIndex: targetPi,
+      });
     },
 
     removeStatus(target: GameCard, status: StatusCondition): void {
@@ -852,6 +921,16 @@ export function createEffectContext(
           `从弃牌堆取回 ${attached.length} 张能量附加到 ${target.card.name}`,
           { count: attached.length, targetName: target.card.name }
         );
+
+        // Emit ENERGY_ATTACHED for each energy (chain reactions)
+        for (const energy of attached) {
+          emitEvent(state, {
+            type: "ENERGY_ATTACHED",
+            pokemon: target,
+            energy,
+            playerIndex,
+          });
+        }
       }
 
       return attached;
