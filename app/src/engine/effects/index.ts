@@ -95,6 +95,9 @@ export type {
 export { loadV2Effects, loadV2EffectsFromArray } from "./v2-loader";
 export type { V2LoadResult } from "./v2-loader";
 
+// Re-export LLM pipeline loader (L2.5)
+export { loadCompiledEffects, loadCompiledEffectsFromFile } from "../llm-pipeline/effect-loader";
+
 // Re-export ryuu metadata extractor
 export {
   extractAllRyuuMetadata,
@@ -173,7 +176,7 @@ const allEffects = [...trainerEffects, ...attackEffects];
  */
 export function initializeEffects(
   cards?: Card[],
-  options?: { skipRyuuMeta?: boolean; skipV2?: boolean }
+  options?: { skipRyuuMeta?: boolean; skipV2?: boolean; skipLLMCache?: boolean }
 ): void {
   // Layer 1: ID-based hand-written effects
   registerAll(allEffects, "L1");
@@ -215,13 +218,27 @@ export function initializeEffects(
   registerAllByName(wave26FinalTrainersEffects, "L2");
   registerAllByName(wave27FinalPokemonEnergyEffects, "L2");
 
-  // Layer 2.5: V2 semantic-extracted + compiled rules
+  // Layer 2.5a: V2 semantic-extracted + compiled rules
   // (covers ~5,300 cards from bottom-up ontology extraction)
   if (!options?.skipV2) {
     try {
       loadV2Effects();
     } catch (err) {
       console.warn("[Effects] Could not load V2 rules:", (err as Error).message);
+    }
+  }
+
+  // Layer 2.5b: LLM pipeline compiled effects cache
+  // (covers MVP deck cards parsed by semantic-parser + action-compiler)
+  if (!options?.skipLLMCache) {
+    try {
+      const { loadCompiledEffectsFromFile } = require("../llm-pipeline/effect-loader") as {
+        loadCompiledEffectsFromFile: (path?: string) => { loaded: number; skipped: number; merged: number; errors: number };
+      };
+      loadCompiledEffectsFromFile();
+    } catch (err) {
+      // Silently skip if cache not available
+      console.warn("[Effects] Could not load LLM pipeline cache:", (err as Error).message);
     }
   }
 
