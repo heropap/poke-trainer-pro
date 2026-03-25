@@ -601,6 +601,85 @@ export const FEW_SHOT_EXAMPLES = [
       ambiguities: [],
     }, null, 2),
   },
+
+
+  // ═══ Example 12: 英文 — Attack + 自身洗回牌库 (Lumineon V) ═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：Lumineon V [Aqua Return]
+效果来源：招式
+伤害值：120
+文本：Shuffle this Pokémon and all attached cards into your deck.`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: 'Lumineon V',
+      effectSource: 'attack',
+      trigger: 'NONE',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          {
+            type: 'pattern',
+            patternId: 'DMG_FLAT',
+            slotValues: { damage: 120 },
+          },
+          {
+            type: 'pattern',
+            patternId: 'FLOW_SELF_SWITCH',
+            slotValues: {
+              destination: 'deck',
+              includeAttached: true,
+              shuffle: true,
+            },
+          },
+        ],
+      },
+      confidence: 0.95,
+      ambiguities: ['FLOW_SELF_SWITCH used for bounce-to-deck, not just bench swap'],
+    }, null, 2),
+  },
+
+  // ═══ Example 13: 英文 — Ability 窥视+选择+失去区 (Comfey) ═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：Comfey [Flower Selecting]
+效果来源：特性
+文本：Once during your turn, if this Pokémon is in the Active Spot, you may look at the top 2 cards of your deck and put 1 of them into your hand. Put the other card in the Lost Zone.`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: 'Comfey',
+      effectSource: 'ability',
+      trigger: 'ONCE_PER_TURN',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          {
+            type: 'pattern',
+            patternId: 'CARD_PEEK',
+            slotValues: { count: 2, source: 'deck_top' },
+          },
+          {
+            type: 'pattern',
+            patternId: 'CARD_DRAW',
+            slotValues: { count: 1, filter: 'from_peek', chooser: 'self' },
+          },
+          {
+            type: 'pattern',
+            patternId: 'CARD_DISCARD_HAND',
+            slotValues: { count: 1, destination: 'lost_zone', source: 'remaining_peek' },
+          },
+        ],
+      },
+      confidence: 0.95,
+      ambiguities: ['Lost Zone destination modeled via CARD_DISCARD_HAND with destination slot'],
+    }, null, 2),
+  },
 ];
 
 

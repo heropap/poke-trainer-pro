@@ -40,6 +40,21 @@ const SMOKE_CARDS = {
     energy: '[雷][雷]',
     验证点: 'optional NRG_DISCARD_TARGET(任意数量) → DMG_DYNAMIC_MULTIPLIER(丢弃数×70)',
   },
+  lumineon: {
+    name: 'Lumineon V [Aqua Return]',
+    source: 'attack' as const,
+    text: 'Shuffle this Pokémon and all attached cards into your deck.',
+    energy: '[水][无][无]',
+    damage: '120',
+    验证点: 'DMG_FLAT(120) + FLOW_SELF_SWITCH(destination: deck, includeAttached: true)',
+  },
+  comfey: {
+    name: 'Comfey [Flower Selecting]',
+    source: 'ability' as const,
+    text: 'Once during your turn, if this Pokémon is in the Active Spot, you may look at the top 2 cards of your deck and put 1 of them into your hand. Put the other card in the Lost Zone.',
+    energy: undefined,
+    验证点: 'CARD_PEEK(2) + CARD_DRAW(1) + CARD_DISCARD_HAND(destination: lost_zone)',
+  },
 };
 
 // ─────────────────────────────────────────────

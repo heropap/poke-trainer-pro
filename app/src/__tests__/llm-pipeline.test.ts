@@ -226,8 +226,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     }
   });
 
-  test('few-shot examples have 24 messages (12 pairs)', () => {
-    expect(FEW_SHOT_EXAMPLES).toHaveLength(24);
+  test('few-shot examples have 28 messages (14 pairs)', () => {
+    expect(FEW_SHOT_EXAMPLES).toHaveLength(28);
     // Every odd index is assistant response
     for (let i = 1; i < FEW_SHOT_EXAMPLES.length; i += 2) {
       expect(FEW_SHOT_EXAMPLES[i].role).toBe('assistant');
@@ -247,8 +247,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     expect(req.model).toBeDefined();
     expect(req.max_tokens).toBeGreaterThan(0);
     expect(req.system).toBe(SEMANTIC_PARSER_SYSTEM_PROMPT);
-    // 12 few-shot pairs + 1 user message = 25
-    expect(req.messages).toHaveLength(25);
+    // 14 few-shot pairs + 1 user message = 29
+    expect(req.messages).toHaveLength(29);
     expect(req.messages[req.messages.length - 1].role).toBe('user');
     expect(req.messages[req.messages.length - 1].content).toContain('皮卡丘');
     expect(req.messages[req.messages.length - 1].content).toContain('[雷][无]');
@@ -268,8 +268,8 @@ describe('Semantic Parser — Prompt Builder', () => {
 // ═══════════════════════════════════════════
 
 describe('Card Test Suite', () => {
-  test('has 18 test cases', () => {
-    expect(CARD_TEST_SUITE).toHaveLength(18);
+  test('has 20 test cases', () => {
+    expect(CARD_TEST_SUITE).toHaveLength(20);
   });
 
   test('all test IDs are unique', () => {

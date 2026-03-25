@@ -627,6 +627,65 @@ export const CARD_TEST_SUITE: CardTestCase[] = [
       '这是最难的卡牌类型之一：涉及击倒事件、伤害追踪、结算时序',
     ],
   },
+
+  // ═══════════════════════════════════════════
+  // 补充：阶段二失败卡修复
+  // ═══════════════════════════════════════════
+
+  // T031: Lumineon V [Aqua Return] — 攻击后自身洗回牌库
+  {
+    id: 'T031',
+    cardName: 'Lumineon V',
+    cardNameEN: 'Lumineon V',
+    complexity: 2,
+    effectSource: 'attack',
+    energyCost: '[水][无][无]',
+    cardText: 'Shuffle this Pokémon and all attached cards into your deck.',
+    expected: {
+      trigger: 'NONE',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          { type: 'pattern', patternId: 'DMG_FLAT', slotValues: { damage: 120 } },
+          { type: 'pattern', patternId: 'FLOW_SELF_SWITCH', slotValues: { destination: 'deck', includeAttached: true, shuffle: true } },
+        ],
+      },
+    },
+    criticalAssertions: [
+      '★ 120 damage is base damage from the attack, goes through DMG_FLAT',
+      '★ "Shuffle this Pokémon and all attached cards into your deck" is FLOW_SELF_SWITCH with destination: deck',
+      '★ includeAttached: true — energy cards go back too',
+      'Not CARD_RECOVER — the Pokémon itself moves, not just cards',
+    ],
+  },
+
+  // T032: Comfey [Flower Selecting] — 窥视+选择+失去区
+  {
+    id: 'T032',
+    cardName: 'Comfey',
+    cardNameEN: 'Comfey',
+    complexity: 3,
+    effectSource: 'ability',
+    cardText: 'Once during your turn, if this Pokémon is in the Active Spot, you may look at the top 2 cards of your deck and put 1 of them into your hand. Put the other card in the Lost Zone.',
+    expected: {
+      trigger: 'ONCE_PER_TURN',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          { type: 'pattern', patternId: 'CARD_PEEK', slotValues: { count: 2, source: 'deck_top' } },
+          { type: 'pattern', patternId: 'CARD_DRAW', slotValues: { count: 1, filter: 'from_peek', chooser: 'self' } },
+          { type: 'pattern', patternId: 'CARD_DISCARD_HAND', slotValues: { count: 1, destination: 'lost_zone', source: 'remaining_peek' } },
+        ],
+      },
+    },
+    criticalAssertions: [
+      '★ ONCE_PER_TURN trigger + condition: must be in Active Spot',
+      '★ CARD_PEEK(2) → look at top 2',
+      '★ CARD_DRAW(1) → pick 1 to hand',
+      '★ CARD_DISCARD_HAND with destination: lost_zone — NOT a new pattern like CARD_DISCARD_DECK',
+      'Lost Zone is modeled as a destination slot, not a separate pattern',
+    ],
+  },
 ];
 
 
