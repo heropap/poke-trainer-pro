@@ -49,10 +49,10 @@ const SMOKE_CARDS = {
 async function main() {
   const args = process.argv.slice(2);
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.error('❌ 缺少 ANTHROPIC_API_KEY 环境变量');
-    console.error('   用法: ANTHROPIC_API_KEY=sk-xxx npx tsx app/src/engine/llm-pipeline/run-smoke.ts');
-    process.exit(1);
+  if (process.env.ANTHROPIC_API_KEY) {
+    console.log('🔑 使用 API 模式 (ANTHROPIC_API_KEY)\n');
+  } else {
+    console.log('🖥️  使用 claude CLI 模式 (无 API Key，通过 claude -p 调用)\n');
   }
 
   // --all: 跑全部 18 张测试卡

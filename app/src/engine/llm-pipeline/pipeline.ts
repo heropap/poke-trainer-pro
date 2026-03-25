@@ -44,7 +44,11 @@ interface ActionPacket {
 // ═══════════════════════════════════════════
 
 /**
- * 调用 Claude API 将卡牌文本解析为 ParsedEffect
+ * 调用 LLM 将卡牌文本解析为 ParsedEffect。
+ *
+ * 支持两种模式：
+ *   1. API 模式 — 设置 ANTHROPIC_API_KEY 环境变量，直接调用 Claude API
+ *   2. CLI 模式 — 无 API Key 时，通过 `claude -p` 子进程调用本地 Claude Code
  */
 async function parseCardText(
   cardName: string,
@@ -54,33 +58,57 @@ async function parseCardText(
 ): Promise<ParseResult> {
   const request = buildParseRequest(cardName, effectSource, cardText, energyCost);
 
+  let rawText: string;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new Error('缺少 ANTHROPIC_API_KEY 环境变量。请设置后重试。');
+  if (apiKey) {
+    // ── API 模式 ──
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(request),
+    });
+
+    const data = await response.json();
+    rawText = data.content
+      .filter((item: any) => item.type === 'text')
+      .map((item: any) => item.text)
+      .join('');
+  } else {
+    // ── CLI 模式 — 通过 claude -p 调用 ──
+    const { execSync } = await import('child_process');
+
+    // 构建完整 prompt：system + few-shot + user message
+    const userMsg = request.messages[request.messages.length - 1].content;
+    const fullPrompt = request.system + '\n\n' +
+      request.messages.slice(0, -1).map((m: any) =>
+        m.role === 'user' ? `[用户示例]\n${m.content}` : `[助手示例]\n${m.content}`
+      ).join('\n\n') +
+      '\n\n[正式请求]\n' + userMsg;
+
+    console.log(`[Pipeline] 使用 claude CLI 模式 (无 API Key)...`);
+    rawText = execSync(
+      `claude -p --output-format text`,
+      {
+        input: fullPrompt,
+        encoding: 'utf-8',
+        maxBuffer: 1024 * 1024,
+        timeout: 120_000,
+      },
+    ).trim();
   }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(request),
-  });
-
-  const data = await response.json();
-  const rawText = data.content
-    .filter((item: any) => item.type === 'text')
-    .map((item: any) => item.text)
-    .join('');
 
   const validation = validateParseResult(rawText);
 
   if (!validation.valid) {
     throw new Error(
       `LLM 解析结果校验失败 [${cardName}]:\n` +
-      validation.errors.map(e => `  - ${e}`).join('\n')
+      validation.errors.map(e => `  - ${e}`).join('\n') +
+      `\n\n原始输出:\n${rawText.slice(0, 500)}`
     );
   }
 

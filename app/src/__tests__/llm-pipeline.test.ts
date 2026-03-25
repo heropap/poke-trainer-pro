@@ -226,8 +226,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     }
   });
 
-  test('few-shot examples have 16 messages (8 pairs)', () => {
-    expect(FEW_SHOT_EXAMPLES).toHaveLength(16);
+  test('few-shot examples have 18 messages (9 pairs)', () => {
+    expect(FEW_SHOT_EXAMPLES).toHaveLength(18);
     // Every odd index is assistant response
     for (let i = 1; i < FEW_SHOT_EXAMPLES.length; i += 2) {
       expect(FEW_SHOT_EXAMPLES[i].role).toBe('assistant');
@@ -247,8 +247,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     expect(req.model).toBeDefined();
     expect(req.max_tokens).toBeGreaterThan(0);
     expect(req.system).toBe(SEMANTIC_PARSER_SYSTEM_PROMPT);
-    // 8 few-shot pairs + 1 user message = 17
-    expect(req.messages).toHaveLength(17);
+    // 9 few-shot pairs + 1 user message = 19
+    expect(req.messages).toHaveLength(19);
     expect(req.messages[req.messages.length - 1].role).toBe('user');
     expect(req.messages[req.messages.length - 1].content).toContain('皮卡丘');
     expect(req.messages[req.messages.length - 1].content).toContain('[雷][无]');

@@ -446,6 +446,55 @@ export const FEW_SHOT_EXAMPLES = [
       ambiguities: [],
     }, null, 2),
   },
+
+  // ═══ Example 9: 可选丢弃 → 动态伤害（丢弃和伤害必须拆成两步）═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：猛雷鼓ex (Raging Bolt ex)
+效果来源：招式
+能量消耗：[雷][雷]
+文本：你可以丢弃此宝可梦身上任意数量的基础雷能量。每丢弃 1 张，此招式额外造成 70 伤害。`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: '猛雷鼓ex',
+      effectSource: 'attack',
+      trigger: 'NONE',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          {
+            type: 'optional',
+            optionalEffect: {
+              type: 'pattern',
+              patternId: 'NRG_DISCARD_TARGET',
+              slotValues: {
+                count: -2,
+                target: 'self.active',
+                energyType: 'lightning',
+                chooser: 'self',
+              },
+            },
+          },
+          {
+            type: 'pattern',
+            patternId: 'DMG_DYNAMIC_MULTIPLIER',
+            slotValues: {
+              source: { type: 'DISCARDED_COUNT', description: '本次丢弃的能量数量' },
+              multiplier: 70,
+              baseDamage: 0,
+            },
+          },
+        ],
+      },
+      confidence: 0.95,
+      ambiguities: [
+        '"你可以"+"任意数量" → 可以选择丢 0 张（此时伤害为 0）。丢弃是独立的 NRG_DISCARD_TARGET 步骤，伤害计算是独立的 DMG_DYNAMIC_MULTIPLIER 步骤，两者之间有数据传递（丢弃数→乘算伤害）。',
+      ],
+    }, null, 2),
+  },
 ];
 
 
