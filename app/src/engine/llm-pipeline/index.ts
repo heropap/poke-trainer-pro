@@ -18,3 +18,5 @@ export type { PipelineResult } from './pipeline';
 
 export { CARD_TEST_SUITE, assertParseResult, runTestSuite } from './card-test-suite';
 export type { CardTestCase } from './card-test-suite';
+
+export { compileActionPacket, registerCompiledEffect, registerCompiledEffects } from './action-compiler';
