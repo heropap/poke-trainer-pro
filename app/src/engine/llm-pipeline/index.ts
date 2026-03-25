@@ -20,3 +20,4 @@ export { CARD_TEST_SUITE, assertParseResult, runTestSuite } from './card-test-su
 export type { CardTestCase } from './card-test-suite';
 
 export { compileActionPacket, registerCompiledEffect, registerCompiledEffects } from './action-compiler';
+export { loadCompiledEffects, loadCompiledEffectsFromFile } from './effect-loader';

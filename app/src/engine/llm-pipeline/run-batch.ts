@@ -196,6 +196,8 @@ interface BatchResult {
   error?: string;
   patternIds?: string[];
   confidence?: number;
+  parsedEffect?: any;
+  actionPacket?: any;
 }
 
 async function runBatch(entries: EffectEntry[], dryRun: boolean): Promise<BatchResult[]> {
@@ -232,17 +234,20 @@ async function runBatch(entries: EffectEntry[], dryRun: boolean): Promise<BatchR
           status: result.validation.passed ? 'pass' : 'fail',
           patternIds,
           confidence: result.parseResult.confidence,
+          parsedEffect: result.parseResult.parsedEffect,
+          actionPacket: result.actionPacket,
         });
       } else {
         // 没有对应的测试用例，只能看 LLM 是否成功解析
+        const passed = result.parseResult.confidence >= 0.7;
         results.push({
           entry,
-          status: result.parseResult.confidence >= 0.7 ? 'pass' : 'fail',
+          status: passed ? 'pass' : 'fail',
           patternIds,
           confidence: result.parseResult.confidence,
-          error: result.parseResult.confidence < 0.7
-            ? `低置信度: ${result.parseResult.confidence}`
-            : undefined,
+          error: !passed ? `低置信度: ${result.parseResult.confidence}` : undefined,
+          parsedEffect: passed ? result.parseResult.parsedEffect : undefined,
+          actionPacket: passed ? result.actionPacket : undefined,
         });
       }
     } catch (err: any) {
@@ -427,6 +432,23 @@ async function main() {
   }));
   fs.writeFileSync(outputPath, JSON.stringify(outputData, null, 2));
   console.log(`\n📄 结果已保存到: ${outputPath}`);
+
+  // --save-cache: 保存完整 parsedEffect + actionPacket 供引擎启动时加载
+  if (args.includes('--save-cache')) {
+    const cachePath = path.resolve(__dirname, 'compiled-effects-cache.json');
+    const cacheData = results
+      .filter(r => r.status === 'pass' && r.parsedEffect && r.actionPacket)
+      .map(r => ({
+        cardId: r.entry.cardId,
+        cardName: r.entry.cardName,
+        effectName: r.entry.effectName,
+        effectSource: r.entry.effectSource,
+        parsedEffect: r.parsedEffect,
+        actionPacket: r.actionPacket,
+      }));
+    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
+    console.log(`\n💾 编译缓存已保存到: ${cachePath} (${cacheData.length} 条)`);
+  }
 }
 
 main().catch(err => {
