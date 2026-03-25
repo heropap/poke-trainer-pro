@@ -332,7 +332,7 @@ export const FEW_SHOT_EXAMPLES = [
 卡牌名：多龙巴鲁托ex (Dragapult ex)
 效果来源：招式 - 幻影俯冲 (Phantom Dive)
 能量消耗：[超][超]
-文本：造成 200 伤害。在对手的备战区宝可梦身上任意放置 5 个伤害指示物。`,
+文本：造成 200 伤害。在对手的备战区宝可梦身上任意放置 6 个伤害指示物。`,
   },
   {
     role: 'assistant' as const,
@@ -352,7 +352,7 @@ export const FEW_SHOT_EXAMPLES = [
             type: 'pattern',
             patternId: 'DMG_DISTRIBUTE',
             slotValues: {
-              totalCounters: 5,
+              totalCounters: 6,
               targetScope: 'bench_only',
             },
           },

@@ -261,20 +261,20 @@ export const CARD_TEST_SUITE: CardTestCase[] = [
     complexity: 3,
     effectSource: 'attack',
     energyCost: '[超][超]',
-    cardText: '造成 200 伤害。在对手的备战区宝可梦身上任意放置 5 个伤害指示物。',
+    cardText: '造成 200 伤害。在对手的备战区宝可梦身上任意放置 6 个伤害指示物。',
     expected: {
       trigger: 'NONE',
       parsedEffect: {
         type: 'sequence',
         steps: [
           { type: 'pattern', patternId: 'DMG_FLAT', slotValues: { damage: 200 } },
-          { type: 'pattern', patternId: 'DMG_DISTRIBUTE', slotValues: { totalCounters: 5, targetScope: 'bench_only' } },
+          { type: 'pattern', patternId: 'DMG_DISTRIBUTE', slotValues: { totalCounters: 6, targetScope: 'bench_only' } },
         ],
       },
     },
     criticalAssertions: [
       '★ 关键：200 伤害走 DMG_FLAT（攻击管线，受弱点/抗性影响）',
-      '★ 关键：5 个指示物走 DMG_DISTRIBUTE（绕过管线！），targetScope 必须是 bench_only',
+      '★ 关键：6 个指示物走 DMG_DISTRIBUTE（绕过管线！），targetScope 必须是 bench_only',
       '两个效果的区别是整个系统最容易出bug的地方',
     ],
   },

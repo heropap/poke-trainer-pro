@@ -22,9 +22,9 @@ const SMOKE_CARDS = {
   dragapult: {
     name: '多龙巴鲁托ex',
     source: 'attack' as const,
-    text: '造成 200 伤害。在对手的备战区宝可梦身上任意放置 5 个伤害指示物。',
+    text: '造成 200 伤害。在对手的备战区宝可梦身上任意放置 6 个伤害指示物。',
     energy: '[超][超]',
-    验证点: '200 伤害走 DMG_FLAT(攻击管线) + 5 指示物走 DMG_DISTRIBUTE(绕过弱点/抗性)',
+    验证点: '200 伤害走 DMG_FLAT(攻击管线) + 6 指示物走 DMG_DISTRIBUTE(绕过弱点/抗性)',
   },
   gardevoir: {
     name: '沙奈朵',
