@@ -66,7 +66,7 @@ async function parseCardText(
 
   if (qwenKey) {
     // ── 千问 API 模式（OpenAI 兼容格式）──
-    const qwenModel = process.env.QWEN_MODEL || 'qwen3-235b-a22b';
+    const qwenModel = process.env.QWEN_MODEL || 'qwen3.5-plus';
     console.log(`[Pipeline] 使用千问 ${qwenModel} API...`);
 
     const openaiMessages = [
