@@ -21,6 +21,24 @@ export const SEMANTIC_PARSER_SYSTEM_PROMPT = `你是一个 PTCG（宝可梦集�
 你的唯一任务是：将卡牌的文字描述解析为结构化的 JSON 中间表示。
 你不需要生成任何代码。你只需要准确理解卡牌文字的含义，并映射到预定义的效果模式。
 
+【语言】卡牌文本可能是中文或英文，你都必须正确处理。英文关键词对照：
+- "does X damage" = "造成 X 伤害" → DMG_FLAT 或其变体
+- "put N damage counters" = "放置 N 个伤害指示物" → DMG_PLACE_COUNTERS / DMG_DISTRIBUTE
+- "You may" = "你可以" → optional
+- "If you do" = "如果你这么做了" → 前一步可选，后一步依赖
+- "Flip a coin" = "翻硬币" → coin_flip 条件
+- "for each" = "每...+X" → isPerUnit: true
+- "Search your deck" = "搜索牌库" → CARD_SEARCH_DECK
+- "draw N cards" = "抽 N 张" → CARD_DRAW
+- "discard" = "丢弃" → 取决于上下文
+- "attach" = "贴上/附加" → NRG_ACCELERATE 等
+- "Switch" = "替换/切换" → FLOW_FORCE_SWITCH / FLOW_SELF_SWITCH
+- "can't attack" = "无法攻击" → FLOW_LOCK
+- "Knocked Out" = "被击倒"
+- "damage isn't affected by Weakness" = 不受弱点影响
+- "this Pokémon also does X damage to itself" = "自身也受到 X 伤害" → DMG_RECOIL
+- 如果招式有 damage 字段（如 "damage": "180+"），文本中不会重复写伤害数值，直接用 damage 字段的值
+
 ═══════════════════════════════════════════
 PTCG 核心规则语境（你必须牢记）
 ═══════════════════════════════════════════
@@ -495,6 +513,94 @@ export const FEW_SHOT_EXAMPLES = [
       ],
     }, null, 2),
   },
+
+  // ═══ Example 9: 英文 — Supporter 搜索 + 抽卡 ═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：Professor's Research
+效果来源：trainer_supporter
+文本：Discard your hand and draw 7 cards.`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: "Professor's Research",
+      effectSource: 'trainer_supporter',
+      trigger: 'NONE',
+      parsedEffect: {
+        type: 'sequence',
+        steps: [
+          {
+            type: 'pattern',
+            patternId: 'CARD_DISCARD_HAND',
+            slotValues: { count: -1, chooser: 'self' },
+          },
+          {
+            type: 'pattern',
+            patternId: 'CARD_DRAW',
+            slotValues: { count: 7 },
+          },
+        ],
+      },
+      confidence: 1.0,
+      ambiguities: [],
+    }, null, 2),
+  },
+
+  // ═══ Example 10: 英文 — Attack + 自伤 (recoil) ═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：Charmander [Heat Tackle]
+效果来源：招式
+伤害值：30
+文本：This Pokémon also does 10 damage to itself.`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: 'Charmander',
+      effectSource: 'attack',
+      trigger: 'NONE',
+      parsedEffect: {
+        type: 'pattern',
+        patternId: 'DMG_RECOIL',
+        slotValues: { damage: 30, recoilDamage: 10, recoilType: 'damage' },
+      },
+      confidence: 1.0,
+      ambiguities: [],
+    }, null, 2),
+  },
+
+  // ═══ Example 11: 英文 — Ability 能量加速 (from discard) ═══
+  {
+    role: 'user' as const,
+    content: `解析以下卡牌效果：
+卡牌名：Flaaffy [Dynamotor]
+效果来源：特性
+文本：Once during your turn (before your attack), you may attach a Lightning Energy card from your discard pile to 1 of your Benched Pokémon.`,
+  },
+  {
+    role: 'assistant' as const,
+    content: JSON.stringify({
+      cardName: 'Flaaffy',
+      effectSource: 'ability',
+      trigger: 'ONCE_PER_TURN',
+      parsedEffect: {
+        type: 'pattern',
+        patternId: 'NRG_ACCELERATE',
+        slotValues: {
+          source: 'discard',
+          energyType: 'lightning',
+          count: 1,
+          attachTarget: 'bench_pokemon',
+        },
+      },
+      confidence: 1.0,
+      ambiguities: [],
+    }, null, 2),
+  },
 ];
 
 
@@ -515,12 +621,14 @@ export function buildParseRequest(
   effectSource: 'attack' | 'ability' | 'trainer_item' | 'trainer_supporter' | 'trainer_stadium' | 'special_energy',
   cardText: string,
   energyCost?: string,
+  damage?: string,
 ) {
   const userMessage = [
     `解析以下卡牌效果：`,
     `卡牌名：${cardName}`,
     `效果来源：${effectSource === 'attack' ? '招式' : effectSource === 'ability' ? '特性' : effectSource}`,
     energyCost ? `能量消耗：${energyCost}` : null,
+    damage ? `伤害值：${damage}` : null,
     `文本：${cardText}`,
   ].filter(Boolean).join('\n');
 

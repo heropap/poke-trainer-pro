@@ -55,14 +55,48 @@ async function parseCardText(
   effectSource: 'attack' | 'ability' | 'trainer_item' | 'trainer_supporter' | 'trainer_stadium' | 'special_energy',
   cardText: string,
   energyCost?: string,
+  damage?: string,
 ): Promise<ParseResult> {
-  const request = buildParseRequest(cardName, effectSource, cardText, energyCost);
+  const request = buildParseRequest(cardName, effectSource, cardText, energyCost, damage);
 
   let rawText: string;
 
+  const qwenKey = process.env.QWEN_API_KEY;
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (apiKey) {
-    // ── API 模式 ──
+
+  if (qwenKey) {
+    // ── 千问 API 模式（OpenAI 兼容格式）──
+    const qwenModel = process.env.QWEN_MODEL || 'qwen3-235b-a22b';
+    console.log(`[Pipeline] 使用千问 ${qwenModel} API...`);
+
+    const openaiMessages = [
+      { role: 'system' as const, content: request.system },
+      ...request.messages,
+    ];
+
+    const response = await fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${qwenKey}`,
+      },
+      body: JSON.stringify({
+        model: qwenModel,
+        messages: openaiMessages,
+        max_tokens: 1000,
+        temperature: 0.1,  // 低温度保证确定性输出
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`千问 API 错误 (${response.status}): ${errText}`);
+    }
+
+    const data = await response.json();
+    rawText = data.choices?.[0]?.message?.content || '';
+  } else if (apiKey) {
+    // ── Anthropic API 模式 ──
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -714,11 +748,12 @@ export async function processCard(
   cardText: string,
   energyCost?: string,
   sourcePlayer?: string,
+  damage?: string,
 ): Promise<PipelineResult> {
 
   // Layer 1: LLM 语义解析
   console.log(`[Pipeline] 解析 ${cardName}...`);
-  const parseResult = await parseCardText(cardName, effectSource, cardText, energyCost);
+  const parseResult = await parseCardText(cardName, effectSource, cardText, energyCost, damage);
   console.log(`[Pipeline] 解析完成, confidence: ${parseResult.confidence}`);
 
   if (parseResult.confidence < 0.7) {
