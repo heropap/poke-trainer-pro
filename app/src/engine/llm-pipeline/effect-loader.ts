@@ -123,22 +123,17 @@ export function loadCompiledEffects(cacheEntries: CachedEffectEntry[]): {
 }
 
 /**
- * Load from compiled-effects-cache.json file.
- * Safe to call even if the file doesn't exist (returns empty stats).
+ * Load from compiled-effects-cache.json via static import.
+ * Works in both Node.js and browser (no fs dependency).
+ * Safe to call even if the cache is empty.
  */
-export function loadCompiledEffectsFromFile(cachePath?: string): ReturnType<typeof loadCompiledEffects> {
-  const fs = require('fs');
-  const path = require('path');
-
-  const resolvedPath = cachePath || path.resolve(__dirname, 'compiled-effects-cache.json');
-
-  if (!fs.existsSync(resolvedPath)) {
-    console.log('[L2.5 Loader] No cache file found, skipping');
-    return { loaded: 0, skipped: 0, merged: 0, errors: 0 };
-  }
-
+export function loadCompiledEffectsFromFile(): ReturnType<typeof loadCompiledEffects> {
   try {
-    const data = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+    // Static import — bundled at build time, no fs needed
+    const data: CachedEffectEntry[] = require('./compiled-effects-cache.json');
+    if (!Array.isArray(data) || data.length === 0) {
+      return { loaded: 0, skipped: 0, merged: 0, errors: 0 };
+    }
     console.log(`[L2.5 Loader] Loading ${data.length} entries from cache...`);
     const stats = loadCompiledEffects(data);
     console.log(`[L2.5 Loader] Done: ${stats.loaded} loaded, ${stats.skipped} skipped (L1/L2 covered), ${stats.merged} merged, ${stats.errors} errors`);
