@@ -97,6 +97,7 @@ DMG_BENCH_SPREAD: 备战扩散 — "对备战区各造成 X"
 DMG_DISTRIBUTE: 分配伤害 — "放置 N 个指示物，任意分配"
 DMG_PLACE_COUNTERS: 放置指示物 — "放 N 个伤害指示物"（绕过弱点/抗性！）
 DMG_RECOIL: 反冲自伤 — "造成 X。自身受 Y"
+DMG_MOVE_COUNTERS: 移动伤害指示物 — "将伤害指示物从 A 移到 B"
 
 --- 能量模式 ---
 NRG_ACCELERATE: 能量加速 — "从牌库/弃牌区搜索能量贴上"
@@ -125,6 +126,7 @@ FLOW_SELF_SWITCH: 自我切换 — "替换为备战区"
 FLOW_EVOLVE: 进化加速 — "搜索进化卡直接进化"
 FLOW_LOCK: 封锁 — "对手不能使用 X"
 FLOW_PRIZE_MANIPULATION: 奖赏操作 — "查看/交换奖赏卡"
+FLOW_RETREAT_COST_MOD: 撤退费用修改 — "撤退费用减少/增加 N"
 
 ═══════════════════════════════════════════
 输出格式
@@ -201,32 +203,7 @@ ParsedEffect 结构：
 
 export const FEW_SHOT_EXAMPLES = [
 
-  // ═══ Example 1: 最简单 — 固定伤害 ═══
-  {
-    role: 'user' as const,
-    content: `解析以下卡牌效果：
-卡牌名：皮卡丘 (Pikachu)
-效果来源：招式 - 电击 (Thunder Shock)
-能量消耗：[雷][无]
-文本：造成 40 伤害。`,
-  },
-  {
-    role: 'assistant' as const,
-    content: JSON.stringify({
-      cardName: '皮卡丘',
-      effectSource: 'attack',
-      trigger: 'NONE',
-      parsedEffect: {
-        type: 'pattern',
-        patternId: 'DMG_FLAT',
-        slotValues: { damage: 40 },
-      },
-      confidence: 1.0,
-      ambiguities: [],
-    }, null, 2),
-  },
-
-  // ═══ Example 2: 伤害+消耗 ═══
+  // ═══ Example 1: 伤害+消耗 ═══
   {
     role: 'user' as const,
     content: `解析以下卡牌效果：
@@ -426,46 +403,7 @@ export const FEW_SHOT_EXAMPLES = [
     }, null, 2),
   },
 
-  // ═══ Example 8: 复杂复合 — 可选 + 条件 + 多效果 ═══
-  {
-    role: 'user' as const,
-    content: `解析以下卡牌效果：
-卡牌名：博士的研究 — 奥博士 (Professor's Research)
-效果来源：支援者卡
-文本：丢弃你的所有手牌，然后抽 7 张卡。`,
-  },
-  {
-    role: 'assistant' as const,
-    content: JSON.stringify({
-      cardName: '博士的研究',
-      effectSource: 'trainer_supporter',
-      trigger: 'NONE',
-      parsedEffect: {
-        type: 'sequence',
-        steps: [
-          {
-            type: 'pattern',
-            patternId: 'CARD_DISCARD_HAND',
-            slotValues: {
-              count: -1,
-              chooser: 'self',
-            },
-          },
-          {
-            type: 'pattern',
-            patternId: 'CARD_DRAW',
-            slotValues: {
-              count: 7,
-            },
-          },
-        ],
-      },
-      confidence: 1.0,
-      ambiguities: [],
-    }, null, 2),
-  },
-
-  // ═══ Example 9: 可选丢弃 → 动态伤害（丢弃和伤害必须拆成两步）═══
+  // ═══ Example 8: 可选丢弃 → 动态伤害（丢弃和伤害必须拆成两步）═══
   {
     role: 'user' as const,
     content: `解析以下卡牌效果：
@@ -573,37 +511,7 @@ export const FEW_SHOT_EXAMPLES = [
     }, null, 2),
   },
 
-  // ═══ Example 11: 英文 — Ability 能量加速 (from discard) ═══
-  {
-    role: 'user' as const,
-    content: `解析以下卡牌效果：
-卡牌名：Flaaffy [Dynamotor]
-效果来源：特性
-文本：Once during your turn (before your attack), you may attach a Lightning Energy card from your discard pile to 1 of your Benched Pokémon.`,
-  },
-  {
-    role: 'assistant' as const,
-    content: JSON.stringify({
-      cardName: 'Flaaffy',
-      effectSource: 'ability',
-      trigger: 'ONCE_PER_TURN',
-      parsedEffect: {
-        type: 'pattern',
-        patternId: 'NRG_ACCELERATE',
-        slotValues: {
-          source: 'discard',
-          energyType: 'lightning',
-          count: 1,
-          attachTarget: 'bench_pokemon',
-        },
-      },
-      confidence: 1.0,
-      ambiguities: [],
-    }, null, 2),
-  },
-
-
-  // ═══ Example 12: 英文 — Attack + 自身洗回牌库 (Lumineon V) ═══
+  // ═══ Example 11: 英文 — Attack + 自身洗回牌库 (Lumineon V) ═══
   {
     role: 'user' as const,
     content: `解析以下卡牌效果：

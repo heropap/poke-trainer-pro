@@ -1,0 +1,4077 @@
+[
+  {
+    "cardId": "sv3-26",
+    "cardName": "Charmander [Heat Tackle]",
+    "effectName": "Heat Tackle",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_RECOIL",
+      "slotValues": {
+        "damage": 30,
+        "recoilDamage": 10,
+        "recoilType": "damage"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-26_1774482896924",
+      "source": {
+        "sourceCardId": "sv3-26",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 30,
+          "damageTag": "attack"
+        },
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "amount": 10,
+          "damageTag": "self_damage"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv3-27",
+    "cardName": "Charmeleon [Heat Tackle]",
+    "effectName": "Heat Tackle",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_RECOIL",
+      "slotValues": {
+        "damage": 70,
+        "recoilDamage": 20,
+        "recoilType": "damage"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-27_1774482915457",
+      "source": {
+        "sourceCardId": "sv3-27",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 70,
+          "damageTag": "attack"
+        },
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "amount": 20,
+          "damageTag": "self_damage"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv3-125",
+    "cardName": "Charizard ex [Burning Darkness]",
+    "effectName": "Burning Darkness",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 180,
+        "condition": {
+          "type": "OPPONENT_PRIZES_TAKEN",
+          "description": "对手已取奖赏卡数量"
+        },
+        "bonusDamage": 30,
+        "isPerUnit": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-125_1774482951927",
+      "source": {
+        "sourceCardId": "sv3-125",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "OPPONENT_PRIZES_TAKEN",
+            "description": "对手已取奖赏卡数量"
+          },
+          "dynamicDamage": {
+            "base": 180,
+            "perUnit": 30,
+            "source": {
+              "type": "OPPONENT_PRIZES_TAKEN",
+              "description": "对手已取奖赏卡数量"
+            }
+          },
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": "DYNAMIC",
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 180,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv3-125",
+    "cardName": "Charizard ex [Infernal Reign]",
+    "effectName": "Infernal Reign",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "NRG_ACCELERATE",
+      "slotValues": {
+        "source": "deck",
+        "energyType": "fire",
+        "count": 3,
+        "attachTarget": "any_own"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-125_1774483014357",
+      "source": {
+        "sourceCardId": "sv3-125",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ON_EVOLVE",
+      "actions": [
+        {
+          "type": "search_deck",
+          "filter": {
+            "cardType": "energy",
+            "energyType": "fire"
+          },
+          "count": 3
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "distribute_energy",
+          "targets": {
+            "player": "self",
+            "zone": "all_pokemon"
+          },
+          "filter": null
+        },
+        {
+          "type": "attach_energy"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv3-164",
+    "cardName": "Pidgeot ex [Blustery Wind]",
+    "effectName": "Blustery Wind",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 120
+          }
+        },
+        {
+          "type": "optional",
+          "optionalEffect": {
+            "type": "pattern",
+            "patternId": "CARD_DISCARD_HAND",
+            "slotValues": {
+              "count": 1,
+              "source": "field",
+              "cardType": "stadium",
+              "target": "any"
+            }
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-164_1774483073854",
+      "source": {
+        "sourceCardId": "sv3-164",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 120,
+          "damageTag": "attack"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "player_choice",
+              "choiceType": "select_from_hand",
+              "count": 1,
+              "filter": null
+            },
+            {
+              "type": "discard_card",
+              "from": "hand",
+              "count": 1,
+              "filter": null
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv3-164",
+    "cardName": "Pidgeot ex [Quick Search]",
+    "effectName": "Quick Search",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "count": 1,
+          "cardType": "any",
+          "destination": "hand"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv3-164_1774483128839",
+      "source": {
+        "sourceCardId": "sv3-164",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "count": 1,
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "hand"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "cel25-11",
+    "cardName": "Mew [Mysterious Tail]",
+    "effectName": "Mysterious Tail",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "sequence",
+        "steps": [
+          {
+            "type": "pattern",
+            "patternId": "CARD_PEEK",
+            "slotValues": {
+              "count": 6,
+              "source": "deck_top"
+            }
+          },
+          {
+            "type": "pattern",
+            "patternId": "CARD_DRAW",
+            "slotValues": {
+              "count": 1,
+              "filter": "Item",
+              "source": "peeked"
+            }
+          }
+        ]
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_cel25-11_1774483213662",
+      "source": {
+        "sourceCardId": "cel25-11",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "peek_cards",
+              "zone": "deck"
+            },
+            {
+              "type": "draw_card",
+              "count": 1
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-190",
+    "cardName": "Professor's Research (Professor Turo)",
+    "effectName": "Professor's Research (Professor Turo)",
+    "effectSource": "trainer_supporter",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": -1,
+            "chooser": "self"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_DRAW",
+          "slotValues": {
+            "count": 7
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-190_1774483259685",
+      "source": {
+        "sourceCardId": "sv1-190",
+        "sourceType": "supporter",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": -1,
+          "filter": null
+        },
+        {
+          "type": "draw_card",
+          "count": 7
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv2-172",
+    "cardName": "Boss's Orders (Ghetsis)",
+    "effectName": "Boss's Orders (Ghetsis)",
+    "effectSource": "trainer_supporter",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "FLOW_FORCE_SWITCH",
+      "slotValues": {
+        "chooser": "self"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv2-172_1774483277603",
+      "source": {
+        "sourceCardId": "sv2-172",
+        "sourceType": "supporter",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "player": "self",
+          "choiceType": "select_bench_pokemon",
+          "target": {
+            "player": "opponent",
+            "zone": "bench"
+          }
+        },
+        {
+          "type": "switch_pokemon",
+          "player": "opponent"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-191",
+    "cardName": "Rare Candy",
+    "effectName": "Rare Candy",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "FLOW_EVOLVE",
+      "slotValues": {
+        "target": "basic_pokemon",
+        "evolutionStage": "stage_2",
+        "source": "hand",
+        "skipStage1": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-191_1774483317919",
+      "source": {
+        "sourceCardId": "sv1-191",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_pokemon",
+          "filter": null
+        },
+        {
+          "type": "search_deck",
+          "filter": {
+            "evolvesFrom": "SELECTED"
+          }
+        },
+        {
+          "type": "evolve_pokemon"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-196",
+    "cardName": "Ultra Ball",
+    "effectName": "Ultra Ball",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": 2,
+            "chooser": "self"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_SEARCH_DECK",
+          "slotValues": {
+            "count": 1,
+            "cardType": "Pokemon",
+            "reveal": true,
+            "destination": "hand"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-196_1774483359178",
+      "source": {
+        "sourceCardId": "sv1-196",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "player": "self",
+          "choiceType": "select_from_hand",
+          "count": 2,
+          "filter": null
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": 2,
+          "filter": null
+        },
+        {
+          "type": "search_deck",
+          "count": 1,
+          "revealTo": "none"
+        },
+        {
+          "type": "move_card",
+          "destination": "hand"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-181",
+    "cardName": "Nest Ball",
+    "effectName": "Nest Ball",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "CARD_SEARCH_DECK",
+      "slotValues": {
+        "count": 1,
+        "cardType": "Basic Pokémon",
+        "destination": "bench"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-181_1774483412968",
+      "source": {
+        "sourceCardId": "sv1-181",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "search_deck",
+          "count": 1,
+          "revealTo": "none"
+        },
+        {
+          "type": "move_card",
+          "destination": "bench"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv2-185",
+    "cardName": "Iono",
+    "effectName": "Iono",
+    "effectSource": "trainer_supporter",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": -1,
+            "chooser": "both_players",
+            "destination": "deck_bottom"
+          }
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "If either player put any cards on the bottom of their deck"
+          },
+          "ifTrue": {
+            "type": "pattern",
+            "patternId": "CARD_DRAW",
+            "slotValues": {
+              "count": 1,
+              "isPerUnit": true,
+              "unit": "remaining_prizes",
+              "chooser": "both_players"
+            }
+          },
+          "ifFalse": null
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv2-185_1774483472006",
+      "source": {
+        "sourceCardId": "sv2-185",
+        "sourceType": "supporter",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": -1,
+          "filter": null
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "If either player put any cards on the bottom of their deck"
+          },
+          "ifTrue": [
+            {
+              "type": "draw_card",
+              "count": 1
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-194",
+    "cardName": "Switch",
+    "effectName": "Switch",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "FLOW_SELF_SWITCH",
+      "slotValues": {
+        "chooser": "self",
+        "target": "bench"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-194_1774483492961",
+      "source": {
+        "sourceCardId": "sv1-194",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否将战斗宝可梦切换到备战区？"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_bench_pokemon",
+          "target": {
+            "player": "self",
+            "zone": "bench"
+          }
+        },
+        {
+          "type": "switch_pokemon",
+          "player": "self",
+          "freeRetreat": true
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv2-188",
+    "cardName": "Super Rod",
+    "effectName": "Super Rod",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "CARD_RECOVER",
+      "slotValues": {
+        "count": 3,
+        "source": "discard",
+        "destination": "deck",
+        "shuffle": true,
+        "filter": "Pokemon or Basic Energy"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv2-188_1774483517420",
+      "source": {
+        "sourceCardId": "sv2-188",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_discard",
+          "count": 3,
+          "filter": "Pokemon or Basic Energy"
+        },
+        {
+          "type": "move_card",
+          "to": "deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-171",
+    "cardName": "Energy Retrieval",
+    "effectName": "Energy Retrieval",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "NRG_RECOVER",
+      "slotValues": {
+        "count": 2,
+        "energyType": "basic",
+        "source": "discard"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-171_1774483569018",
+      "source": {
+        "sourceCardId": "sv1-171",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_discard",
+          "filter": {
+            "cardType": "energy",
+            "energyType": "basic"
+          },
+          "count": 2
+        },
+        {
+          "type": "move_card"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-186",
+    "cardName": "Pokégear 3.0",
+    "effectName": "Pokégear 3.0",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_PEEK",
+          "slotValues": {
+            "count": 7,
+            "source": "deck_top"
+          }
+        },
+        {
+          "type": "optional",
+          "optionalEffect": {
+            "type": "pattern",
+            "patternId": "CARD_DRAW",
+            "slotValues": {
+              "count": 1,
+              "filter": "Supporter",
+              "source": "peeked_cards"
+            }
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-186_1774483628048",
+      "source": {
+        "sourceCardId": "sv1-186",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "peek_cards",
+          "zone": "deck"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "draw_card",
+              "count": 1
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-138",
+    "cardName": "Lugia V [Read the Wind]",
+    "effectName": "Read the Wind",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalCost": {
+        "type": "pattern",
+        "patternId": "CARD_DISCARD_HAND",
+        "slotValues": {
+          "count": 1,
+          "chooser": "self"
+        }
+      },
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_DRAW",
+        "slotValues": {
+          "count": 3
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-138_1774483684058",
+      "source": {
+        "sourceCardId": "swsh12-138",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "draw_card",
+              "count": 3
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-138",
+    "cardName": "Lugia V [Aero Dive]",
+    "effectName": "Aero Dive",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 130
+          }
+        },
+        {
+          "type": "optional",
+          "optionalEffect": {
+            "type": "pattern",
+            "patternId": "CARD_DISCARD_HAND",
+            "slotValues": {
+              "count": 1,
+              "chooser": "self",
+              "targetType": "stadium"
+            }
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-138_1774483734967",
+      "source": {
+        "sourceCardId": "swsh12-138",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 130,
+          "damageTag": "attack"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "player_choice",
+              "player": "self",
+              "choiceType": "select_from_hand",
+              "count": 1,
+              "filter": null
+            },
+            {
+              "type": "discard_card",
+              "from": "hand",
+              "count": 1,
+              "filter": null
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-139",
+    "cardName": "Lugia VSTAR [Tempest Dive]",
+    "effectName": "Tempest Dive",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 220
+          }
+        },
+        {
+          "type": "optional",
+          "optionalEffect": {
+            "type": "pattern",
+            "patternId": "CARD_DISCARD_HAND",
+            "slotValues": {
+              "count": 1,
+              "source": "stadium_in_play",
+              "chooser": "self"
+            }
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-139_1774483784832",
+      "source": {
+        "sourceCardId": "swsh12-139",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 220,
+          "damageTag": "attack"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "player_choice",
+              "player": "self",
+              "choiceType": "select_from_hand",
+              "count": 1,
+              "filter": null
+            },
+            {
+              "type": "discard_card",
+              "from": "hand",
+              "count": 1,
+              "filter": null
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-139",
+    "cardName": "Lugia VSTAR [Summoning Star]",
+    "effectName": "Summoning Star",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_RECOVER",
+        "slotValues": {
+          "source": "discard",
+          "destination": "bench",
+          "count": 2,
+          "filter": "Colorless, no Rule Box"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-139_1774483855368",
+      "source": {
+        "sourceCardId": "swsh12-139",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "player_choice",
+              "choiceType": "select_from_discard",
+              "count": 2,
+              "filter": "Colorless, no Rule Box"
+            },
+            {
+              "type": "move_card",
+              "to": "bench"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-147",
+    "cardName": "Archeops [Primal Turbo]",
+    "effectName": "Primal Turbo",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "NRG_ACCELERATE",
+        "slotValues": {
+          "source": "deck",
+          "energyType": "special",
+          "count": 2,
+          "attachTarget": "any_own"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-147_1774483888864",
+      "source": {
+        "sourceCardId": "swsh12-147",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "filter": {
+                "cardType": "energy",
+                "energyType": "special"
+              },
+              "count": 2
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "distribute_energy",
+              "targets": {
+                "player": "self",
+                "zone": "all_pokemon"
+              },
+              "filter": null
+            },
+            {
+              "type": "attach_energy"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-40",
+    "cardName": "Lumineon V [Aqua Return]",
+    "effectName": "Aqua Return",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 120
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "FLOW_SELF_SWITCH",
+          "slotValues": {
+            "destination": "deck",
+            "includeAttached": true,
+            "shuffle": true
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-40_1774483929586",
+      "source": {
+        "sourceCardId": "swsh9-40",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 120,
+          "damageTag": "attack"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否将战斗宝可梦切换到备战区？"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_bench_pokemon",
+          "target": {
+            "player": "self",
+            "zone": "bench"
+          }
+        },
+        {
+          "type": "switch_pokemon",
+          "player": "self",
+          "freeRetreat": true
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-40",
+    "cardName": "Lumineon V [Luminous Sign]",
+    "effectName": "Luminous Sign",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "cardType": "supporter",
+          "count": 1,
+          "destination": "hand"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-40_1774483953603",
+      "source": {
+        "sourceCardId": "swsh9-40",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ON_PLAY",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "count": 1,
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "hand"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh45-46",
+    "cardName": "Yveltal [Amazing Destruction]",
+    "effectName": "Amazing Destruction",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "FLOW_FORCE_SWITCH",
+      "slotValues": {
+        "target": "opponent_active",
+        "outcome": "KO",
+        "chooser": "self"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh45-46_1774484048230",
+      "source": {
+        "sourceCardId": "swsh45-46",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "player": "self",
+          "choiceType": "select_bench_pokemon",
+          "target": {
+            "player": "opponent",
+            "zone": "bench"
+          }
+        },
+        {
+          "type": "switch_pokemon",
+          "player": "opponent"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh8-207",
+    "cardName": "Dunsparce [Mysterious Nest]",
+    "effectName": "Mysterious Nest",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "STATUS_IMMUNITY",
+      "slotValues": {
+        "immunityType": "WEAKNESS",
+        "targetCondition": "COLORLESS_POKEMON",
+        "scope": "BOTH_PLAYERS",
+        "duration": "CONTINUOUS"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh8-207_1774484195219",
+      "source": {
+        "sourceCardId": "swsh8-207",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "modifier": {
+            "type": "immunity",
+            "immunityType": "WEAKNESS",
+            "sourceFilter": null
+          },
+          "duration": "CONTINUOUS"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-153",
+    "cardName": "Capturing Aroma",
+    "effectName": "Capturing Aroma",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "coin_flip",
+        "description": "Flip a coin"
+      },
+      "ifTrue": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "cardType": "Evolution",
+          "count": 1,
+          "destination": "hand"
+        }
+      },
+      "ifFalse": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "cardType": "Basic",
+          "count": 1,
+          "destination": "hand"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-153_1774484251778",
+      "source": {
+        "sourceCardId": "swsh12-153",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "flip_coin",
+          "mode": "single",
+          "onHeads": [
+            {
+              "type": "search_deck",
+              "count": 1,
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "hand"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onTails": [
+            {
+              "type": "search_deck",
+              "count": 1,
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "hand"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv2-176",
+    "cardName": "Choice Belt",
+    "effectName": "Choice Belt",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 0,
+        "bonusDamage": 30,
+        "condition": {
+          "type": "TARGET_IS_V",
+          "description": "对手战斗宝可梦是 V"
+        },
+        "isPerUnit": false
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv2-176_1774484310525",
+      "source": {
+        "sourceCardId": "sv2-176",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "TARGET_IS_V",
+            "description": "对手战斗宝可梦是 V"
+          },
+          "dynamicDamage": null,
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 30,
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 0,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-137",
+    "cardName": "Collapsed Stadium",
+    "effectName": "Collapsed Stadium",
+    "effectSource": "trainer_stadium",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "FLOW_LOCK",
+          "slotValues": {
+            "lockType": "BENCH_SIZE_LIMIT",
+            "limit": 4,
+            "target": "both_players"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": -1,
+            "source": "bench",
+            "condition": "if_exceeds_limit",
+            "order": "play_first"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-137_1774484376444",
+      "source": {
+        "sourceCardId": "swsh9-137",
+        "sourceType": "stadium",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "scope": "opponent",
+          "modifier": {
+            "type": "action_lock"
+          }
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": -1,
+          "filter": null
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12pt5-135",
+    "cardName": "Lost Vacuum",
+    "effectName": "Lost Vacuum",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": 1,
+            "destination": "lost_zone",
+            "source": "hand",
+            "description": "Play cost: Put 1 card from hand to Lost Zone"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": 1,
+            "destination": "lost_zone",
+            "source": "field",
+            "targetType": [
+              "tool",
+              "stadium"
+            ],
+            "targetScope": "any"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12pt5-135_1774484444874",
+      "source": {
+        "sourceCardId": "swsh12pt5-135",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_hand",
+          "count": 1,
+          "filter": null
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": 1,
+          "filter": null
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_hand",
+          "count": 1,
+          "filter": null
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": 1,
+          "filter": null
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-151",
+    "cardName": "Double Turbo Energy",
+    "effectName": "Double Turbo Energy",
+    "effectSource": "special_energy",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "NRG_SPECIAL_EFFECT",
+      "slotValues": {
+        "energyProvided": "colorless_colorless",
+        "effectType": "damage_modifier",
+        "modifierValue": -20,
+        "modifierScope": "attacks_of_attached_pokemon",
+        "timing": "before_weakness_resistance"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-151_1774484517341",
+      "source": {
+        "sourceCardId": "swsh9-151",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "scope": "while_attached",
+          "modifier": {
+            "value": -20
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-169",
+    "cardName": "V Guard Energy",
+    "effectName": "V Guard Energy",
+    "effectSource": "special_energy",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "NRG_SPECIAL_EFFECT",
+      "slotValues": {
+        "effectType": "damage_reduction",
+        "reductionAmount": 30,
+        "condition": {
+          "type": "DAMAGE_SOURCE_TYPE",
+          "description": "damage from opponent's Pokémon V"
+        },
+        "timing": "after_weakness_resistance",
+        "stackable": false
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-169_1774488400504",
+      "source": {
+        "sourceCardId": "swsh12-169",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "scope": "while_attached",
+          "modifier": {}
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-171",
+    "cardName": "Gift Energy",
+    "effectName": "Gift Energy",
+    "effectSource": "special_energy",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "附着的宝可梦被对手攻击伤害击倒"
+      },
+      "ifTrue": {
+        "type": "pattern",
+        "patternId": "CARD_DRAW",
+        "slotValues": {
+          "drawToHandSize": 7
+        }
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-171_1774488441853",
+      "source": {
+        "sourceCardId": "swsh11-171",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "附着的宝可梦被对手攻击伤害击倒"
+          },
+          "ifTrue": [
+            {
+              "type": "draw_card"
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-67",
+    "cardName": "Flaaffy [Thunder Shock]",
+    "effectName": "Thunder Shock",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 20
+          }
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "coin_flip",
+            "description": "翻硬币"
+          },
+          "ifTrue": {
+            "type": "pattern",
+            "patternId": "STATUS_APPLY",
+            "slotValues": {
+              "status": "paralyzed",
+              "target": "opponent.active"
+            }
+          },
+          "ifFalse": null
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-67_1774488458794",
+      "source": {
+        "sourceCardId": "sv1-67",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 20,
+          "damageTag": "attack"
+        },
+        {
+          "type": "flip_coin",
+          "mode": "single",
+          "onHeads": [
+            {
+              "type": "apply_special_condition",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              }
+            }
+          ],
+          "onTails": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-68",
+    "cardName": "Pachirisu [Everyone Discharge]",
+    "effectName": "Everyone Discharge",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 10,
+        "condition": {
+          "type": "BENCHED_POKEMON_COUNT",
+          "description": "自己备战区的闪电系宝可梦数量",
+          "filter": "lightning_type"
+        },
+        "bonusDamage": 20,
+        "isPerUnit": true,
+        "ignoreWeakness": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-68_1774488480863",
+      "source": {
+        "sourceCardId": "sv1-68",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "BENCHED_POKEMON_COUNT",
+            "description": "自己备战区的闪电系宝可梦数量",
+            "filter": "lightning_type"
+          },
+          "dynamicDamage": {
+            "base": 10,
+            "perUnit": 20,
+            "source": {
+              "type": "BENCHED_POKEMON_COUNT",
+              "description": "自己备战区的闪电系宝可梦数量",
+              "filter": "lightning_type"
+            }
+          },
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": "DYNAMIC",
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 10,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-68",
+    "cardName": "Pachirisu [Electricity Pouches]",
+    "effectName": "Electricity Pouches",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "STATUS_IMMUNITY",
+      "slotValues": {
+        "immuneEffect": "paralysis",
+        "target": "self"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-68_1774493026509",
+      "source": {
+        "sourceCardId": "sv1-68",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "modifier": {
+            "type": "immunity",
+            "sourceFilter": null
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-86",
+    "cardName": "Gardevoir ex [Miracle Force]",
+    "effectName": "Miracle Force",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 190
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "STATUS_HEAL",
+          "slotValues": {
+            "target": "self",
+            "healTarget": "all_special_conditions"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-86_1774493055644",
+      "source": {
+        "sourceCardId": "sv1-86",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 190,
+          "damageTag": "attack"
+        },
+        {
+          "type": "heal_damage",
+          "target": {
+            "raw": "self"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-86",
+    "cardName": "Gardevoir ex [Psychic Embrace]",
+    "effectName": "Psychic Embrace",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "sequence",
+        "steps": [
+          {
+            "type": "pattern",
+            "patternId": "NRG_ACCELERATE",
+            "slotValues": {
+              "source": "discard_pile",
+              "energyType": "psychic",
+              "count": 1,
+              "attachTarget": "own_psychic_pokemon",
+              "preCondition": "target will not be Knocked Out after placing 2 damage counters"
+            }
+          },
+          {
+            "type": "pattern",
+            "patternId": "DMG_PLACE_COUNTERS",
+            "slotValues": {
+              "counters": 2,
+              "target": "the_pokemon_just_attached_energy"
+            }
+          }
+        ]
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-86_1774493106983",
+      "source": {
+        "sourceCardId": "sv1-86",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "REPEATABLE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_discard",
+              "filter": {
+                "cardType": "energy",
+                "energyType": "psychic"
+              },
+              "count": 1
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "select_pokemon",
+              "targets": {
+                "player": "self",
+                "zone": "all_pokemon"
+              },
+              "filter": null
+            },
+            {
+              "type": "attach_energy"
+            },
+            {
+              "type": "place_damage_counters",
+              "target": {
+                "raw": "the_pokemon_just_attached_energy"
+              },
+              "counters": 2
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh10-62",
+    "cardName": "Gallade [Swirling Slice]",
+    "effectName": "Swirling Slice",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 160
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "NRG_MOVE",
+          "slotValues": {
+            "source": "self.active",
+            "target": "own.bench",
+            "count": 1
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh10-62_1774493123841",
+      "source": {
+        "sourceCardId": "swsh10-62",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 160,
+          "damageTag": "attack"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_energy_and_targets",
+          "count": 1
+        },
+        {
+          "type": "move_energy",
+          "count": 1
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh10-62",
+    "cardName": "Gallade [Buddy Catch]",
+    "effectName": "Buddy Catch",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "searchFilter": "trainer_supporter",
+          "count": 1,
+          "reveal": true,
+          "destination": "hand"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh10-62_1774493138791",
+      "source": {
+        "sourceCardId": "swsh10-62",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "count": 1,
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "hand"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "cel25-16",
+    "cardName": "Zacian V [Storm Slash]",
+    "effectName": "Storm Slash",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 60,
+        "bonusDamage": 30,
+        "condition": {
+          "type": "ATTACHED_ENERGY_COUNT",
+          "description": "此宝可梦身上附着的超能力能量数量"
+        },
+        "isPerUnit": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_cel25-16_1774493150693",
+      "source": {
+        "sourceCardId": "cel25-16",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "ATTACHED_ENERGY_COUNT",
+            "description": "此宝可梦身上附着的超能力能量数量"
+          },
+          "dynamicDamage": {
+            "base": 60,
+            "perUnit": 30,
+            "source": {
+              "type": "ATTACHED_ENERGY_COUNT",
+              "description": "此宝可梦身上附着的超能力能量数量"
+            }
+          },
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": "DYNAMIC",
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 60,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "cel25-16",
+    "cardName": "Zacian V [Roar of the Sword]",
+    "effectName": "Roar of the Sword",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "sequence",
+        "steps": [
+          {
+            "type": "pattern",
+            "patternId": "NRG_ACCELERATE",
+            "slotValues": {
+              "source": "deck",
+              "energyType": "psychic",
+              "count": 1,
+              "attachTarget": "any_own_pokemon"
+            }
+          },
+          {
+            "type": "pattern",
+            "patternId": "FLOW_LOCK",
+            "slotValues": {
+              "lockType": "turn_end",
+              "description": "使用此特性后你的本回合立即结束"
+            }
+          }
+        ]
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_cel25-16_1774493180400",
+      "source": {
+        "sourceCardId": "cel25-16",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "filter": {
+                "cardType": "energy",
+                "energyType": "psychic"
+              },
+              "count": 1
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "select_pokemon",
+              "targets": {
+                "player": "self",
+                "zone": "all_pokemon"
+              },
+              "filter": null
+            },
+            {
+              "type": "attach_energy"
+            },
+            {
+              "type": "shuffle_deck"
+            },
+            {
+              "type": "register_modifier",
+              "scope": "opponent",
+              "modifier": {
+                "type": "action_lock"
+              }
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-89",
+    "cardName": "Drifloon [Balloon Blast]",
+    "effectName": "Balloon Blast",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_DYNAMIC_MULTIPLIER",
+      "slotValues": {
+        "source": {
+          "type": "SELF_DAMAGE_COUNTERS",
+          "description": "此宝可梦身上的伤害指示物数量"
+        },
+        "multiplier": 30,
+        "baseDamage": 0,
+        "isPerUnit": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-89_1774493251585",
+      "source": {
+        "sourceCardId": "sv1-89",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "dynamic_value",
+          "source": {
+            "type": "SELF_DAMAGE_COUNTERS",
+            "description": "此宝可梦身上的伤害指示物数量"
+          },
+          "multiplier": 30,
+          "action": {
+            "type": "deal_damage",
+            "target": {
+              "player": "opponent",
+              "zone": "active"
+            },
+            "amount": "DYNAMIC",
+            "baseDamage": 0,
+            "damageTag": "attack"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh5-129",
+    "cardName": "Level Ball",
+    "effectName": "Level Ball",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "CARD_SEARCH_DECK",
+      "slotValues": {
+        "filter": {
+          "cardType": "pokemon",
+          "hpUpperLimit": 90
+        },
+        "count": 1,
+        "reveal": true,
+        "destination": "hand"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh5-129_1774493276344",
+      "source": {
+        "sourceCardId": "swsh5-129",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "search_deck",
+          "filter": {
+            "cardType": "pokemon",
+            "hpUpperLimit": 90
+          },
+          "count": 1,
+          "revealTo": "none"
+        },
+        {
+          "type": "move_card",
+          "destination": "hand"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh6-140",
+    "cardName": "Fog Crystal",
+    "effectName": "Fog Crystal",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "CARD_SEARCH_DECK",
+      "slotValues": {
+        "filter": [
+          "Psychic Energy card",
+          "Basic Psychic Pokémon"
+        ],
+        "count": 1,
+        "reveal": true,
+        "destination": "hand"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh6-140_1774493299813",
+      "source": {
+        "sourceCardId": "swsh6-140",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ON_PLAY",
+      "actions": [
+        {
+          "type": "search_deck",
+          "filter": [
+            "Psychic Energy card",
+            "Basic Psychic Pokémon"
+          ],
+          "count": 1,
+          "revealTo": "none"
+        },
+        {
+          "type": "move_card",
+          "destination": "hand"
+        },
+        {
+          "type": "shuffle_deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-81",
+    "cardName": "Miraidon ex [Photon Blaster]",
+    "effectName": "Photon Blaster",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 220
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "FLOW_LOCK",
+          "slotValues": {
+            "lockTarget": "self.active",
+            "lockContent": "cannot_attack",
+            "duration": "next_own_turn"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-81_1774493319993",
+      "source": {
+        "sourceCardId": "sv1-81",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 220,
+          "damageTag": "attack"
+        },
+        {
+          "type": "register_modifier",
+          "scope": "opponent",
+          "modifier": {
+            "type": "action_lock",
+            "lockTarget": "self.active"
+          },
+          "duration": "next_own_turn"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-81",
+    "cardName": "Miraidon ex [Tandem Unit]",
+    "effectName": "Tandem Unit",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_SEARCH_DECK",
+        "slotValues": {
+          "filter": "Basic Lightning Pokémon",
+          "maxCount": 2,
+          "destination": "own_bench"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-81_1774493335045",
+      "source": {
+        "sourceCardId": "sv1-81",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_deck",
+              "filter": "Basic Lightning Pokémon",
+              "revealTo": "none"
+            },
+            {
+              "type": "move_card",
+              "destination": "own_bench"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh7-55",
+    "cardName": "Flaaffy [Dynamotor]",
+    "effectName": "Dynamotor",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "NRG_ACCELERATE",
+        "slotValues": {
+          "source": "discard_pile",
+          "energyType": "lightning",
+          "count": 1,
+          "attachTarget": "own_benched"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh7-55_1774493353092",
+      "source": {
+        "sourceCardId": "swsh7-55",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "search_discard",
+              "filter": {
+                "cardType": "energy",
+                "energyType": "lightning"
+              },
+              "count": 1
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "select_pokemon",
+              "targets": {
+                "player": "self",
+                "zone": "all_pokemon"
+              },
+              "filter": null
+            },
+            {
+              "type": "attach_energy"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-48",
+    "cardName": "Raikou V [Lightning Rondo]",
+    "effectName": "Lightning Rondo",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 20,
+        "condition": {
+          "type": "game_state",
+          "description": "双方备战区宝可梦的总数量"
+        },
+        "bonusDamage": 20,
+        "isPerUnit": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-48_1774493366724",
+      "source": {
+        "sourceCardId": "swsh9-48",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "双方备战区宝可梦的总数量"
+          },
+          "dynamicDamage": {
+            "base": 20,
+            "perUnit": 20,
+            "source": {
+              "type": "game_state",
+              "description": "双方备战区宝可梦的总数量"
+            }
+          },
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": "DYNAMIC",
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 20,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-48",
+    "cardName": "Raikou V [Fleet-Footed]",
+    "effectName": "Fleet-Footed",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "此宝可梦位于战斗场"
+      },
+      "ifTrue": {
+        "type": "optional",
+        "optionalEffect": {
+          "type": "pattern",
+          "patternId": "CARD_DRAW",
+          "slotValues": {
+            "count": 1
+          }
+        },
+        "optionalCost": null
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-48_1774493387246",
+      "source": {
+        "sourceCardId": "swsh9-48",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "此宝可梦位于战斗场"
+          },
+          "ifTrue": [
+            {
+              "type": "player_choice",
+              "choiceType": "yes_no",
+              "prompt": "是否执行此效果？",
+              "onYes": [
+                {
+                  "type": "draw_card",
+                  "count": 1
+                }
+              ],
+              "onNo": [
+                {
+                  "type": "no_op"
+                }
+              ]
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-58",
+    "cardName": "Regieleki VMAX [Max Thunder and Lightning]",
+    "effectName": "Max Thunder and Lightning",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 220
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "FLOW_LOCK",
+          "slotValues": {
+            "target": "self.active",
+            "restriction": "cannot_attack",
+            "duration": "next_own_turn"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-58_1774493401250",
+      "source": {
+        "sourceCardId": "swsh12-58",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 220,
+          "damageTag": "attack"
+        },
+        {
+          "type": "register_modifier",
+          "scope": "opponent",
+          "modifier": {
+            "type": "action_lock"
+          },
+          "duration": "next_own_turn"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-58",
+    "cardName": "Regieleki VMAX [Transistor]",
+    "effectName": "Transistor",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "STATUS_DAMAGE_REDUCTION",
+      "slotValues": {
+        "modifier": 30,
+        "isDamageBoost": true,
+        "affectedPokemonFilter": "own.basic.lightning",
+        "targetFilter": "opponent.active",
+        "applyBeforeWeakness": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-58_1774493456094",
+      "source": {
+        "sourceCardId": "swsh12-58",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "modifier": {
+            "type": "damage_reduction"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-170",
+    "cardName": "Electric Generator",
+    "effectName": "Electric Generator",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_PEEK",
+          "slotValues": {
+            "count": 5,
+            "source": "deck_top"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "NRG_ACCELERATE",
+          "slotValues": {
+            "source": "peeked_cards",
+            "energyType": "basic_lightning",
+            "maxCount": 2,
+            "attachTarget": "own_benched_lightning_pokemon",
+            "chooser": "self"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-170_1774493485532",
+      "source": {
+        "sourceCardId": "sv1-170",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "peek_cards",
+          "zone": "deck"
+        },
+        {
+          "type": "search_discard",
+          "filter": {
+            "cardType": "energy",
+            "energyType": "basic_lightning"
+          }
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_pokemon",
+          "targets": {
+            "player": "self",
+            "zone": "all_pokemon"
+          },
+          "filter": null
+        },
+        {
+          "type": "attach_energy"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-174",
+    "cardName": "Exp. Share",
+    "effectName": "Exp. Share",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "NRG_MOVE",
+        "slotValues": {
+          "count": 1,
+          "energyType": "basic",
+          "source": "knocked_out_active_pokemon",
+          "destination": "host_pokemon"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_sv1-174_1774493550177",
+      "source": {
+        "sourceCardId": "sv1-174",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ON_ACTIVE_KNOCKED_OUT_BY_OPPONENT_ATTACK",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "player_choice",
+              "choiceType": "select_energy_and_targets",
+              "energyType": "basic",
+              "count": 1
+            },
+            {
+              "type": "move_energy",
+              "count": 1,
+              "energyType": "basic"
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-79",
+    "cardName": "Comfey [Flower Selecting]",
+    "effectName": "Flower Selecting",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "此宝可梦处于战斗场（Active Spot）位置"
+      },
+      "ifTrue": {
+        "type": "optional",
+        "optionalEffect": {
+          "type": "sequence",
+          "steps": [
+            {
+              "type": "pattern",
+              "patternId": "CARD_PEEK",
+              "slotValues": {
+                "count": 2,
+                "source": "own_deck_top"
+              }
+            },
+            {
+              "type": "pattern",
+              "patternId": "CARD_DRAW",
+              "slotValues": {
+                "count": 1,
+                "source": "peeked_cards",
+                "chooser": "self"
+              }
+            },
+            {
+              "type": "pattern",
+              "patternId": "CARD_DISCARD_HAND",
+              "slotValues": {
+                "count": 1,
+                "source": "remaining_peeked_cards",
+                "destination": "lost_zone"
+              }
+            }
+          ]
+        }
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-79_1774493595927",
+      "source": {
+        "sourceCardId": "swsh11-79",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "此宝可梦处于战斗场（Active Spot）位置"
+          },
+          "ifTrue": [
+            {
+              "type": "player_choice",
+              "choiceType": "yes_no",
+              "prompt": "是否执行此效果？",
+              "onYes": [
+                {
+                  "type": "peek_cards",
+                  "zone": "deck"
+                },
+                {
+                  "type": "draw_card",
+                  "count": 1
+                },
+                {
+                  "type": "player_choice",
+                  "choiceType": "select_from_hand",
+                  "count": 1,
+                  "filter": null
+                },
+                {
+                  "type": "discard_card",
+                  "from": "hand",
+                  "count": 1,
+                  "filter": null
+                }
+              ],
+              "onNo": [
+                {
+                  "type": "no_op"
+                }
+              ]
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-50",
+    "cardName": "Cramorant [Spit Innocently]",
+    "effectName": "Spit Innocently",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_FLAT",
+      "slotValues": {
+        "damage": 110,
+        "ignoreWeakness": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-50_1774493613977",
+      "source": {
+        "sourceCardId": "swsh11-50",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 110,
+          "damageTag": "attack"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-50",
+    "cardName": "Cramorant [Lost Provisions]",
+    "effectName": "Lost Provisions",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "我方失落区卡牌数量≥4"
+      },
+      "ifTrue": {
+        "type": "pattern",
+        "patternId": "FLOW_LOCK",
+        "slotValues": {
+          "target": "self",
+          "effect": "忽略该宝可梦所有招式的能量消耗要求"
+        }
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-50_1774493641838",
+      "source": {
+        "sourceCardId": "swsh11-50",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "我方失落区卡牌数量≥4"
+          },
+          "ifTrue": [
+            {
+              "type": "register_modifier",
+              "scope": "opponent",
+              "modifier": {
+                "type": "action_lock"
+              }
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-70",
+    "cardName": "Sableye [Lost Mine]",
+    "effectName": "Lost Mine",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "己方迷失区域卡牌数量≥10"
+      },
+      "ifTrue": {
+        "type": "pattern",
+        "patternId": "DMG_DISTRIBUTE",
+        "slotValues": {
+          "totalCounters": 12,
+          "targetScope": "opponent_all_pokemon",
+          "chooser": "self"
+        }
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-70_1774493667941",
+      "source": {
+        "sourceCardId": "swsh11-70",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "己方迷失区域卡牌数量≥10"
+          },
+          "ifTrue": [
+            {
+              "type": "player_choice",
+              "choiceType": "distribute_counters",
+              "totalCounters": 12,
+              "targets": {
+                "player": "opponent",
+                "scope": "opponent_all_pokemon"
+              },
+              "action": {
+                "type": "place_damage_counters"
+              }
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12-49",
+    "cardName": "Pikachu [Pika Strike]",
+    "effectName": "Pika Strike",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_CONDITIONAL_BONUS",
+      "slotValues": {
+        "baseDamage": 20,
+        "condition": {
+          "type": "game_state",
+          "description": "Your Dedenne used Dede-Short during your last turn"
+        },
+        "bonusDamage": 180
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh12-49_1774493687830",
+      "source": {
+        "sourceCardId": "swsh12-49",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "Your Dedenne used Dede-Short during your last turn"
+          },
+          "dynamicDamage": null,
+          "ifTrue": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 200,
+              "damageTag": "attack"
+            }
+          ],
+          "ifFalse": [
+            {
+              "type": "deal_damage",
+              "target": {
+                "player": "opponent",
+                "zone": "active"
+              },
+              "amount": 20,
+              "damageTag": "attack"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "cel25-3",
+    "cardName": "Kyogre [Aqua Storm]",
+    "effectName": "Aqua Storm",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "source": "deck_top",
+            "count": 5
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "DMG_DYNAMIC_MULTIPLIER",
+          "slotValues": {
+            "baseDamage": 0,
+            "multiplier": 50,
+            "countSource": {
+              "type": "DISCARDED_ENERGY_COUNT",
+              "description": "本次从牌库顶丢弃的能量卡数量"
+            },
+            "target": "selected_opponent_bench",
+            "targetCount": 2,
+            "isBenchEffect": true
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_cel25-3_1774493728499",
+      "source": {
+        "sourceCardId": "cel25-3",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_hand",
+          "count": 5,
+          "filter": null
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": 5,
+          "filter": null
+        },
+        {
+          "type": "dynamic_value",
+          "multiplier": 50,
+          "action": {
+            "type": "deal_damage",
+            "target": {
+              "player": "opponent",
+              "zone": "active"
+            },
+            "amount": "DYNAMIC",
+            "baseDamage": 0,
+            "damageTag": "attack"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh9-41",
+    "cardName": "Manaphy [Wave Veil]",
+    "effectName": "Wave Veil",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "STATUS_IMMUNITY",
+      "slotValues": {
+        "target": "own_benched_pokemons",
+        "immuneScope": "all_damage_from_opponent_pokemon_attack",
+        "duration": "permanent_while_ability_active"
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh9-41_1774493758211",
+      "source": {
+        "sourceCardId": "swsh9-41",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "PASSIVE",
+      "actions": [
+        {
+          "type": "register_modifier",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "modifier": {
+            "type": "immunity",
+            "sourceFilter": null
+          },
+          "duration": "permanent_while_ability_active"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh10-46",
+    "cardName": "Radiant Greninja [Moonlight Shuriken]",
+    "effectName": "Moonlight Shuriken",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "NRG_DISCARD_TARGET",
+          "slotValues": {
+            "count": 2,
+            "target": "self.active",
+            "energyType": "any"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "DMG_FLAT",
+          "slotValues": {
+            "damage": 90,
+            "targetCount": 2,
+            "targetScope": "opponent.all",
+            "benchIgnoreWeakResistance": true
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh10-46_1774493791356",
+      "source": {
+        "sourceCardId": "swsh10-46",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_energy",
+          "target": {
+            "player": "self",
+            "zone": "active"
+          },
+          "energyType": "any",
+          "count": 2
+        },
+        {
+          "type": "discard_energy",
+          "count": 2
+        },
+        {
+          "type": "deal_damage",
+          "target": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "amount": 90,
+          "damageTag": "attack"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh10-46",
+    "cardName": "Radiant Greninja [Concealed Cards]",
+    "effectName": "Concealed Cards",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalCost": {
+        "type": "pattern",
+        "patternId": "CARD_DISCARD_HAND",
+        "slotValues": {
+          "count": 1,
+          "filter": "energy"
+        }
+      },
+      "optionalEffect": {
+        "type": "pattern",
+        "patternId": "CARD_DRAW",
+        "slotValues": {
+          "count": 2
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh10-46_1774493813043",
+      "source": {
+        "sourceCardId": "swsh10-46",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_TURN",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "draw_card",
+              "count": 2
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-155",
+    "cardName": "Colress's Experiment",
+    "effectName": "Colress's Experiment",
+    "effectSource": "trainer_supporter",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "CARD_PEEK",
+          "slotValues": {
+            "count": 5,
+            "source": "deck_top"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_DRAW",
+          "slotValues": {
+            "count": 3,
+            "source": "peeked_cards",
+            "chooser": "self"
+          }
+        },
+        {
+          "type": "pattern",
+          "patternId": "CARD_DISCARD_HAND",
+          "slotValues": {
+            "count": 2,
+            "source": "remaining_peeked_cards",
+            "destination": "lost_zone"
+          }
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-155_1774493840518",
+      "source": {
+        "sourceCardId": "swsh11-155",
+        "sourceType": "supporter",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "peek_cards",
+          "zone": "deck"
+        },
+        {
+          "type": "draw_card",
+          "count": 3
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_hand",
+          "count": 2,
+          "filter": null
+        },
+        {
+          "type": "discard_card",
+          "from": "hand",
+          "count": 2,
+          "filter": null
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh8-225",
+    "cardName": "Battle VIP Pass",
+    "effectName": "Battle VIP Pass",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "当前为使用者的第一回合"
+      },
+      "ifTrue": null,
+      "ifFalse": {
+        "type": "pattern",
+        "patternId": "FLOW_LOCK",
+        "slotValues": {
+          "target": "self",
+          "action": "use_this_card"
+        }
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh8-225_1774493863378",
+      "source": {
+        "sourceCardId": "swsh8-225",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ON_PLAY",
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "当前为使用者的第一回合"
+          },
+          "ifTrue": [],
+          "ifFalse": [
+            {
+              "type": "register_modifier",
+              "scope": "opponent",
+              "modifier": {
+                "type": "action_lock"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-163",
+    "cardName": "Mirage Gate",
+    "effectName": "Mirage Gate",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "conditional",
+      "condition": {
+        "type": "game_state",
+        "description": "我方失落区卡牌数量≥7"
+      },
+      "ifTrue": {
+        "type": "pattern",
+        "patternId": "NRG_ACCELERATE",
+        "slotValues": {
+          "source": "deck",
+          "energyType": "basic",
+          "count": 2,
+          "isMaxCount": true,
+          "requireDifferentTypes": true,
+          "attachTarget": "any_own"
+        }
+      },
+      "ifFalse": null
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-163_1774493899525",
+      "source": {
+        "sourceCardId": "swsh11-163",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "我方失落区卡牌数量≥7"
+          },
+          "ifTrue": [
+            {
+              "type": "search_deck",
+              "filter": {
+                "cardType": "energy",
+                "energyType": "basic"
+              },
+              "count": 2
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "distribute_energy",
+              "targets": {
+                "player": "self",
+                "zone": "all_pokemon"
+              },
+              "filter": null
+            },
+            {
+              "type": "attach_energy"
+            },
+            {
+              "type": "shuffle_deck"
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh10-154",
+    "cardName": "Switch Cart",
+    "effectName": "Switch Cart",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "pattern",
+          "patternId": "FLOW_SELF_SWITCH",
+          "slotValues": {
+            "chooser": "self",
+            "activeFilter": "basic"
+          }
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "已成功完成宝可梦切换操作"
+          },
+          "ifTrue": {
+            "type": "pattern",
+            "patternId": "STATUS_HEAL",
+            "slotValues": {
+              "healAmount": 30,
+              "target": "moved_to_bench_pokemon"
+            }
+          },
+          "ifFalse": null
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh10-154_1774493936251",
+      "source": {
+        "sourceCardId": "swsh10-154",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否将战斗宝可梦切换到备战区？"
+        },
+        {
+          "type": "player_choice",
+          "choiceType": "select_bench_pokemon",
+          "target": {
+            "player": "self",
+            "zone": "bench"
+          }
+        },
+        {
+          "type": "switch_pokemon",
+          "player": "self",
+          "freeRetreat": true
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "已成功完成宝可梦切换操作"
+          },
+          "ifTrue": [
+            {
+              "type": "heal_damage",
+              "target": {
+                "raw": "moved_to_bench_pokemon"
+              },
+              "amount": 30
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh5-125",
+    "cardName": "Escape Rope",
+    "effectName": "Escape Rope",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "sequence",
+      "steps": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "对手拥有至少1只备战区宝可梦"
+          },
+          "ifTrue": {
+            "type": "pattern",
+            "patternId": "FLOW_SELF_SWITCH",
+            "slotValues": {
+              "chooser": "opponent",
+              "targetSide": "opponent"
+            }
+          },
+          "ifFalse": null
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "己方拥有至少1只备战区宝可梦"
+          },
+          "ifTrue": {
+            "type": "pattern",
+            "patternId": "FLOW_SELF_SWITCH",
+            "slotValues": {
+              "chooser": "self",
+              "targetSide": "self"
+            }
+          },
+          "ifFalse": null
+        }
+      ]
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh5-125_1774493960487",
+      "source": {
+        "sourceCardId": "swsh5-125",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "对手拥有至少1只备战区宝可梦"
+          },
+          "ifTrue": [
+            {
+              "type": "player_choice",
+              "choiceType": "yes_no",
+              "prompt": "是否将战斗宝可梦切换到备战区？"
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "select_bench_pokemon",
+              "target": {
+                "player": "self",
+                "zone": "bench"
+              }
+            },
+            {
+              "type": "switch_pokemon",
+              "player": "self",
+              "freeRetreat": true
+            }
+          ],
+          "ifFalse": []
+        },
+        {
+          "type": "conditional",
+          "condition": {
+            "type": "game_state",
+            "description": "己方拥有至少1只备战区宝可梦"
+          },
+          "ifTrue": [
+            {
+              "type": "player_choice",
+              "choiceType": "yes_no",
+              "prompt": "是否将战斗宝可梦切换到备战区？"
+            },
+            {
+              "type": "player_choice",
+              "choiceType": "select_bench_pokemon",
+              "target": {
+                "player": "self",
+                "zone": "bench"
+              }
+            },
+            {
+              "type": "switch_pokemon",
+              "player": "self",
+              "freeRetreat": true
+            }
+          ],
+          "ifFalse": []
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-147",
+    "cardName": "Hisuian Zoroark VSTAR [Ticking Curse]",
+    "effectName": "Ticking Curse",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_DYNAMIC_MULTIPLIER",
+      "slotValues": {
+        "source": {
+          "type": "OWN_POKEMON_COUNT",
+          "description": "己方带有任意伤害指示物的宝可梦数量"
+        },
+        "multiplier": 50,
+        "isPerUnit": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-147_1774493982298",
+      "source": {
+        "sourceCardId": "swsh11-147",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "dynamic_value",
+          "source": {
+            "type": "OWN_POKEMON_COUNT",
+            "description": "己方带有任意伤害指示物的宝可梦数量"
+          },
+          "multiplier": 50,
+          "action": {
+            "type": "deal_damage",
+            "target": {
+              "player": "opponent",
+              "zone": "active"
+            },
+            "amount": "DYNAMIC",
+            "baseDamage": 0,
+            "damageTag": "attack"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh11-147",
+    "cardName": "Hisuian Zoroark VSTAR [Phantom Star]",
+    "effectName": "Phantom Star",
+    "effectSource": "ability",
+    "parsedEffect": {
+      "type": "optional",
+      "optionalEffect": {
+        "type": "sequence",
+        "steps": [
+          {
+            "type": "pattern",
+            "patternId": "CARD_DISCARD_HAND",
+            "slotValues": {
+              "count": -1
+            }
+          },
+          {
+            "type": "pattern",
+            "patternId": "CARD_DRAW",
+            "slotValues": {
+              "count": 7
+            }
+          }
+        ]
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh11-147_1774494009366",
+      "source": {
+        "sourceCardId": "swsh11-147",
+        "sourceType": "ability",
+        "sourcePlayer": "player1"
+      },
+      "trigger": "ONCE_PER_GAME",
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "yes_no",
+          "prompt": "是否执行此效果？",
+          "onYes": [
+            {
+              "type": "discard_card",
+              "from": "hand",
+              "count": -1,
+              "filter": null
+            },
+            {
+              "type": "draw_card",
+              "count": 7
+            }
+          ],
+          "onNo": [
+            {
+              "type": "no_op"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh5-124",
+    "cardName": "Energy Recycler",
+    "effectName": "Energy Recycler",
+    "effectSource": "trainer_item",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "CARD_RECOVER",
+      "slotValues": {
+        "source": "discard_pile",
+        "cardFilter": "basic_energy",
+        "maxCount": 5,
+        "destination": "deck",
+        "shuffle": true
+      }
+    },
+    "actionPacket": {
+      "executionId": "exec_swsh5-124_1774494028920",
+      "source": {
+        "sourceCardId": "swsh5-124",
+        "sourceType": "item",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "player_choice",
+          "choiceType": "select_from_discard",
+          "filter": null
+        },
+        {
+          "type": "move_card",
+          "to": "deck"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "swsh12pt5gg-GG20",
+    "cardName": "Cresselia [Moonglow Reverse]",
+    "effectName": "Moonglow Reverse",
+    "effectSource": "attack",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "DMG_MOVE_COUNTERS",
+      "slotValues": {
+        "from": "self.all_pokemon",
+        "to": "opponent.active",
+        "counters": 2,
+        "fromScope": "each"
+      }
+    },
+    "actionPacket": {
+      "executionId": "manual_cresselia",
+      "source": {
+        "sourceCardId": "swsh12pt5gg-GG20",
+        "sourceType": "attack",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "move_damage_counters",
+          "from": {
+            "player": "self",
+            "zone": "all_pokemon"
+          },
+          "to": {
+            "player": "opponent",
+            "zone": "active"
+          },
+          "counters": 2,
+          "fromScope": "each"
+        }
+      ]
+    }
+  },
+  {
+    "cardId": "sv1-167",
+    "cardName": "Beach Court",
+    "effectName": "Beach Court",
+    "effectSource": "trainer_stadium",
+    "parsedEffect": {
+      "type": "pattern",
+      "patternId": "FLOW_RETREAT_COST_MOD",
+      "slotValues": {
+        "value": -1,
+        "scope": "all",
+        "filter": {
+          "stage": "Basic"
+        },
+        "duration": "while_in_play"
+      }
+    },
+    "actionPacket": {
+      "executionId": "manual_beach_court",
+      "source": {
+        "sourceCardId": "sv1-167",
+        "sourceType": "stadium",
+        "sourcePlayer": "player1"
+      },
+      "actions": [
+        {
+          "type": "register_modifier",
+          "scope": "all",
+          "modifier": {
+            "type": "retreat_cost_mod",
+            "value": -1,
+            "filter": {
+              "stage": "Basic"
+            }
+          },
+          "duration": "while_in_play"
+        }
+      ]
+    }
+  }
+]

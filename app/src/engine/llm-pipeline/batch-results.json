@@ -1,394 +1,5 @@
 [
   {
-    "cardId": "sv3-26",
-    "cardName": "Charmander [Heat Tackle]",
-    "effectSource": "attack",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "DMG_RECOIL"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv3-27",
-    "cardName": "Charmeleon [Heat Tackle]",
-    "effectSource": "attack",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "DMG_RECOIL"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv3-125",
-    "cardName": "Charizard ex [Burning Darkness]",
-    "effectSource": "attack",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "DMG_CONDITIONAL_BONUS"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv3-125",
-    "cardName": "Charizard ex [Infernal Reign]",
-    "effectSource": "ability",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "NRG_ACCELERATE"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv3-164",
-    "cardName": "Pidgeot ex [Blustery Wind]",
-    "effectSource": "attack",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DISCARD_HAND"
-    ],
-    "confidence": 0.9
-  },
-  {
-    "cardId": "sv3-164",
-    "cardName": "Pidgeot ex [Quick Search]",
-    "effectSource": "ability",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "cel25-11",
-    "cardName": "Mew [Mysterious Tail]",
-    "effectSource": "ability",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_PEEK",
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "sv1-190",
-    "cardName": "Professor's Research (Professor Turo)",
-    "effectSource": "trainer_supporter",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DISCARD_HAND",
-      "CARD_DRAW"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv2-172",
-    "cardName": "Boss's Orders (Ghetsis)",
-    "effectSource": "trainer_supporter",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "FLOW_FORCE_SWITCH"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv1-191",
-    "cardName": "Rare Candy",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "FLOW_EVOLVE"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "sv1-196",
-    "cardName": "Ultra Ball",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "sv1-181",
-    "cardName": "Nest Ball",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv2-185",
-    "cardName": "Iono",
-    "effectSource": "trainer_supporter",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SHUFFLE_DRAW",
-      "CARD_DRAW"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "sv1-194",
-    "cardName": "Switch",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "FLOW_SELF_SWITCH"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv2-188",
-    "cardName": "Super Rod",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_RECOVER"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv1-171",
-    "cardName": "Energy Retrieval",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_RECOVER"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv1-186",
-    "cardName": "Pokégear 3.0",
-    "effectSource": "trainer_item",
-    "fromDeck": "Charizard ex",
-    "status": "pass",
-    "patternIds": [
-      "CARD_PEEK",
-      "CARD_RECOVER"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh12-138",
-    "cardName": "Lugia V [Read the Wind]",
-    "effectSource": "attack",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DISCARD_HAND",
-      "CARD_DRAW"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh12-138",
-    "cardName": "Lugia V [Aero Dive]",
-    "effectSource": "attack",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DISCARD_HAND"
-    ],
-    "confidence": 0.9
-  },
-  {
-    "cardId": "swsh12-139",
-    "cardName": "Lugia VSTAR [Tempest Dive]",
-    "effectSource": "attack",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DISCARD_HAND"
-    ],
-    "confidence": 0.9
-  },
-  {
-    "cardId": "swsh12-139",
-    "cardName": "Lugia VSTAR [Summoning Star]",
-    "effectSource": "ability",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_RECOVER"
-    ],
-    "confidence": 0.9
-  },
-  {
-    "cardId": "swsh12-147",
-    "cardName": "Archeops [Primal Turbo]",
-    "effectSource": "ability",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "NRG_ACCELERATE"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh9-40",
-    "cardName": "Lumineon V [Aqua Return]",
-    "effectSource": "attack",
-    "fromDeck": "Lugia VSTAR",
-    "status": "error",
-    "error": "LLM 解析结果校验失败 [Lumineon V [Aqua Return]]:\n  - JSON 解析失败: SyntaxError: Expected ',' or ']' after array element in JSON at position 610 (line 28 column 66)\n\n原始输出:\n{\n  \"cardName\": \"Lumineon V\",\n  \"effectS"
-  },
-  {
-    "cardId": "swsh9-40",
-    "cardName": "Lumineon V [Luminous Sign]",
-    "effectSource": "ability",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh45-46",
-    "cardName": "Yveltal [Amazing Destruction]",
-    "effectSource": "attack",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "DMG_FLAT"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "swsh8-207",
-    "cardName": "Dunsparce [Mysterious Nest]",
-    "effectSource": "ability",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "STATUS_IMMUNITY"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh12-153",
-    "cardName": "Capturing Aroma",
-    "effectSource": "trainer_item",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_SEARCH_DECK",
-      "CARD_SEARCH_DECK"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv2-176",
-    "cardName": "Choice Belt",
-    "effectSource": "trainer_item",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "STATUS_DAMAGE_REDUCTION"
-    ],
-    "confidence": 0.9
-  },
-  {
-    "cardId": "swsh9-137",
-    "cardName": "Collapsed Stadium",
-    "effectSource": "trainer_stadium",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "FLOW_LOCK"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "swsh12pt5-135",
-    "cardName": "Lost Vacuum",
-    "effectSource": "trainer_item",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "FLOW_PRIZE_MANIPULATION"
-    ],
-    "confidence": 0.85
-  },
-  {
-    "cardId": "swsh9-151",
-    "cardName": "Double Turbo Energy",
-    "effectSource": "special_energy",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "NRG_SPECIAL_EFFECT"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh12-169",
-    "cardName": "V Guard Energy",
-    "effectSource": "special_energy",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "NRG_SPECIAL_EFFECT",
-      "STATUS_DAMAGE_REDUCTION"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "swsh11-171",
-    "cardName": "Gift Energy",
-    "effectSource": "special_energy",
-    "fromDeck": "Lugia VSTAR",
-    "status": "pass",
-    "patternIds": [
-      "CARD_DRAW"
-    ],
-    "confidence": 0.98
-  },
-  {
-    "cardId": "sv1-67",
-    "cardName": "Flaaffy [Thunder Shock]",
-    "effectSource": "attack",
-    "fromDeck": "Gardevoir ex",
-    "status": "pass",
-    "patternIds": [
-      "STATUS_APPLY"
-    ],
-    "confidence": 1
-  },
-  {
-    "cardId": "sv1-68",
-    "cardName": "Pachirisu [Everyone Discharge]",
-    "effectSource": "attack",
-    "fromDeck": "Gardevoir ex",
-    "status": "pass",
-    "patternIds": [
-      "DMG_CONDITIONAL_BONUS"
-    ],
-    "confidence": 1
-  },
-  {
     "cardId": "sv1-68",
     "cardName": "Pachirisu [Electricity Pouches]",
     "effectSource": "ability",
@@ -421,7 +32,7 @@
       "NRG_ACCELERATE",
       "DMG_PLACE_COUNTERS"
     ],
-    "confidence": 0.98
+    "confidence": 0.95
   },
   {
     "cardId": "swsh10-62",
@@ -430,6 +41,7 @@
     "fromDeck": "Gardevoir ex",
     "status": "pass",
     "patternIds": [
+      "DMG_FLAT",
       "NRG_MOVE"
     ],
     "confidence": 1
@@ -466,18 +78,15 @@
       "NRG_ACCELERATE",
       "FLOW_LOCK"
     ],
-    "confidence": 0.98
+    "confidence": 0.9
   },
   {
     "cardId": "swsh11-74",
     "cardName": "Cresselia [Moonglow Reverse]",
     "effectSource": "attack",
     "fromDeck": "Gardevoir ex",
-    "status": "pass",
-    "patternIds": [
-      "DMG_DISTRIBUTE"
-    ],
-    "confidence": 0.9
+    "status": "error",
+    "error": "LLM 解析结果校验失败 [Cresselia [Moonglow Reverse]]:\n  - parsedEffect.steps[0]: 未知的 effect type \"target_selection\"\n\n原始输出:\n{\n  \"cardName\": \"Cresselia\",\n  \"effectSource\": \"attack\",\n  \"trigger\": \"NONE\",\n  \"parse"
   },
   {
     "cardId": "sv1-89",
@@ -553,7 +162,7 @@
     "fromDeck": "Miraidon ex",
     "status": "pass",
     "patternIds": [
-      "DMG_DYNAMIC_MULTIPLIER"
+      "DMG_CONDITIONAL_BONUS"
     ],
     "confidence": 1
   },
@@ -589,7 +198,7 @@
     "patternIds": [
       "STATUS_DAMAGE_REDUCTION"
     ],
-    "confidence": 0.98
+    "confidence": 0.9
   },
   {
     "cardId": "sv1-170",
@@ -601,18 +210,15 @@
       "CARD_PEEK",
       "NRG_ACCELERATE"
     ],
-    "confidence": 0.98
+    "confidence": 0.95
   },
   {
     "cardId": "sv1-167",
     "cardName": "Beach Court",
     "effectSource": "trainer_stadium",
     "fromDeck": "Miraidon ex",
-    "status": "pass",
-    "patternIds": [
-      "STATUS_DAMAGE_REDUCTION"
-    ],
-    "confidence": 0.98
+    "status": "error",
+    "error": "LLM 解析结果校验失败 [Beach Court]:\n  - parsedEffect: 未知的 patternId \"STATUS_SPECIAL_EFFECT\"\n\n原始输出:\n{\n  \"cardName\": \"Beach Court\",\n  \"effectSource\": \"trainer_stadium\",\n  \"trigger\": \"PASSIVE\",\n  \"parsedEffect\":"
   },
   {
     "cardId": "sv1-174",
@@ -623,15 +229,20 @@
     "patternIds": [
       "NRG_MOVE"
     ],
-    "confidence": 0.98
+    "confidence": 0.9
   },
   {
     "cardId": "swsh11-79",
     "cardName": "Comfey [Flower Selecting]",
     "effectSource": "ability",
     "fromDeck": "Lost Zone Box",
-    "status": "error",
-    "error": "LLM 解析结果校验失败 [Comfey [Flower Selecting]]:\n  - parsedEffect.steps[2]: 未知的 patternId \"CARD_DISCARD_DECK\"\n\n原始输出:\n{\n  \"cardName\": \"Comfey\",\n  \"effectSource\": \"ability\",\n  \"trigger\": \"ONCE_PER_TURN\",\n  \"pa"
+    "status": "pass",
+    "patternIds": [
+      "CARD_PEEK",
+      "CARD_DRAW",
+      "CARD_DISCARD_HAND"
+    ],
+    "confidence": 0.9
   },
   {
     "cardId": "swsh11-50",
@@ -651,9 +262,9 @@
     "fromDeck": "Lost Zone Box",
     "status": "pass",
     "patternIds": [
-      "NRG_SPECIAL_EFFECT"
+      "FLOW_LOCK"
     ],
-    "confidence": 0.98
+    "confidence": 0.9
   },
   {
     "cardId": "swsh11-70",
@@ -664,7 +275,7 @@
     "patternIds": [
       "DMG_DISTRIBUTE"
     ],
-    "confidence": 0.98
+    "confidence": 1
   },
   {
     "cardId": "swsh12-49",
@@ -675,7 +286,7 @@
     "patternIds": [
       "DMG_CONDITIONAL_BONUS"
     ],
-    "confidence": 0.95
+    "confidence": 1
   },
   {
     "cardId": "cel25-3",
@@ -684,10 +295,10 @@
     "fromDeck": "Lost Zone Box",
     "status": "pass",
     "patternIds": [
-      "CARD_PEEK",
+      "CARD_DISCARD_HAND",
       "DMG_DYNAMIC_MULTIPLIER"
     ],
-    "confidence": 0.92
+    "confidence": 0.95
   },
   {
     "cardId": "swsh9-41",
@@ -696,9 +307,9 @@
     "fromDeck": "Lost Zone Box",
     "status": "pass",
     "patternIds": [
-      "STATUS_DAMAGE_REDUCTION"
+      "STATUS_IMMUNITY"
     ],
-    "confidence": 0.98
+    "confidence": 0.95
   },
   {
     "cardId": "swsh10-46",
@@ -708,9 +319,9 @@
     "status": "pass",
     "patternIds": [
       "NRG_DISCARD_TARGET",
-      "DMG_BENCH_SPREAD"
+      "DMG_FLAT"
     ],
-    "confidence": 1
+    "confidence": 0.98
   },
   {
     "cardId": "swsh10-46",
@@ -731,10 +342,10 @@
     "status": "pass",
     "patternIds": [
       "CARD_PEEK",
-      "CARD_RECOVER",
+      "CARD_DRAW",
       "CARD_DISCARD_HAND"
     ],
-    "confidence": 0.9
+    "confidence": 0.95
   },
   {
     "cardId": "swsh8-225",
@@ -756,7 +367,7 @@
     "patternIds": [
       "NRG_ACCELERATE"
     ],
-    "confidence": 1
+    "confidence": 0.95
   },
   {
     "cardId": "swsh10-154",
@@ -768,7 +379,7 @@
       "FLOW_SELF_SWITCH",
       "STATUS_HEAL"
     ],
-    "confidence": 1
+    "confidence": 0.95
   },
   {
     "cardId": "swsh5-125",
@@ -777,10 +388,10 @@
     "fromDeck": "Lost Zone Box",
     "status": "pass",
     "patternIds": [
-      "FLOW_FORCE_SWITCH",
+      "FLOW_SELF_SWITCH",
       "FLOW_SELF_SWITCH"
     ],
-    "confidence": 1
+    "confidence": 0.95
   },
   {
     "cardId": "swsh11-147",

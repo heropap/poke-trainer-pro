@@ -42,6 +42,8 @@ export enum PatternId {
   DMG_PLACE_COUNTERS = 'DMG_PLACE_COUNTERS',
   /** A10: 自伤/反冲 — "此宝可梦也受到 X 伤害" */
   DMG_RECOIL = 'DMG_RECOIL',
+  /** A11: 移动伤害指示物 — "将伤害指示物从一方移动到另一方" */
+  DMG_MOVE_COUNTERS = 'DMG_MOVE_COUNTERS',
 
   // ═══ B. 能量模式 ═══
   /** B1: 能量加速 — "从牌库/弃牌区搜索 N 张能量卡，贴到宝可梦身上" */
@@ -90,6 +92,8 @@ export enum PatternId {
   FLOW_LOCK = 'FLOW_LOCK',
   /** E5: 奖赏卡操作 — "额外获得/查看奖赏卡" */
   FLOW_PRIZE_MANIPULATION = 'FLOW_PRIZE_MANIPULATION',
+  /** E6: 撤退费用修改 — "撤退费用减少/增加 N" */
+  FLOW_RETREAT_COST_MOD = 'FLOW_RETREAT_COST_MOD',
 }
 
 // ─────────────────────────────────────────────
@@ -330,6 +334,23 @@ export const PATTERN_CATALOG: Record<PatternId, EffectPattern> = {
       { type: 'deal_damage', target: opponent.active, amount: {damage}, damageTag: 'attack' },
       { type: 'deal_damage'|'place_damage_counters', target: self.active, amount: {recoilDamage} }
     ]`,
+  },
+
+  [PatternId.DMG_MOVE_COUNTERS]: {
+    id: PatternId.DMG_MOVE_COUNTERS,
+    category: 'damage',
+    nameCN: '移动伤害指示物',
+    description: '将伤害指示物从己方宝可梦移动到对手宝可梦身上。',
+    textExamples: [
+      'Move 2 damage counters from each of your Pokémon to 1 of your opponent\'s Pokémon.',
+    ],
+    slots: [
+      { name: 'from', type: 'zone', description: '指示物来源', required: true },
+      { name: 'to', type: 'zone', description: '指示物目标', required: true },
+      { name: 'counters', type: 'number', description: '每只移动的指示物数', required: true },
+      { name: 'fromScope', type: 'string', description: '"each"(每只) 或 "total"(总计)', required: false, defaultValue: 'each' },
+    ],
+    templateNote: `生成: [{ type: 'move_damage_counters', from, to, counters, fromScope }]`,
   },
 
   // ═══════════════════════════════════════════
@@ -772,6 +793,23 @@ export const PATTERN_CATALOG: Record<PatternId, EffectPattern> = {
       if action=='swap': { type: 'player_choice', choiceType: 'select_from_hand' },
       { type: 'move_card', swap: true }
     ]`,
+  },
+
+  [PatternId.FLOW_RETREAT_COST_MOD]: {
+    id: PatternId.FLOW_RETREAT_COST_MOD,
+    category: 'flow',
+    nameCN: '撤退费用修改',
+    description: '修改宝可梦的撤退费用（通常由场地卡或道具提供）。',
+    textExamples: [
+      'The Retreat Cost of each Basic Pokémon in play is reduced by 1.',
+    ],
+    slots: [
+      { name: 'value', type: 'number', description: '修改值（负数=减少）', required: true },
+      { name: 'scope', type: 'string', description: '"all" / "self" / "opponent"', required: false, defaultValue: 'all' },
+      { name: 'filter', type: 'card_filter', description: '受影响宝可梦的过滤条件', required: false },
+      { name: 'duration', type: 'string', description: '持续时间', required: false, defaultValue: 'while_in_play' },
+    ],
+    templateNote: `生成: [{ type: 'register_modifier', modifier: { type: 'retreat_cost_mod', value, filter }, duration }]`,
   },
 };
 

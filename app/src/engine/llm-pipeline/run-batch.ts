@@ -401,6 +401,23 @@ async function main() {
 
   console.log(`🎯 共 ${allEffects.length} 个需要解析的效果条目\n`);
 
+  // --resume: 跳过已在缓存中的卡牌
+  const resume = args.includes('--resume');
+  let existingCache: any[] = [];
+  if (resume) {
+    const cachePath = path.resolve(__dirname, 'compiled-effects-cache.json');
+    if (fs.existsSync(cachePath)) {
+      existingCache = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+      const cachedNames = new Set(existingCache.map((c: any) => c.cardName));
+      const before = allEffects.length;
+      const toRun = allEffects.filter(e => !cachedNames.has(e.cardName));
+      const skipped = before - toRun.length;
+      console.log(`🔄 RESUME 模式: 跳过 ${skipped} 已缓存, 剩余 ${toRun.length} 待处理\n`);
+      allEffects.length = 0;
+      allEffects.push(...toRun);
+    }
+  }
+
   // 按效果来源统计
   const bySource = new Map<string, number>();
   for (const e of allEffects) {
@@ -436,7 +453,7 @@ async function main() {
   // --save-cache: 保存完整 parsedEffect + actionPacket 供引擎启动时加载
   if (args.includes('--save-cache')) {
     const cachePath = path.resolve(__dirname, 'compiled-effects-cache.json');
-    const cacheData = results
+    const newCacheData = results
       .filter(r => r.status === 'pass' && r.parsedEffect && r.actionPacket)
       .map(r => ({
         cardId: r.entry.cardId,
@@ -446,8 +463,18 @@ async function main() {
         parsedEffect: r.parsedEffect,
         actionPacket: r.actionPacket,
       }));
-    fs.writeFileSync(cachePath, JSON.stringify(cacheData, null, 2));
-    console.log(`\n💾 编译缓存已保存到: ${cachePath} (${cacheData.length} 条)`);
+
+    // Merge with existing cache on resume
+    let mergedCache = newCacheData;
+    if (resume && existingCache.length > 0) {
+      const newNames = new Set(newCacheData.map(c => c.cardName));
+      const kept = existingCache.filter((c: any) => !newNames.has(c.cardName));
+      mergedCache = [...kept, ...newCacheData];
+      console.log(`\n🔗 合并缓存: ${existingCache.length} 旧 + ${newCacheData.length} 新 = ${mergedCache.length} 总计`);
+    }
+
+    fs.writeFileSync(cachePath, JSON.stringify(mergedCache, null, 2));
+    console.log(`💾 编译缓存已保存到: ${cachePath} (${mergedCache.length} 条)`);
   }
 }
 

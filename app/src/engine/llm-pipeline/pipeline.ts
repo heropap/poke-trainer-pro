@@ -61,10 +61,42 @@ async function parseCardText(
 
   let rawText: string;
 
+  const doubaoKey = process.env.DOUBAO_API_KEY;
   const qwenKey = process.env.QWEN_API_KEY;
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  if (qwenKey) {
+  if (doubaoKey) {
+    // ── 豆包 API 模式（OpenAI 兼容格式）──
+    const doubaoModel = process.env.DOUBAO_MODEL || 'doubao-seed-2.0-pro';
+    console.log(`[Pipeline] 使用豆包 ${doubaoModel} API...`);
+
+    const openaiMessages = [
+      { role: 'system' as const, content: request.system },
+      ...request.messages,
+    ];
+
+    const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${doubaoKey}`,
+      },
+      body: JSON.stringify({
+        model: doubaoModel,
+        messages: openaiMessages,
+        max_tokens: 1000,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`豆包 API 错误 (${response.status}): ${errText}`);
+    }
+
+    const data = await response.json();
+    rawText = data.choices?.[0]?.message?.content || '';
+  } else if (qwenKey) {
     // ── 千问 API 模式（OpenAI 兼容格式）──
     const qwenModel = process.env.QWEN_MODEL || 'qwen3.5-plus';
     console.log(`[Pipeline] 使用千问 ${qwenModel} API...`);
@@ -84,7 +116,7 @@ async function parseCardText(
         model: qwenModel,
         messages: openaiMessages,
         max_tokens: 1000,
-        temperature: 0.1,  // 低温度保证确定性输出
+        temperature: 0.1,
       }),
     });
 
@@ -124,9 +156,11 @@ async function parseCardText(
       ).join('\n\n') +
       '\n\n[正式请求]\n' + userMsg;
 
-    console.log(`[Pipeline] 使用 claude CLI 模式 (无 API Key)...`);
+    const cliModel = process.env.CLAUDE_CLI_MODEL || '';
+    const modelFlag = cliModel ? ` --model ${cliModel}` : '';
+    console.log(`[Pipeline] 使用 claude CLI 模式${cliModel ? ` (${cliModel})` : ''}...`);
     rawText = execSync(
-      `claude -p --output-format text`,
+      `claude -p --output-format text${modelFlag}`,
       {
         input: fullPrompt,
         encoding: 'utf-8',
@@ -388,6 +422,15 @@ function patternToActions(
           ? { type: 'place_damage_counters', target: { player: 'self', zone: 'active' }, counters: slots.recoilDamage / 10 }
           : { type: 'deal_damage', target: { player: 'self', zone: 'active' }, amount: slots.recoilDamage, damageTag: 'self_damage' },
       ];
+
+    case PatternId.DMG_MOVE_COUNTERS:
+      return [{
+        type: 'move_damage_counters',
+        from: resolveTarget(slots.from),
+        to: resolveTarget(slots.to),
+        counters: slots.counters,
+        fromScope: slots.fromScope || 'each',  // 'each' = from each pokemon, 'total' = total pool
+      }];
 
     // ─── B. 能量模式 ───
 
@@ -662,6 +705,18 @@ function patternToActions(
           lockTarget: slots.lockTarget,
         },
         duration: slots.duration,
+      }];
+
+    case PatternId.FLOW_RETREAT_COST_MOD:
+      return [{
+        type: 'register_modifier',
+        scope: slots.scope || 'all',
+        modifier: {
+          type: 'retreat_cost_mod',
+          value: slots.value,  // negative = reduction
+          filter: slots.filter || null,
+        },
+        duration: slots.duration || 'while_in_play',
       }];
 
     case PatternId.FLOW_PRIZE_MANIPULATION:

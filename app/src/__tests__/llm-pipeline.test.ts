@@ -30,7 +30,7 @@ import {
 describe('Effect Pattern Catalog', () => {
   test('PatternId enum has 30 patterns', () => {
     const ids = Object.values(PatternId);
-    expect(ids.length).toBe(30);
+    expect(ids.length).toBe(32);
   });
 
   test('every PatternId has a corresponding catalog entry', () => {
@@ -226,8 +226,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     }
   });
 
-  test('few-shot examples have 28 messages (14 pairs)', () => {
-    expect(FEW_SHOT_EXAMPLES).toHaveLength(28);
+  test('few-shot examples have 22 messages (11 pairs)', () => {
+    expect(FEW_SHOT_EXAMPLES).toHaveLength(22);
     // Every odd index is assistant response
     for (let i = 1; i < FEW_SHOT_EXAMPLES.length; i += 2) {
       expect(FEW_SHOT_EXAMPLES[i].role).toBe('assistant');
@@ -247,8 +247,8 @@ describe('Semantic Parser — Prompt Builder', () => {
     expect(req.model).toBeDefined();
     expect(req.max_tokens).toBeGreaterThan(0);
     expect(req.system).toBe(SEMANTIC_PARSER_SYSTEM_PROMPT);
-    // 14 few-shot pairs + 1 user message = 29
-    expect(req.messages).toHaveLength(29);
+    // 11 few-shot pairs + 1 user message = 23
+    expect(req.messages).toHaveLength(23);
     expect(req.messages[req.messages.length - 1].role).toBe('user');
     expect(req.messages[req.messages.length - 1].content).toContain('皮卡丘');
     expect(req.messages[req.messages.length - 1].content).toContain('[雷][无]');
