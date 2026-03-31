@@ -33,6 +33,37 @@ import { cantUseAttackMarker } from "../effects/markers";
 // ═══════════════════════════════════════════════════════
 
 /**
+ * Execute a sequence of action steps within an attack context — synchronously.
+ * Interactive actions (choose, search with prompt, etc.) fall back to auto-select.
+ * Use this inside onAttack() callbacks where async is not supported.
+ */
+export function executeAttackStepsSync(
+  steps: ActionStep[],
+  ctx: EffectContext,
+  baseDamage: number,
+): AttackResult {
+  const execCtx = new ExecutionContext(ctx, baseDamage);
+  for (const step of steps) {
+    execCtx.executeStepSync(step);
+  }
+  return execCtx.getAttackResult();
+}
+
+/**
+ * Execute a sequence of action steps (non-attack context) — synchronously.
+ * Interactive actions fall back to auto-select.
+ */
+export function executeStepsSync(
+  steps: ActionStep[],
+  ctx: EffectContext,
+): void {
+  const execCtx = new ExecutionContext(ctx, 0);
+  for (const step of steps) {
+    execCtx.executeStepSync(step);
+  }
+}
+
+/**
  * Execute a sequence of action steps within an attack context.
  * Returns an AttackResult that the engine applies to the game state.
  */
@@ -125,6 +156,14 @@ class ExecutionContext {
       case "ignore_wr":
         if (step.weakness) this.result.skipWeakness = true;
         if (step.resistance) this.result.skipResistance = true;
+        break;
+
+      case "ignore_weakness":
+        this.result.skipWeakness = true;
+        break;
+
+      case "ignore_resistance":
+        this.result.skipResistance = true;
         break;
 
       // ─── B. Coin ───
@@ -928,6 +967,368 @@ class ExecutionContext {
       case "opp_bench": return "opponent_bench";
       case "all_own": return "own_field";
       default: return undefined;
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Sync Step Executor
+  // Same as executeStep but with auto-select fallbacks for interactive actions.
+  // ═══════════════════════════════════════════════════════
+
+  executeStepSync(step: ActionStep): void {
+    switch (step.action) {
+      // ─── A. Damage ───
+      case "deal_damage": {
+        const value = this.resolveDynamic(step.value);
+        if (step.target) {
+          const targets = this.resolveTargets(step.target);
+          for (const t of targets) this.ctx.damage(value, t);
+        } else {
+          this.result.damage = value;
+        }
+        break;
+      }
+      case "put_damage_counters": {
+        const value = this.resolveDynamic(step.value);
+        const targets = this.resolveTargets(step.target);
+        for (const t of targets) t.damageCounters += value;
+        break;
+      }
+      case "self_damage":
+        this.result.selfDamage = (this.result.selfDamage || 0) + step.value;
+        break;
+      case "bench_damage": {
+        const benchTargets = this.getBenchTargets(step.side, step.count);
+        this.result.benchDamage = [
+          ...(this.result.benchDamage || []),
+          ...benchTargets.map(t => ({ target: t, damage: step.value })),
+        ];
+        break;
+      }
+      case "ignore_wr":
+        if (step.weakness) this.result.skipWeakness = true;
+        if (step.resistance) this.result.skipResistance = true;
+        break;
+      case "ignore_weakness":
+        this.result.skipWeakness = true;
+        break;
+      case "ignore_resistance":
+        this.result.skipResistance = true;
+        break;
+
+      // ─── B. Coin ───
+      case "flip_coin": {
+        const isHeads = this.ctx.flipCoin();
+        const subs = isHeads ? step.on_heads : (step.on_tails || []);
+        for (const sub of subs) this.executeStepSync(sub);
+        break;
+      }
+      case "flip_coins": {
+        const flips = this.ctx.flipCoins(step.count);
+        this.lastCoinHeads = flips.heads;
+        for (let i = 0; i < flips.heads; i++) {
+          for (const sub of step.per_heads) this.executeStepSync(sub);
+        }
+        break;
+      }
+
+      // ─── C. Status ───
+      case "apply_status": {
+        const target = step.target
+          ? this.resolveTargets(step.target)[0]
+          : this.ctx.opponent.active;
+        if (target) this.ctx.applyStatus(target, step.status);
+        break;
+      }
+      case "remove_status": {
+        const target = step.target
+          ? this.resolveTargets(step.target)[0]
+          : this.ctx.source;
+        if (target) {
+          if (step.status) this.ctx.removeStatus(target, step.status);
+          else this.ctx.removeAllStatus(target);
+        }
+        break;
+      }
+
+      // ─── D. Card Movement ───
+      case "draw_cards":
+        this.ctx.drawCards(this.resolveDynamic(step.count), this.resolveWho(step.who));
+        break;
+      case "discard_from_hand":
+        this.ctx.discardFromHand(step.count, this.resolveWho(step.who));
+        break;
+      case "discard_hand":
+        this.ctx.discardHand(this.resolveWho(step.who));
+        break;
+      case "search_deck": {
+        const who = this.resolveWho(step.who);
+        const filter = this.buildCardFilter(step.filter);
+        const found = this.ctx.searchDeck(filter, step.count, who);
+        for (const card of found) {
+          switch (step.destination) {
+            case "hand": this.ctx.addToHand(card, who); break;
+            case "bench": this.putOnBench(card, who); break;
+            case "attach_to_self": this.ctx.source.attachedEnergy.push(card); break;
+            case "top_of_deck": this.ctx.putOnTopOfDeck([card], who); break;
+            case "bottom_of_deck": this.getPlayerByWho(who).deck.cards.push(card); break;
+            default: this.ctx.addToHand(card, who); break;
+          }
+        }
+        this.ctx.shuffleDeck(who);
+        break;
+      }
+      case "recover_from_discard": {
+        const who = this.resolveWho(step.who);
+        const filter = this.buildCardFilter(step.filter);
+        const found = this.ctx.searchDiscard(filter, step.count, who);
+        for (const card of found) {
+          switch (step.destination) {
+            case "hand": this.ctx.addToHand(card, who); break;
+            case "deck": this.ctx.shuffleIntoDeck([card], who); break;
+            case "attach_to_self": this.ctx.source.attachedEnergy.push(card); break;
+            case "bench": this.putOnBench(card, who); break;
+            default: this.ctx.addToHand(card, who); break;
+          }
+        }
+        break;
+      }
+      case "shuffle_hand_into_deck":
+        this.ctx.shuffleHandIntoDeck(this.resolveWho(step.who));
+        break;
+      case "shuffle_deck":
+        this.ctx.shuffleDeck(this.resolveWho(step.who));
+        break;
+      case "reveal_top_cards": {
+        const who = this.resolveWho(step.who);
+        this.tempCards = this.ctx.revealTopCards(step.count, who);
+        for (const sub of step.then) this.executeStepSync(sub);
+        break;
+      }
+      case "put_on_deck": {
+        const who = this.resolveWho(step.who);
+        if (step.position === "top") {
+          this.ctx.putOnTopOfDeck(this.tempCards, who);
+        } else {
+          this.getPlayerByWho(who).deck.cards.push(...this.tempCards);
+        }
+        this.tempCards = [];
+        break;
+      }
+      case "discard_from_deck_top": {
+        const who = this.resolveWho(step.who);
+        const player = this.getPlayerByWho(who);
+        for (let i = 0; i < step.count && player.deck.cards.length > 0; i++) {
+          const card = player.deck.cards.shift()!;
+          player.discard.cards.push(card);
+        }
+        break;
+      }
+
+      // ─── E. Energy Management ───
+      case "discard_energy": {
+        const targets = step.target
+          ? this.resolveTargets(step.target)
+          : [this.ctx.source];
+        for (const target of targets) {
+          const count = step.count === "all" ? target.attachedEnergy.length : step.count;
+          let discarded = 0;
+          for (let i = target.attachedEnergy.length - 1; i >= 0 && discarded < count; i--) {
+            if (!step.energy_type || target.attachedEnergy[i].card.types?.includes(step.energy_type)) {
+              const energy = target.attachedEnergy.splice(i, 1)[0];
+              this.getPlayerForCard(target).discard.cards.push(energy);
+              discarded++;
+            }
+          }
+        }
+        if (!step.target) {
+          this.result.discardEnergy = (this.result.discardEnergy || 0) +
+            (step.count === "all" ? this.ctx.source.attachedEnergy.length : step.count);
+        }
+        break;
+      }
+      case "attach_energy": {
+        const targets = this.resolveTargets(step.target);
+        const target = targets[0];
+        if (!target) break;
+        const energyFilter = step.filter
+          ? this.buildCardFilter(step.filter)
+          : (c: GameCard) => c.card.supertype === "Energy";
+        switch (step.source) {
+          case "deck":
+            for (let i = 0; i < step.count; i++) this.ctx.attachEnergyFromDeck(energyFilter, target);
+            break;
+          case "discard":
+            this.ctx.attachEnergyFromDiscard(energyFilter, step.count, target);
+            break;
+          case "hand": {
+            let attached = 0;
+            for (let i = this.ctx.player.hand.cards.length - 1; i >= 0 && attached < step.count; i--) {
+              if (energyFilter(this.ctx.player.hand.cards[i])) {
+                const card = this.ctx.player.hand.cards.splice(i, 1)[0];
+                target.attachedEnergy.push(card);
+                attached++;
+              }
+            }
+            break;
+          }
+        }
+        break;
+      }
+      case "move_energy": {
+        const from = this.resolveTargets(step.from)[0];
+        const to = this.resolveTargets(step.to)[0];
+        if (!from || !to) break;
+        const count = step.count || 1;
+        let moved = 0;
+        for (let i = from.attachedEnergy.length - 1; i >= 0 && moved < count; i--) {
+          const energy = from.attachedEnergy[i];
+          if (!step.energy_type || energy.card.types?.includes(step.energy_type)) {
+            this.ctx.moveEnergy(from, to, energy.instanceId);
+            moved++;
+          }
+        }
+        break;
+      }
+
+      // ─── F. Field Operations ───
+      case "switch_pokemon": {
+        // Auto-select: pick first bench pokemon (no prompt)
+        if (step.who === "player" || step.who === "both") {
+          if (this.ctx.player.bench.cards.length > 0) {
+            const bench = this.ctx.player.bench.cards;
+            const idx = step.choice === "random" ? Math.floor(Math.random() * bench.length) : 0;
+            this.ctx.switchOwnActive(bench[idx].instanceId);
+          }
+        }
+        if (step.who === "opponent" || step.who === "both") {
+          if (this.ctx.opponent.bench.cards.length > 0) {
+            const bench = this.ctx.opponent.bench.cards;
+            const idx = step.choice === "random" ? Math.floor(Math.random() * bench.length) : 0;
+            this.ctx.switchOpponentActive(bench[idx].instanceId);
+          }
+        }
+        break;
+      }
+      case "heal": {
+        const value = this.resolveDynamic(step.value);
+        const targets = this.resolveTargets(step.target);
+        for (const t of targets) this.ctx.heal(value, t);
+        break;
+      }
+      case "discard_stadium":
+        this.ctx.removeStadium();
+        break;
+      case "discard_tool": {
+        const targets = step.target
+          ? this.resolveTargets(step.target)
+          : [this.ctx.opponent.active].filter(Boolean) as GameCard[];
+        for (const t of targets) {
+          if (t.attachedTools && t.attachedTools.length > 0) {
+            const tool = t.attachedTools.pop()!;
+            this.getPlayerForCard(t).discard.cards.push(tool);
+          }
+        }
+        break;
+      }
+      case "evolve": {
+        const targets = this.resolveTargets(step.target);
+        const target = targets[0];
+        if (!target || !this.ctx.evolvePokemonDirect) break;
+        if (step.from_deck) {
+          const filter = (c: GameCard) =>
+            c.card.supertype === "Pokémon" && c.card.evolvesFrom === target.card.name;
+          const found = this.ctx.searchDeck(filter, 1, "player");
+          if (found.length > 0) this.ctx.evolvePokemonDirect(target.instanceId, found[0]);
+          this.ctx.shuffleDeck("player");
+        }
+        break;
+      }
+
+      // ─── G. Markers / Restrictions ───
+      case "set_marker": {
+        const targets = this.resolveTargets(step.target);
+        for (const t of targets) this.ctx.addMarker(t, step.marker, step.value ?? 1);
+        break;
+      }
+      case "clear_marker": {
+        const targets = this.resolveTargets(step.target);
+        for (const t of targets) this.ctx.removeMarker(t, step.marker);
+        break;
+      }
+      case "cant_attack_next_turn":
+        this.ctx.addMarker(this.ctx.source, CANT_ATTACK_NEXT_TURN, 1);
+        break;
+      case "cant_retreat": {
+        const target = step.target
+          ? this.resolveTargets(step.target)[0]
+          : this.ctx.opponent.active;
+        if (target) {
+          this.ctx.addMarker(target, PREVENT_RETREAT_NEXT_TURN, 1);
+          this.result.preventRetreat = true;
+        }
+        break;
+      }
+      case "reduce_damage_next_turn":
+        this.ctx.addMarker(this.ctx.source, `DAMAGE_REDUCTION:${step.amount}`, 1);
+        break;
+      case "prevent_damage_next_turn":
+        this.ctx.addMarker(this.ctx.source, PREVENT_ALL_DAMAGE_NEXT_TURN, 1);
+        break;
+      case "disable_attack": {
+        const target = step.target
+          ? this.resolveTargets(step.target)[0]
+          : this.ctx.opponent.active;
+        if (target) {
+          const attacks = target.card.attacks;
+          if (attacks && attacks.length > 0) {
+            const attackName = step.choice === "random"
+              ? attacks[Math.floor(Math.random() * attacks.length)].name
+              : attacks[0].name;
+            this.ctx.addMarker(target, cantUseAttackMarker(attackName), 1);
+          }
+        }
+        break;
+      }
+
+      // ─── H. Flow Control ───
+      case "if": {
+        const condMet = this.evaluateCondition(step.condition);
+        const subs = condMet ? step.then : (step.else || []);
+        for (const sub of subs) this.executeStepSync(sub);
+        break;
+      }
+      case "for_each": {
+        const targets = this.resolveTargets(step.targets);
+        for (const _target of targets) {
+          for (const sub of step.body) this.executeStepSync(sub);
+        }
+        break;
+      }
+      case "choose": {
+        // Auto-select: resolve all targets up to max
+        this.tempCards = this.resolveTargets(step.from).slice(0, step.max);
+        for (const sub of step.then) this.executeStepSync(sub);
+        this.tempCards = [];
+        break;
+      }
+      case "choose_one": {
+        // Auto-select: first option
+        for (const sub of step.options[0].steps) this.executeStepSync(sub);
+        break;
+      }
+
+      // ─── I. Special ───
+      case "copy_attack":
+        this.ctx.log("复制攻击 (需要引擎层面实现)");
+        break;
+      case "extra_turn":
+        this.ctx.log("获得额外回合!");
+        (this.ctx.state as any).__extraTurn = true;
+        break;
+      case "log":
+        this.ctx.log(step.message);
+        break;
     }
   }
 }

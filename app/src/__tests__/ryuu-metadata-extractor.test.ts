@@ -403,16 +403,17 @@ describe("ryuu-metadata-extractor: extractAllRyuuMetadata", () => {
 // ═══════════════════════════════════════════
 
 describe("ryuu-metadata-extractor: extractRyuuAsUICards", () => {
-  test("produces deduplicated UI cards", () => {
+  test("produces UI cards while retaining multiple printings", () => {
     const cards = extractRyuuAsUICards();
 
-    // Should have many unique cards
+    // Should have many cards
     expect(cards.length).toBeGreaterThan(200);
 
-    // Should be deduplicated by name
+    // Same-name reprints should still be present so downstream loaders can
+    // decide whether a shared fallback is safe.
     const names = cards.map((c) => c.name);
     const uniqueNames = new Set(names);
-    expect(names.length).toBe(uniqueNames.size);
+    expect(names.length).toBeGreaterThan(uniqueNames.size);
   });
 
   test("excludes basic energies without text", () => {

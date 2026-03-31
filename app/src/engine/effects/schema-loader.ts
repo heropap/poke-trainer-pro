@@ -65,14 +65,16 @@ export function loadSchemaEffects(
       }
 
       // Register by ID if cardId is provided
+      const forceOpt = options?.force ? { force: true } : undefined;
       if (def.cardId && def.cardId !== "__schema__") {
-        registerEffect({ ...compiled, cardId: def.cardId }, SCHEMA_LAYER);
+        registerEffect({ ...compiled, cardId: def.cardId }, SCHEMA_LAYER, forceOpt);
       }
 
       // Always register by name for reprint coverage
       registerByName(
         { ...compiled, cardId: def.cardId || `__schema__`, cardName: def.cardName },
-        SCHEMA_LAYER
+        SCHEMA_LAYER,
+        forceOpt
       );
 
       result.registered++;

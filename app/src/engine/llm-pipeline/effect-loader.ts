@@ -15,9 +15,11 @@
  * ============================================================================
  */
 
-import { registerByName, hasEffect } from '../effects/effect-registry';
+import { registerByName, registerEffect, getEffectSource, getSourcePriority } from '../effects/effect-registry';
 import { compileActionPacket } from './action-compiler';
 import type { CardEffectDef } from '../effects/effect-types';
+
+const LLM_LAYER = 'L2.5' as const;
 
 // ─────────────────────────────────────────────
 // Cache entry type
@@ -52,31 +54,45 @@ export function loadCompiledEffects(cacheEntries: CachedEffectEntry[]): {
 } {
   const stats = { loaded: 0, skipped: 0, merged: 0, errors: 0 };
 
-  // Group entries by base card name (strip [attack/ability name])
+  const nameToIds = new Map<string, Set<string>>();
+
+  // Group entries by exact cardId, while keeping the base printed name.
   const grouped = new Map<string, {
-    baseCardName: string;
     cardId: string;
+    baseCardName: string;
     entries: CachedEffectEntry[];
   }>();
 
   for (const entry of cacheEntries) {
     // Extract base card name: "Charizard ex [Burning Darkness]" → "Charizard ex"
     const baseName = entry.cardName.replace(/\s*\[.*\]$/, '');
+    if (!nameToIds.has(baseName)) {
+      nameToIds.set(baseName, new Set());
+    }
+    nameToIds.get(baseName)!.add(entry.cardId);
 
-    if (!grouped.has(baseName)) {
-      grouped.set(baseName, {
-        baseCardName: baseName,
+    if (!grouped.has(entry.cardId)) {
+      grouped.set(entry.cardId, {
         cardId: entry.cardId,
+        baseCardName: baseName,
         entries: [],
       });
     }
-    grouped.get(baseName)!.entries.push(entry);
+    grouped.get(entry.cardId)!.entries.push(entry);
   }
 
-  // Compile and register each group
-  for (const [baseName, group] of grouped) {
-    // Skip if L1/L2 already covers this card
-    if (hasEffect(group.cardId, baseName)) {
+  // Compile and register each group.
+  // The registry's built-in priority guard handles same-key overwrites,
+  // but we also need the cross-check: a name-based higher-priority registration
+  // should block the entire card to keep hand-written L2 name-based rules authoritative.
+  for (const group of grouped.values()) {
+    const { cardId, baseCardName } = group;
+
+    // Cross-check: if the card name has a higher-priority name-based registration,
+    // skip this card entirely
+    const existingNameSource = getEffectSource('', baseCardName);
+    if (existingNameSource && existingNameSource !== LLM_LAYER &&
+        getSourcePriority(existingNameSource) > getSourcePriority(LLM_LAYER)) {
       stats.skipped += group.entries.length;
       continue;
     }
@@ -84,13 +100,13 @@ export function loadCompiledEffects(cacheEntries: CachedEffectEntry[]): {
     try {
       // Compile all effects for this card into a single merged CardEffectDef
       const mergedDef: CardEffectDef & { cardName: string } = {
-        cardId: `l25:${baseName}`,
-        cardName: baseName,
+        cardId,
+        cardName: baseCardName,
       };
 
       for (const entry of group.entries) {
         const compiled = compileActionPacket(
-          baseName,
+          baseCardName,
           entry.effectName,
           entry.actionPacket,
         );
@@ -109,12 +125,23 @@ export function loadCompiledEffects(cacheEntries: CachedEffectEntry[]): {
         }
       }
 
-      registerByName(mergedDef, 'L2.5');
+      // Registry guards against overwriting higher-priority ID sources
+      const idRegistered = registerEffect(mergedDef, LLM_LAYER);
+      if (!idRegistered) {
+        stats.skipped += group.entries.length;
+        continue;
+      }
+
+      // Register by name only if this is the sole cardId for this name
+      const idsForName = nameToIds.get(baseCardName);
+      if (idsForName?.size === 1) {
+        registerByName(mergedDef, LLM_LAYER);
+      }
       stats.loaded++;
       if (group.entries.length > 1) stats.merged++;
 
     } catch (err) {
-      console.warn(`[L2.5 Loader] Failed to compile ${baseName}:`, err);
+      console.warn(`[L2.5 Loader] Failed to compile ${baseCardName} (${cardId}):`, err);
       stats.errors++;
     }
   }

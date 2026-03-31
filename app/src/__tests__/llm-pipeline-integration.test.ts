@@ -23,7 +23,7 @@ describe('L2.5 LLM Pipeline Integration', () => {
   test('loaded effects are queryable via getEffect by name', () => {
     loadCompiledEffectsFromFile();
 
-    const charizard = getEffect('l25:Charizard ex', 'Charizard ex');
+    const charizard = getEffect('sv3-125', 'Charizard ex');
     expect(charizard).not.toBeNull();
     expect(charizard!.attacks).toBeDefined();
     expect(charizard!.attacks!.length).toBeGreaterThan(0);
@@ -32,21 +32,21 @@ describe('L2.5 LLM Pipeline Integration', () => {
   test('loaded effects report L2.5 source layer', () => {
     loadCompiledEffectsFromFile();
 
-    const source = getEffectSource('l25:Charizard ex', 'Charizard ex');
+    const source = getEffectSource('sv3-125', 'Charizard ex');
     expect(source).toBe('L2.5');
   });
 
   test('trainer cards are registered', () => {
     loadCompiledEffectsFromFile();
 
-    const iono = getEffect('l25:Iono', 'Iono');
+    const iono = getEffect('sv2-185', 'Iono');
     expect(iono).not.toBeNull();
   });
 
   test('multi-effect cards merge attacks and abilities', () => {
     loadCompiledEffectsFromFile();
 
-    const pidgeot = getEffect('l25:Pidgeot ex', 'Pidgeot ex');
+    const pidgeot = getEffect('sv3-164', 'Pidgeot ex');
     expect(pidgeot).not.toBeNull();
     expect(pidgeot!.attacks?.length).toBeGreaterThanOrEqual(1);
     expect(pidgeot!.abilities?.length).toBeGreaterThanOrEqual(1);
@@ -55,8 +55,26 @@ describe('L2.5 LLM Pipeline Integration', () => {
   test('hasEffect returns true for loaded cards', () => {
     loadCompiledEffectsFromFile();
 
-    expect(hasEffect('l25:Lugia VSTAR', 'Lugia VSTAR')).toBe(true);
+    expect(hasEffect('swsh12-139', 'Lugia VSTAR')).toBe(true);
     expect(hasEffect('nonexistent', 'Nonexistent Card')).toBe(false);
+  });
+
+  test('不同卡号但同名的缓存效果不会被错误合并', () => {
+    loadCompiledEffectsFromFile();
+
+    const scarletFlaaffy = getEffect('sv1-67', 'Flaaffy');
+    const evolvingSkiesFlaaffy = getEffect('swsh7-55', 'Flaaffy');
+
+    expect(scarletFlaaffy).not.toBeNull();
+    expect(scarletFlaaffy!.attacks?.map((attack) => attack.name)).toContain('Thunder Shock');
+    expect(scarletFlaaffy!.abilities ?? []).toHaveLength(0);
+
+    expect(evolvingSkiesFlaaffy).not.toBeNull();
+    expect(evolvingSkiesFlaaffy!.abilities?.map((ability) => ability.name)).toContain('Dynamotor');
+    expect(evolvingSkiesFlaaffy!.attacks ?? []).toHaveLength(0);
+
+    // Ambiguous duplicate names should not get a shared fallback registration.
+    expect(getEffect('missing-id', 'Flaaffy')).toBeNull();
   });
 
   test('L1/L2 effects take priority over L2.5', () => {

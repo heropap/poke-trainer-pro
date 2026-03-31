@@ -765,9 +765,9 @@ describe("autoRegisterTextEffects", () => {
     expect(result.registered).toBe(2);
     expect(result.skipped).toBe(1);
 
-    // Should be registered by name
-    expect(hasEffect("__text_parsed__", "Draw Trainer")).toBe(true);
-    expect(hasEffect("__text_parsed__", "Heal Trainer")).toBe(true);
+    // Should be registered by exact card ID
+    expect(hasEffect("t1", "Draw Trainer")).toBe(true);
+    expect(hasEffect("t2", "Heal Trainer")).toBe(true);
   });
 
   test("does not overwrite already-registered effects", () => {
@@ -797,16 +797,42 @@ describe("autoRegisterTextEffects", () => {
     expect(effect!.cardId).toBe("custom-id"); // not "__text_parsed__"
   });
 
-  test("deduplicates by name (reprints)", () => {
+  test("same-name same-text reprints register by ID and share one name fallback", () => {
     const cards: Card[] = [
       makeTrainerCard({ id: "t1-a", name: "Potion", rules: ["Heal 30 damage from 1 of your Pokémon."] }),
       makeTrainerCard({ id: "t1-b", name: "Potion", rules: ["Heal 30 damage from 1 of your Pokémon."] }),
     ];
 
     const result = autoRegisterTextEffects(cards);
-    // First Potion registered, second skipped as duplicate name
-    expect(result.registered).toBe(1);
-    expect(result.skipped).toBe(1);
+    expect(result.registered).toBe(2);
+    expect(result.skipped).toBe(0);
+    expect(hasEffect("t1-a", "Potion")).toBe(true);
+    expect(hasEffect("t1-b", "Potion")).toBe(true);
+    expect(getNameRegisteredCount()).toBe(1);
+    expect(getEffect("missing-id", "Potion")?.cardId).toBe("t1-a");
+  });
+
+  test("same-name different-text prints stay cardId-specific and do not share fallback", () => {
+    const cards: Card[] = [
+      makePokemonCard({
+        id: "flaaffy-a",
+        name: "Flaaffy",
+        attacks: [makeAttack({ name: "Thunder Shock", damage: "20", text: "The Defending Pokémon is now Paralyzed." })],
+      }),
+      makePokemonCard({
+        id: "flaaffy-b",
+        name: "Flaaffy",
+        attacks: [makeAttack({ name: "Take Down", damage: "40", text: "This Pokémon also does 10 damage to itself." })],
+      }),
+    ];
+
+    const result = autoRegisterTextEffects(cards);
+    expect(result.registered).toBe(2);
+    expect(result.skipped).toBe(0);
+    expect(getNameRegisteredCount()).toBe(0);
+    expect(getEffect("flaaffy-a", "Flaaffy")?.attacks?.[0].name).toBe("Thunder Shock");
+    expect(getEffect("flaaffy-b", "Flaaffy")?.attacks?.[0].name).toBe("Take Down");
+    expect(getEffect("missing-id", "Flaaffy")).toBeNull();
   });
 });
 
@@ -850,7 +876,7 @@ describe("text-parser: end-to-end", () => {
     });
 
     autoRegisterTextEffects([card]);
-    const effect = getEffect("__text_parsed__", card.name);
+    const effect = getEffect(card.id, card.name);
     expect(effect).not.toBeNull();
 
     const ctx = makeMockCtx();
@@ -866,7 +892,7 @@ describe("text-parser: end-to-end", () => {
     });
 
     autoRegisterTextEffects([card]);
-    const effect = getEffect("__text_parsed__", "Switch");
+    const effect = getEffect(card.id, "Switch");
     expect(effect).not.toBeNull();
     expect(effect!.trainer).toBeDefined();
   });

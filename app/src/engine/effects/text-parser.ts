@@ -22,7 +22,7 @@
 
 import { Card, CardAttack, CardAbility } from "@/types/card";
 import { CardEffectDef, AttackEffect, AttackResult, TrainerEffect, AbilityEffect, EffectContext } from "./effect-types";
-import { registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
+import { registerByName, registerEffect, hasEffect, getEffectSource, getSourcePriority, EffectSourceLayer } from "./effect-registry";
 import { StatusCondition, GameCard } from "../game-state";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "./markers";
 
@@ -66,29 +66,52 @@ export function autoRegisterTextEffects(cards: Card[], source: EffectSourceLayer
   let registered = 0;
   let skipped = 0;
 
-  // Deduplicate by name to avoid re-parsing reprints
-  const seen = new Set<string>();
-
+  const grouped = new Map<string, Card[]>();
   for (const card of cards) {
-    // Skip if already registered
-    if (hasEffect(card.id, card.name)) {
-      skipped++;
-      continue;
-    }
+    const existing = grouped.get(card.name) ?? [];
+    existing.push(card);
+    grouped.set(card.name, existing);
+  }
 
-    // Skip if already processed this name
-    if (seen.has(card.name)) {
-      skipped++;
-      continue;
-    }
-    seen.add(card.name);
+  for (const [cardName, group] of grouped) {
+    const signatures = new Set(group.map(buildTextSignature));
+    const canRegisterByName = signatures.size === 1;
+    const hasExistingNameEffect = hasEffect("", cardName);
+    const existingNameSource = getEffectSource("", cardName);
+    const nameBlockedByHigherPriority =
+      hasExistingNameEffect &&
+      (!existingNameSource || getLayerPriority(existingNameSource) > getLayerPriority(source));
+    let representative: (CardEffectDef & { cardName: string }) | null = null;
 
-    const def = parseCardEffects(card);
-    if (def) {
-      registerByName({ ...def, cardName: card.name }, source);
+    for (const card of group) {
+      if (hasEffect(card.id)) {
+        skipped++;
+        continue;
+      }
+
+      if (nameBlockedByHigherPriority) {
+        skipped++;
+        continue;
+      }
+
+      const def = parseCardEffects(card);
+      if (!def) {
+        skipped++;
+        continue;
+      }
+
+      const idDef = {
+        ...def,
+        cardId: card.id,
+        cardName: card.name,
+      } as CardEffectDef & { cardName: string };
+      registerEffect(idDef, source);
+      representative ??= idDef;
       registered++;
-    } else {
-      skipped++;
+    }
+
+    if (representative && canRegisterByName && !existingNameSource) {
+      registerByName(representative, source);
     }
   }
 
@@ -97,6 +120,30 @@ export function autoRegisterTextEffects(cards: Card[], source: EffectSourceLayer
   }
 
   return { registered, skipped };
+}
+
+// Use the canonical priority from effect-registry (no local duplicate)
+function getLayerPriority(layer: EffectSourceLayer): number {
+  return getSourcePriority(layer);
+}
+
+function buildTextSignature(card: Card): string {
+  return JSON.stringify({
+    supertype: card.supertype,
+    subtypes: [...(card.subtypes ?? [])],
+    rules: [...(card.rules ?? [])],
+    attacks: (card.attacks ?? []).map((attack) => ({
+      name: attack.name,
+      cost: [...(attack.cost ?? [])],
+      damage: attack.damage ?? "",
+      text: attack.text ?? "",
+    })),
+    abilities: (card.abilities ?? []).map((ability) => ({
+      name: ability.name,
+      text: ability.text ?? "",
+      type: ability.type ?? "",
+    })),
+  });
 }
 
 // ═══════════════════════════════════════════

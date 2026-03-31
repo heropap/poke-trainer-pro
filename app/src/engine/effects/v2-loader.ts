@@ -14,7 +14,7 @@
  */
 
 import { compileAllV2, CardRuleV2Entry } from "../rules/rule-compiler-v2";
-import { registerEffect, registerByName, hasEffect, EffectSourceLayer } from "./effect-registry";
+import { registerEffect, registerByName, getEffectSource, getSourcePriority, EffectSourceLayer } from "./effect-registry";
 import { CardEffectDef } from "./effect-types";
 
 const V2_LAYER: EffectSourceLayer = "L2.5";
@@ -73,29 +73,41 @@ export function loadV2Effects(options?: { force?: boolean }): V2LoadResult {
 
   result.compiled = defs.length;
 
-  // Register each compiled def
+  // Register each compiled def.
+  // The registry's built-in priority guard handles same-key overwrites,
+  // but we also need the cross-check: a name-based higher-priority registration
+  // should block the entire card (including ID registration) to keep hand-written
+  // L2 name-based rules authoritative for all prints.
+  const forceOpt = options?.force ? { force: true } : undefined;
+
   for (const def of defs) {
-    // Check if this card is already registered at a higher-priority layer.
-    // Check both by ID and by name — a hand-written name-based effect (L2) should
-    // take precedence over a V2 compiled effect for the same card.
-    if (!options?.force && (hasEffect(def.cardId) || (def.cardName && hasEffect("", def.cardName)))) {
+    if (!options?.force) {
+      // Cross-check: if the card name has a higher-priority name-based registration,
+      // skip this card entirely (not just the name registration)
+      const existingNameSource = def.cardName ? getEffectSource("", def.cardName) : null;
+      if (existingNameSource && existingNameSource !== V2_LAYER &&
+          getSourcePriority(existingNameSource) > getSourcePriority(V2_LAYER)) {
+        result.skippedHigherPriority++;
+        continue;
+      }
+    }
+
+    // Register by ID — registry guards against overwriting higher-priority ID sources
+    const idRegistered = registerEffect(def, V2_LAYER, forceOpt);
+    if (!idRegistered) {
       result.skippedHigherPriority++;
       continue;
     }
-
-    // Register by ID (every unique cardId gets its own entry)
-    registerEffect(def, V2_LAYER);
     result.registeredById++;
 
-    // Also register by name for reprint coverage (first card with this name wins)
+    // Also register by name for reprint coverage
     if (def.cardName) {
-      if (options?.force || !hasEffect("", def.cardName)) {
-        registerByName(
-          { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
-          V2_LAYER
-        );
-        result.registeredByName++;
-      }
+      const nameRegistered = registerByName(
+        { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
+        V2_LAYER,
+        forceOpt
+      );
+      if (nameRegistered) result.registeredByName++;
     }
   }
 
@@ -127,23 +139,32 @@ export function loadV2EffectsFromArray(
   const defs = compileAllV2(cards);
   result.compiled = defs.length;
 
+  const forceOpt2 = options?.force ? { force: true } : undefined;
+
   for (const def of defs) {
-    if (!options?.force && hasEffect(def.cardId)) {
+    if (!options?.force) {
+      const existingNameSource = def.cardName ? getEffectSource("", def.cardName) : null;
+      if (existingNameSource && existingNameSource !== V2_LAYER &&
+          getSourcePriority(existingNameSource) > getSourcePriority(V2_LAYER)) {
+        result.skippedHigherPriority++;
+        continue;
+      }
+    }
+
+    const idRegistered = registerEffect(def, V2_LAYER, forceOpt2);
+    if (!idRegistered) {
       result.skippedHigherPriority++;
       continue;
     }
-
-    registerEffect(def, V2_LAYER);
     result.registeredById++;
 
     if (def.cardName) {
-      if (options?.force || !hasEffect("", def.cardName)) {
-        registerByName(
-          { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
-          V2_LAYER
-        );
-        result.registeredByName++;
-      }
+      const nameRegistered = registerByName(
+        { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
+        V2_LAYER,
+        forceOpt2
+      );
+      if (nameRegistered) result.registeredByName++;
     }
   }
 

@@ -12,6 +12,7 @@ import {
   getEffect,
   getEffectSource,
   registerEffect,
+  registerByName,
 } from "../engine/effects/effect-registry";
 import { loadV2EffectsFromArray, V2LoadResult } from "../engine/effects/v2-loader";
 import { compileAllV2, CardRuleV2Entry } from "../engine/rules/rule-compiler-v2";
@@ -140,6 +141,48 @@ describe("V2 Loader — Priority System", () => {
     // The V2 effect should now be there
     const source = getEffectSource(targetCard!.cardId);
     expect(source).toBe("L2.5");
+  });
+
+  test("同名旧印刷的 L2.5 名称注册不会挡住新卡号自己的 ID 规则", () => {
+    const oldPrint = allCards.find((c) => c.cardId === "me1-51");
+    const newerPrint = allCards.find((c) => c.cardId === "sv1-68");
+    expect(oldPrint).toBeDefined();
+    expect(newerPrint).toBeDefined();
+
+    const result = loadV2EffectsFromArray([oldPrint!, newerPrint!]);
+
+    expect(result.registeredById).toBe(2);
+    expect(result.registeredByName).toBe(1);
+    expect(result.skippedHigherPriority).toBe(0);
+    expect(getEffectSource("me1-51")).toBe("L2.5");
+    expect(getEffectSource("sv1-68")).toBe("L2.5");
+
+    const newerEffect = getEffect("sv1-68", "Pachirisu");
+    expect(newerEffect).not.toBeNull();
+    expect(newerEffect!.cardId).toBe("sv1-68");
+    expect(newerEffect!.attacks?.[0].name).toBe("Everyone Discharge");
+  });
+
+  test("手写同名高优先级规则仍会挡住对应卡名的 V2 ID 注册", () => {
+    const newerPrint = allCards.find((c) => c.cardId === "sv1-68");
+    expect(newerPrint).toBeDefined();
+
+    registerByName(
+      {
+        cardId: "name:Pachirisu",
+        cardName: "Pachirisu",
+        attacks: [{ name: "Handwritten", onAttack: () => ({ damage: 10 }) }],
+      },
+      "L2"
+    );
+
+    const result = loadV2EffectsFromArray([newerPrint!]);
+
+    expect(result.registeredById).toBe(0);
+    expect(result.registeredByName).toBe(0);
+    expect(result.skippedHigherPriority).toBe(1);
+    expect(getEffectSource("sv1-68")).toBeNull();
+    expect(getEffectSource("", "Pachirisu")).toBe("L2");
   });
 });
 
