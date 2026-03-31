@@ -336,21 +336,17 @@ describe("L1.5 priority integration", () => {
     expect(getEffectSource("test-001")).toBe("L1");
   });
 
-  test("L1.5 takes priority over L3/L4 text-parser via registry order", () => {
+  test("L1.5 takes priority over L3/L4 text-parser via registry priority guard", () => {
     // Register at L1.5 via loadSchemaEffects
     loadSchemaEffects([makePoisonSchema()]);
 
     // Verify it's at L1.5
     expect(getEffectSource("test-poison-001")).toBe("L1.5");
 
-    // If we now try to register at L4 (simulating text-parser),
-    // the registry will overwrite — but in initializeEffects(),
-    // L1.5 runs BEFORE L3/L4, so text-parser's registerByName
-    // with "L3"/"L4" won't overwrite because registry doesn't
-    // have priority-based overwrite protection (it's insertion order).
-    // The actual priority is ensured by registration ORDER in initializeEffects().
-    //
-    // This test just verifies that L1.5 definitions exist.
+    // The registry's built-in priority guard (LAYER_PRIORITY) prevents
+    // lower-priority layers (L3=30, L4=20) from overwriting higher-priority
+    // layers (L1.5=90). This is enforced by shouldOverwrite() in effect-registry,
+    // not just by registration order in initializeEffects().
     expect(hasEffect("test-poison-001")).toBe(true);
   });
 });

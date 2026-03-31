@@ -279,13 +279,17 @@ export class ModifierPipeline {
   isCardTypeBlocked(
     cardType: "Item" | "Supporter" | "Stadium" | "Tool",
     playerIndex: 0 | 1,
+    ctx?: ModifierQueryContext,
   ): boolean {
     for (const mod of this.modifiers) {
       if (mod.def.type.modify !== "block_card_type") continue;
       if (mod.def.type.card_type !== cardType) continue;
       // Block card type affects the opponent of the modifier's owner
       if (mod.ownerPlayerIndex === playerIndex) continue; // doesn't block own cards
-      // TODO: condition evaluation
+      // Evaluate condition if present (e.g., "only while in active spot")
+      if (mod.def.condition && ctx) {
+        if (!this.evaluateSimpleCondition(mod.def.condition, ctx)) continue;
+      }
       return true;
     }
     return false;
