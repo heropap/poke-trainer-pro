@@ -39,3 +39,11 @@ export type { ValidationResult } from "./rule-schema-zod";
 
 // ─── V2 Rule Compiler ───
 export { compileAllV2 } from "./rule-compiler-v2";
+
+// ─── Unified Step Executor (sync + async) ───
+export {
+  executeAttackSteps,
+  executeSteps,
+  executeAttackStepsSync,
+  executeStepsSync,
+} from "./rule-executor";

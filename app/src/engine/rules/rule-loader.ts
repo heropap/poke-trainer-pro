@@ -1,14 +1,16 @@
 /**
- * Rule Loader — Loads and registers CTA rule definitions
+ * @deprecated CTA Rule Loader — Legacy system, not in main init chain.
  *
- * Extension of schema-loader.ts for the new CTA rule system.
- * Registers compiled rules at L1.5 in the effect registry.
+ * This module is part of the original CTA rule system (rule-compiler.ts +
+ * rule-loader.ts). It is no longer used in initializeEffects() and is
+ * retained only for backward compatibility with existing tests.
  *
- * Pipeline:
+ * New rules should be added via:
+ *   - L1/L2: hand-written effects in app/src/engine/effects/cards/
+ *   - L2.5: V2 card-rules-v2.json or LLM compiled-effects-cache.json
+ *
+ * Pipeline (legacy):
  *   CardRuleDef[] (JSON) → validateRule() → compileRule() → registerEffect()
- *
- * This file provides the integration bridge between the CTA rule system
- * and the existing 5-layer effect registry.
  */
 
 import { CardRuleDef } from "./card-rule-def";

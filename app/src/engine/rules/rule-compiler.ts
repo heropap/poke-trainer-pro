@@ -1,18 +1,17 @@
 /**
- * Rule Compiler — CTA JSON → CardEffectDef
+ * @deprecated CTA Rule Compiler — Legacy system, not in main init chain.
  *
- * Converts a validated CardRuleDef JSON into an executable CardEffectDef
- * that can be registered in the effect registry at L1.5.
+ * This module is the original CTA rule compiler. It is no longer used in
+ * initializeEffects() and is retained only for backward compatibility.
+ * The private sync executor has been removed; attacks now delegate to
+ * rule-executor.executeAttackStepsSync (the unified executor).
  *
- * Pipeline:
+ * New rules should be added via:
+ *   - L1/L2: hand-written effects in app/src/engine/effects/cards/
+ *   - L2.5: V2 card-rules-v2.json or LLM compiled-effects-cache.json
+ *
+ * Pipeline (legacy):
  *   CardRuleDef (JSON) → compileRule() → CardEffectDef (executable)
- *
- * The compiler wires up:
- * - Attack steps → onAttack callback (async via executeAttackSteps)
- * - Activated abilities → onActivate callback
- * - Passive abilities → modifiers (registered via ModifierPipeline)
- * - Triggered abilities → event hooks (registered via EventHookRegistry)
- * - Trainer effects → onPlay callback
  */
 
 import {
