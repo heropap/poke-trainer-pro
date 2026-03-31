@@ -25,6 +25,8 @@
 
 import { CardEffectDef, AttackResult } from "../effect-types";
 import { CANT_ATTACK_NEXT_TURN, PREVENT_RETREAT_NEXT_TURN } from "../markers";
+import { getEffectiveHp } from "../../game-actions";
+import { getBenchSpace } from "../../bench-rules";
 
 type NamedEffect = CardEffectDef & { cardName: string };
 
@@ -53,25 +55,47 @@ const charizardEx: NamedEffect = {
     {
       name: "Infernal Reign",
       type: "on_enter" as const,
-      onActivate: (ctx) => {
-        // When this Pokemon evolves, search deck for up to 3 Basic Fire Energy and attach to your Pokemon
-        const fires = ctx.player.deck.cards.filter(
-          c => c.card.supertype === "Energy" && c.card.name.includes("Fire") && c.card.subtypes.includes("Basic")
-        );
-        const toAttach = fires.slice(0, 3);
-        for (const energy of toAttach) {
-          ctx.player.deck.cards = ctx.player.deck.cards.filter(c => c.instanceId !== energy.instanceId);
-          // Distribute: active first, then bench in order
-          const targets = [ctx.player.active, ...ctx.player.bench.cards].filter(Boolean) as any[];
-          if (targets.length > 0) {
-            const target = targets[toAttach.indexOf(energy) % targets.length];
-            target.attachedEnergy.push(energy);
-          }
-        }
-        if (toAttach.length > 0) {
+      onEnter: async (ctx) => {
+        // When this Pokemon evolves, search deck for up to 3 Basic Fire Energy
+        // and attach them to your Pokemon in any way you like.
+        const toAttach = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Fire") || c.card.name.includes("Fire")),
+              3,
+              "Infernal Reign: 选择最多 3 张基础火能量附加给自己的宝可梦",
+              "player",
+              0,
+            )
+          : ctx.searchDeck(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Fire") || c.card.name.includes("Fire")),
+              3
+            );
+        const targets = ctx.getAllPokemon("player");
+        if (targets.length === 0) {
           ctx.shuffleDeck();
-          ctx.log(`Infernal Reign: 从牌组附加了 ${toAttach.length} 张火能量`);
+          return;
         }
+
+        for (const energy of toAttach) {
+          const selected = await ctx.promptUser({
+            message: `Infernal Reign: 选择 ${energy.card.name} 要附加到哪只宝可梦`,
+            min: 1,
+            max: 1,
+            zone: "own_field",
+            targets: targets.map((pokemon) => pokemon.instanceId),
+          });
+          const target = targets.find((pokemon) => pokemon.instanceId === selected[0]) ?? targets[0];
+          target.attachedEnergy.push(energy);
+          ctx.log(`Infernal Reign: 将 ${energy.card.name} 附加给 ${target.card.name}`);
+        }
+
+        ctx.shuffleDeck();
       },
     },
   ],
@@ -100,9 +124,19 @@ const pidgeotEx: NamedEffect = {
     {
       name: "Quick Search",
       type: "activated" as const,
-      onActivate: (ctx) => {
-        // Once per turn: search deck for any 1 card and put it in hand
-        const found = ctx.searchDeck(() => true, 1);
+      onActivate: async (ctx) => {
+        // Once per turn: search deck for any 1 card and put it in hand.
+        const found = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(
+              () => true,
+              1,
+              "Quick Search: 选择 1 张牌加入手牌",
+              "player",
+            )
+          : ctx.searchDeck(() => true, 1);
+        if (found.length > 0) {
+          ctx.addToHand(found[0]);
+        }
         ctx.shuffleDeck();
         if (found.length > 0) {
           ctx.log(`Quick Search: 从牌组搜索了 ${found[0].card.name}`);
@@ -204,23 +238,76 @@ const gardevoirEx: NamedEffect = {
   abilities: [
     {
       name: "Psychic Embrace",
+      repeatable: true,
       type: "activated" as const,
-      onActivate: (ctx) => {
-        // Attach a Basic Psychic Energy from discard to one of your Pokemon, then put 2 damage counters on that Pokemon
-        const psychicEnergies = ctx.player.discard.cards.filter(
-          c => c.card.supertype === "Energy" && c.card.name.includes("Psychic") && c.card.subtypes.includes("Basic")
+      canActivate: (ctx) => {
+        const hasPsychicEnergy = ctx.player.discard.cards.some(
+          (c) =>
+            c.card.supertype === "Energy" &&
+            c.card.subtypes.includes("Basic") &&
+            (c.card.types?.includes("Psychic") || c.card.name.includes("Psychic"))
         );
-        if (psychicEnergies.length === 0) {
-          ctx.log("Psychic Embrace: 弃牌堆没有超能量");
+        const hasValidBenchTarget = ctx.player.bench.cards.some((pokemon) => {
+          const isPsychic = pokemon.card.types?.includes("Psychic");
+          const remainingHp = getEffectiveHp(pokemon) - pokemon.damageCounters * 10;
+          return !!isPsychic && remainingHp > 20;
+        });
+        return hasPsychicEnergy && hasValidBenchTarget;
+      },
+      getDisabledReason: (ctx) => {
+        const hasPsychicEnergy = ctx.player.discard.cards.some(
+          (c) =>
+            c.card.supertype === "Energy" &&
+            c.card.subtypes.includes("Basic") &&
+            (c.card.types?.includes("Psychic") || c.card.name.includes("Psychic"))
+        );
+        if (!hasPsychicEnergy) return "Psychic Embrace 需要弃牌堆里有基础超能量";
+        return "Psychic Embrace 需要有不会因此气绝的备战超系宝可梦";
+      },
+      onActivate: async (ctx) => {
+        const energies = ctx.player.discard.cards.filter(
+          (c) =>
+            c.card.supertype === "Energy" &&
+            c.card.subtypes.includes("Basic") &&
+            (c.card.types?.includes("Psychic") || c.card.name.includes("Psychic"))
+        );
+        const targets = ctx.player.bench.cards.filter((pokemon) => {
+          const remainingHp = getEffectiveHp(pokemon) - pokemon.damageCounters * 10;
+          return pokemon.card.types?.includes("Psychic") && remainingHp > 20;
+        });
+        if (energies.length === 0 || targets.length === 0) {
+          ctx.log("Psychic Embrace: 当前没有可附加的基础超能量或合法目标");
           return;
         }
-        const energy = psychicEnergies[0];
-        ctx.player.discard.cards = ctx.player.discard.cards.filter(c => c.instanceId !== energy.instanceId);
-        // Attach to active (or self if on bench)
-        const target = ctx.player.active || ctx.source;
-        target.attachedEnergy.push(energy);
-        target.damageCounters += 2; // 20 damage
-        ctx.log(`Psychic Embrace: 从弃牌堆附加超能量给 ${target.card.name}，受到 20 伤害`);
+        const selectedEnergy = ctx.promptSearchDiscard
+          ? (await ctx.promptSearchDiscard(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Psychic") || c.card.name.includes("Psychic")),
+              1,
+              "Psychic Embrace: 选择 1 张基础超能量附加",
+              "player",
+            ))[0]
+          : ctx.searchDiscard(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Psychic") || c.card.name.includes("Psychic")),
+              1
+            )[0];
+        if (!selectedEnergy) return;
+        const selectedTargetIds = await ctx.promptUser({
+          message: "Psychic Embrace: 选择 1 只备战超系宝可梦",
+          min: 1,
+          max: 1,
+          zone: "bench",
+          targets: targets.map((pokemon) => pokemon.instanceId),
+        });
+        const target = targets.find((pokemon) => pokemon.instanceId === selectedTargetIds[0]) ?? targets[0];
+        target.attachedEnergy.push(selectedEnergy);
+        target.damageCounters += 2;
+        ctx.log(`Psychic Embrace: 从弃牌堆附加超能量给 ${target.card.name}，并放置 2 个伤害指示物`);
       },
     },
   ],
@@ -382,18 +469,26 @@ const miraidonEx: NamedEffect = {
     {
       name: "Tandem Unit",
       type: "activated" as const,
-      onActivate: (ctx) => {
+      onActivate: async (ctx) => {
         // Search deck for up to 2 Basic Lightning Pokemon and put them on bench
-        const benchSpace = 5 - ctx.player.bench.cards.length;
+        const benchSpace = getBenchSpace(ctx.state, ctx.playerIndex);
         if (benchSpace <= 0) {
           ctx.log("Tandem Unit: 备战区已满");
           return;
         }
         const count = Math.min(2, benchSpace);
-        const basics = ctx.searchDeck(
-          (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic") && c.card.types?.includes("Lightning"),
-          count
-        );
+        const basics = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(
+              (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic") && c.card.types?.includes("Lightning"),
+              count,
+              "Tandem Unit: 选择最多 2 只基础雷属性宝可梦放到备战区",
+              "player",
+              0,
+            )
+          : ctx.searchDeck(
+              (c) => c.card.supertype === "Pokémon" && c.card.subtypes.includes("Basic") && c.card.types?.includes("Lightning"),
+              count
+            );
         for (const card of basics) {
           card.playedThisTurn = true;
           ctx.player.bench.cards.push(card);
@@ -476,16 +571,33 @@ const comfey: NamedEffect = {
     {
       name: "Flower Selecting",
       type: "activated" as const,
-      onActivate: (ctx) => {
-        // Look at top 2 cards, put 1 in hand, put the other in Lost Zone. Then end turn.
+      canActivate: (ctx) => ctx.player.active?.instanceId === ctx.source.instanceId,
+      getDisabledReason: () => "Flower Selecting 只能在战斗区使用",
+      onActivate: async (ctx) => {
+        // Look at the top 2 cards, put 1 into hand, and the other into the Lost Zone.
         const top2 = ctx.revealTopCards(2);
         if (top2.length === 0) return;
-        // Take first, Lost Zone second
-        ctx.player.hand.cards.push(top2[0]);
+
+        let handCard = top2[0];
         if (top2.length > 1) {
-          ctx.moveToLostZone(top2[1]);
+          const selection = await ctx.promptUser({
+            message: "Flower Selecting: 选择 1 张加入手牌，另一张放入失落区",
+            min: 1,
+            max: 1,
+            zone: "deck",
+            targets: top2.map((card) => card.instanceId),
+          });
+          handCard = top2.find((card) => card.instanceId === selection[0]) ?? top2[0];
         }
-        ctx.log(`Flower Selecting: ${top2[0].card.name} 加入手牌${top2.length > 1 ? `，${top2[1].card.name} 放入失落区` : ""}`);
+
+        const lostZoneCards = top2.filter((card) => card.instanceId !== handCard.instanceId);
+        ctx.player.hand.cards.push(handCard);
+        for (const card of lostZoneCards) {
+          ctx.moveToLostZone(card);
+        }
+        ctx.log(
+          `Flower Selecting: ${handCard.card.name} 加入手牌${lostZoneCards.length > 0 ? `，${lostZoneCards.map((card) => card.card.name).join("、")} 放入失落区` : ""}`
+        );
       },
     },
   ],
@@ -598,12 +710,15 @@ const lumineonV: NamedEffect = {
     {
       name: "Luminous Sign",
       type: "on_enter" as const,
-      onActivate: (ctx) => {
+      onEnter: (ctx) => {
         // When you play this from hand to bench, search deck for a Supporter
         const supporters = ctx.searchDeck(
           (c) => c.card.supertype === "Trainer" && c.card.subtypes.includes("Supporter"),
           1
         );
+        if (supporters.length > 0) {
+          ctx.addToHand(supporters[0]);
+        }
         ctx.shuffleDeck();
         if (supporters.length > 0) {
           ctx.log(`Luminous Sign: 搜索了支持者 ${supporters[0].card.name}`);
@@ -621,14 +736,21 @@ const radiantGreninja: NamedEffect = {
     {
       name: "Concealed Cards",
       type: "activated" as const,
-      onActivate: (ctx) => {
+      onActivate: async (ctx) => {
         // Discard 1 Energy from hand, then draw 2 cards
         const energyInHand = ctx.player.hand.cards.filter(c => c.card.supertype === "Energy");
         if (energyInHand.length === 0) {
           ctx.log("Concealed Cards: 手牌中没有能量卡可弃");
           return;
         }
-        const toDiscard = energyInHand[0];
+        const selection = await ctx.promptUser({
+          message: "Concealed Cards: 选择 1 张能量牌弃掉并抽 2 张",
+          min: 1,
+          max: 1,
+          zone: "hand",
+          targets: energyInHand.map((card) => card.instanceId),
+        });
+        const toDiscard = energyInHand.find((card) => card.instanceId === selection[0]) ?? energyInHand[0];
         ctx.player.hand.cards = ctx.player.hand.cards.filter(c => c.instanceId !== toDiscard.instanceId);
         ctx.player.discard.cards.push(toDiscard);
         ctx.drawCards(2);
@@ -639,12 +761,13 @@ const radiantGreninja: NamedEffect = {
   attacks: [
     {
       name: "Moonlight Shuriken",
+      canAttack: (ctx) => ctx.source.attachedEnergy.length >= 2,
+      getDisabledReason: () => "Moonlight Shuriken 需要弃掉 2 张能量",
       onAttack: (ctx, _baseDamage) => {
         // "Discard 2 Energy from this Pokémon. This attack does 90 damage
         //  to 2 of your opponent's Pokémon."
         // Discard exactly 2 energy
-        const toDiscard = Math.min(2, ctx.source.attachedEnergy.length);
-        for (let i = 0; i < toDiscard; i++) {
+        for (let i = 0; i < 2; i++) {
           const energy = ctx.source.attachedEnergy.pop()!;
           ctx.player.discard.cards.push(energy);
         }
@@ -889,22 +1012,7 @@ const fezandipitiEx: NamedEffect = {
   ],
 };
 
-// Munkidori — Mind Bend (PC, 60, confuse opponent's active)
-const munkidori: NamedEffect = {
-  cardId: "name:Munkidori",
-  cardName: "Munkidori",
-  attacks: [
-    {
-      name: "Mind Bend",
-      onAttack: (_ctx, baseDamage) => {
-        return {
-          damage: baseDamage,
-          statusEffects: [{ status: "confused" as const, target: "defender" as const }],
-        };
-      },
-    },
-  ],
-};
+// Munkidori — full implementation (attack + Adrena Brain ability) is in psychic-core-w7.ts
 
 // ───────────────────────────────────────────────
 // Prebuilt Deck: Evolution Line Attack Effects
@@ -965,12 +1073,79 @@ const flaaffy: NamedEffect = {
       },
     },
   ],
+  abilities: [
+    {
+      name: "Dynamotor",
+      type: "activated" as const,
+      canActivate: (ctx) => {
+        const hasLightningEnergy = ctx.player.discard.cards.some(
+          (c) =>
+            c.card.supertype === "Energy" &&
+            c.card.subtypes.includes("Basic") &&
+            (c.card.types?.includes("Lightning") || c.card.name.includes("Lightning"))
+        );
+        return hasLightningEnergy && ctx.player.bench.cards.length > 0;
+      },
+      getDisabledReason: (ctx) => {
+        const hasLightningEnergy = ctx.player.discard.cards.some(
+          (c) =>
+            c.card.supertype === "Energy" &&
+            c.card.subtypes.includes("Basic") &&
+            (c.card.types?.includes("Lightning") || c.card.name.includes("Lightning"))
+        );
+        if (!hasLightningEnergy) return "Dynamotor 需要弃牌堆里有基础雷能量";
+        return "Dynamotor 需要有备战区宝可梦";
+      },
+      onActivate: async (ctx) => {
+        const energy = ctx.promptSearchDiscard
+          ? (await ctx.promptSearchDiscard(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Lightning") || c.card.name.includes("Lightning")),
+              1,
+              "Dynamotor: 选择 1 张基础雷能量附加到备战区宝可梦",
+              "player",
+            ))[0]
+          : ctx.searchDiscard(
+              (c) =>
+                c.card.supertype === "Energy" &&
+                c.card.subtypes.includes("Basic") &&
+                (c.card.types?.includes("Lightning") || c.card.name.includes("Lightning")),
+              1
+            )[0];
+        if (!energy || ctx.player.bench.cards.length === 0) return;
+        const selection = await ctx.promptUser({
+          message: "Dynamotor: 选择 1 只备战区宝可梦",
+          min: 1,
+          max: 1,
+          zone: "bench",
+          targets: ctx.player.bench.cards.map((pokemon) => pokemon.instanceId),
+        });
+        const target = ctx.player.bench.cards.find((pokemon) => pokemon.instanceId === selection[0]) ?? ctx.player.bench.cards[0];
+        target.attachedEnergy.push(energy);
+        ctx.log(`Dynamotor: 将 ${energy.card.name} 附加给 ${target.card.name}`);
+      },
+    },
+  ],
 };
 
 // Raikou V — Lightning Rondo (20 + 20 per benched Pokemon on both sides)
 const raikouV: NamedEffect = {
   cardId: "name:Raikou V",
   cardName: "Raikou V",
+  abilities: [
+    {
+      name: "Fleet-Footed",
+      type: "activated" as const,
+      canActivate: (ctx) => ctx.player.active?.instanceId === ctx.source.instanceId,
+      getDisabledReason: () => "Fleet-Footed 只能在战斗区使用",
+      onActivate: (ctx) => {
+        ctx.drawCards(1);
+        ctx.log("Fleet-Footed: 抽了 1 张牌");
+      },
+    },
+  ],
   attacks: [
     {
       name: "Lightning Rondo",
@@ -982,13 +1157,15 @@ const raikouV: NamedEffect = {
   ],
 };
 
-// Sableye — Lost Mine (put 12 damage counters on opponent's Pokemon in any way, requires 7+ Lost Zone)
+// Sableye — Lost Mine (put 12 damage counters on opponent's Pokemon in any way, requires 10+ Lost Zone)
 const sableye: NamedEffect = {
   cardId: "name:Sableye",
   cardName: "Sableye",
   attacks: [
     {
       name: "Lost Mine",
+      canAttack: (ctx) => ctx.player.lostZone.cards.length >= 10,
+      getDisabledReason: () => "失落区不足 10 张",
       onAttack: (ctx, _baseDamage) => {
         // Place 12 damage counters (120 damage) distributed among opponent's Pokemon
         // Auto: spread to benched Pokemon closest to KO
@@ -1024,6 +1201,7 @@ const cramorant: NamedEffect = {
   attacks: [
     {
       name: "Spit Innocently",
+      ignoreEnergyCost: (ctx) => ctx.player.lostZone.cards.length >= 4,
       onAttack: (_ctx, baseDamage) => ({ damage: baseDamage }),
     },
   ],
@@ -1083,24 +1261,39 @@ const lugiaVSTAR: NamedEffect = {
     {
       name: "Summoning Star",
       type: "activated" as const,
-      onActivate: (ctx) => {
-        // VSTAR Power: Put up to 2 Colorless Pokemon that don't have a Rule Box from discard to bench
-        const benchSpace = 5 - ctx.player.bench.cards.length;
+      onActivate: async (ctx) => {
+        // VSTAR Power: Put up to 2 Colorless Pokemon that don't have a Rule Box from discard to bench.
+        const benchSpace = getBenchSpace(ctx.state, ctx.playerIndex);
         if (benchSpace <= 0) return;
-        const targets = ctx.player.discard.cards.filter(
-          c => c.card.supertype === "Pokémon" &&
-               c.card.types?.includes("Colorless") &&
-               !c.card.subtypes.some(s => ["V", "ex", "GX", "VSTAR", "VMAX"].includes(s))
-        );
-        const toPlace = targets.slice(0, Math.min(2, benchSpace));
+
+        const toPlace = ctx.promptSearchDiscard
+          ? await ctx.promptSearchDiscard(
+              (c) =>
+                c.card.supertype === "Pokémon" &&
+                c.card.types?.includes("Colorless") &&
+                !c.card.subtypes.some((s) => ["V", "ex", "GX", "VSTAR", "VMAX"].includes(s)),
+              Math.min(2, benchSpace),
+              "Summoning Star: 选择最多 2 只无规则框的无色宝可梦放到备战区",
+              "player",
+              0,
+            )
+          : ctx.searchDiscard(
+              (c) =>
+                c.card.supertype === "Pokémon" &&
+                c.card.types?.includes("Colorless") &&
+                !c.card.subtypes.some((s) => ["V", "ex", "GX", "VSTAR", "VMAX"].includes(s)),
+              Math.min(2, benchSpace)
+            );
+
         for (const card of toPlace) {
-          ctx.player.discard.cards = ctx.player.discard.cards.filter(c => c.instanceId !== card.instanceId);
           card.playedThisTurn = true;
           ctx.player.bench.cards.push(card);
         }
         if (toPlace.length > 0) {
           ctx.log(`Summoning Star (VSTAR): 从弃牌堆放置 ${toPlace.map(c => c.card.name).join(", ")} 到备战区`);
         }
+        const vstarKey = ctx.playerIndex === 0 ? "p1VstarUsed" : "p2VstarUsed";
+        ctx.state.turnStatus[vstarKey] = true;
       },
     },
   ],
@@ -1120,16 +1313,34 @@ const archeops: NamedEffect = {
     {
       name: "Primal Turbo",
       type: "activated" as const,
-      onActivate: (ctx) => {
-        // Search deck for up to 2 Special Energy and attach to 1 of your Pokemon
-        const specials = ctx.player.deck.cards.filter(
-          c => c.card.supertype === "Energy" && !c.card.subtypes.includes("Basic")
-        );
-        const toAttach = specials.slice(0, 2);
-        const target = ctx.player.active || ctx.player.bench.cards[0];
-        if (!target || toAttach.length === 0) return;
+      onActivate: async (ctx) => {
+        // Search deck for up to 2 Special Energy cards and attach them to 1 of your Pokemon.
+        const toAttach = ctx.promptSearchDeck
+          ? await ctx.promptSearchDeck(
+              (c) => c.card.supertype === "Energy" && !c.card.subtypes.includes("Basic"),
+              2,
+              "Primal Turbo: 选择最多 2 张特殊能量附加给 1 只自己的宝可梦",
+              "player",
+              0,
+            )
+          : ctx.searchDeck(
+              (c) => c.card.supertype === "Energy" && !c.card.subtypes.includes("Basic"),
+              2
+            );
+        const targets = ctx.getAllPokemon("player");
+        if (targets.length === 0 || toAttach.length === 0) {
+          ctx.shuffleDeck();
+          return;
+        }
+        const selected = await ctx.promptUser({
+          message: "Primal Turbo: 选择要附加能量的宝可梦",
+          min: 1,
+          max: 1,
+          zone: "own_field",
+          targets: targets.map((pokemon) => pokemon.instanceId),
+        });
+        const target = targets.find((pokemon) => pokemon.instanceId === selected[0]) ?? targets[0];
         for (const energy of toAttach) {
-          ctx.player.deck.cards = ctx.player.deck.cards.filter(c => c.instanceId !== energy.instanceId);
           target.attachedEnergy.push(energy);
         }
         ctx.shuffleDeck();
@@ -1169,7 +1380,6 @@ export const metaAttackEffects: NamedEffect[] = [
   greninjaEx,
   lugiaEx,
   fezandipitiEx,
-  munkidori,
   lugiaV,
   lugiaVSTAR,
   archeops,

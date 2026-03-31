@@ -590,7 +590,7 @@ describe("Perrin — swap hand Pokemon for deck Pokemon", () => {
 });
 
 describe("Lost Vacuum — remove stadium or tool", () => {
-  test("removes stadium when present", () => {
+  test("removes stadium when present", async () => {
     const state = setupGame();
     state.stadium = { card: makeStadiumCard("Beach Court"), owner: 0 };
     const source = state.players[0].active!;
@@ -598,7 +598,7 @@ describe("Lost Vacuum — remove stadium or tool", () => {
 
     const effect = getEffect("any", "Lost Vacuum");
     const ctx = createEffectContext(state, 0, source);
-    effect!.trainer!.onPlay!(ctx);
+    await effect!.trainer!.onPlay!(ctx);
 
     expect(state.stadium).toBeNull();
   });

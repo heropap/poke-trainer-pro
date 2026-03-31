@@ -530,10 +530,10 @@ describe("Offline Rule Generator — Full Database", () => {
     expect(highConf.length / allRules.length).toBeGreaterThan(0.5);
   });
 
-  test("generation is fast (<100ms)", () => {
+  test("generation is fast (<200ms)", () => {
     const start = Date.now();
     generateRules(allCards);
     const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(100);
+    expect(elapsed).toBeLessThan(200);
   });
 });

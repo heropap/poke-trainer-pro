@@ -1016,7 +1016,9 @@ function generateTrainerRule(card: CardInput): TrainerRuleDef | null {
   if (card.supertype !== "Trainer") return null;
   if (!card.rules || card.rules.length === 0) return null;
 
-  let rawSubtype = (card.subtypes || [])[0] || "Item";
+  const validSubtypes = ["Supporter", "Item", "Stadium", "Tool", "Pokémon Tool"];
+  const subtypes = card.subtypes || [];
+  let rawSubtype = subtypes.find(s => validSubtypes.includes(s)) || subtypes[0] || "Item";
   if (rawSubtype === "Pokémon Tool") {
     rawSubtype = "Tool";
   }
