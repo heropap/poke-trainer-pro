@@ -73,6 +73,17 @@ export function loadV2Effects(options?: { force?: boolean }): V2LoadResult {
 
   result.compiled = defs.length;
 
+  // Pre-pass: build name → Set<cardId> to detect ambiguous reprints.
+  // Cards whose name maps to multiple IDs will NOT get a shared name
+  // registration — callers must match by exact cardId instead.
+  const nameToIds = new Map<string, Set<string>>();
+  for (const def of defs) {
+    if (def.cardName) {
+      if (!nameToIds.has(def.cardName)) nameToIds.set(def.cardName, new Set());
+      nameToIds.get(def.cardName)!.add(def.cardId);
+    }
+  }
+
   // Register each compiled def.
   // The registry's built-in priority guard handles same-key overwrites,
   // but we also need the cross-check: a name-based higher-priority registration
@@ -100,8 +111,10 @@ export function loadV2Effects(options?: { force?: boolean }): V2LoadResult {
     }
     result.registeredById++;
 
-    // Also register by name for reprint coverage
-    if (def.cardName) {
+    // Register by name only if this is the sole cardId for this name.
+    // Ambiguous reprints (same name, different ID, possibly different text)
+    // stay ID-only to avoid cross-print rule contamination.
+    if (def.cardName && nameToIds.get(def.cardName)?.size === 1) {
       const nameRegistered = registerByName(
         { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
         V2_LAYER,
@@ -139,6 +152,15 @@ export function loadV2EffectsFromArray(
   const defs = compileAllV2(cards);
   result.compiled = defs.length;
 
+  // Pre-pass: detect ambiguous reprints (same name, multiple IDs)
+  const nameToIds = new Map<string, Set<string>>();
+  for (const def of defs) {
+    if (def.cardName) {
+      if (!nameToIds.has(def.cardName)) nameToIds.set(def.cardName, new Set());
+      nameToIds.get(def.cardName)!.add(def.cardId);
+    }
+  }
+
   const forceOpt2 = options?.force ? { force: true } : undefined;
 
   for (const def of defs) {
@@ -158,7 +180,8 @@ export function loadV2EffectsFromArray(
     }
     result.registeredById++;
 
-    if (def.cardName) {
+    // Only register by name for unambiguous (unique-name) cards
+    if (def.cardName && nameToIds.get(def.cardName)?.size === 1) {
       const nameRegistered = registerByName(
         { ...def, cardName: def.cardName } as CardEffectDef & { cardName: string },
         V2_LAYER,

@@ -143,7 +143,7 @@ describe("V2 Loader — Priority System", () => {
     expect(source).toBe("L2.5");
   });
 
-  test("同名旧印刷的 L2.5 名称注册不会挡住新卡号自己的 ID 规则", () => {
+  test("同名多印刷 — 两张均注册 ID，但不注册共享名称 (迭代4策略)", () => {
     const oldPrint = allCards.find((c) => c.cardId === "me1-51");
     const newerPrint = allCards.find((c) => c.cardId === "sv1-68");
     expect(oldPrint).toBeDefined();
@@ -151,16 +151,22 @@ describe("V2 Loader — Priority System", () => {
 
     const result = loadV2EffectsFromArray([oldPrint!, newerPrint!]);
 
+    // Both registered by ID — no cross-print name contamination
     expect(result.registeredById).toBe(2);
-    expect(result.registeredByName).toBe(1);
+    // Ambiguous name (2 IDs) → no name registration
+    expect(result.registeredByName).toBe(0);
     expect(result.skippedHigherPriority).toBe(0);
     expect(getEffectSource("me1-51")).toBe("L2.5");
     expect(getEffectSource("sv1-68")).toBe("L2.5");
 
+    // ID-based lookup still works correctly
     const newerEffect = getEffect("sv1-68", "Pachirisu");
     expect(newerEffect).not.toBeNull();
     expect(newerEffect!.cardId).toBe("sv1-68");
     expect(newerEffect!.attacks?.[0].name).toBe("Everyone Discharge");
+
+    // Ambiguous name lookup (no specific ID) returns null — correct behavior
+    expect(getEffect("missing-id", "Pachirisu")).toBeNull();
   });
 
   test("手写同名高优先级规则仍会挡住对应卡名的 V2 ID 注册", () => {
