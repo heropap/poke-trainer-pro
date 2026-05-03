@@ -102,7 +102,7 @@
       "AI 自我对战 100 局不崩 (simulateGame)",
       "Jest：AI 不发出非法 action；基础 win-rate 合理"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 7
   },
   {

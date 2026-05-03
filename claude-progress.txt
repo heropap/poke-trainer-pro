@@ -134,3 +134,22 @@ Notes:
   - 13 个新单测，全过；6 suites 61 tests；init.sh 全绿
   - 暂未实装：Flaaffy Dynamotor / Kirlia Refinement / Rare Candy / Ultra Ball /
     Arven / 其他次要 trainer。这些在 F14 之前如有时间可补；不影响 v0 demo 流程。
+
+=== Session F7 | 2026-05-03 ===
+Feature: AI 启发式对手（priority 7）
+Status: completed
+Notes:
+  - core/ai/heuristics.ts：can-pay-cost / pickBestAttack / findEvolution /
+    findUsableAbility 等纯函数 helper
+  - core/ai/policy.ts：chooseAction 主入口 + simulateGame 仿真器
+  - AI 优先级：
+      1. 用能力（Pidgeot Quick Search / Gardevoir Psychic Embrace）
+      2. 进化（hand 有进化 + 在场对应 Basic + 非首回合 + 不是同回合放出）
+      3. 出 Basic 到后场（如果 hand 有 Basic + 后场有空槽）
+      4. 出 Supporter（非首回合 + 每回合一次）
+      5. 出 Nest Ball（如果 bench 有空）
+      6. 挂能量到前场
+      7. 攻击（最高伤害可负担的招式）
+      8. EndTurn 兜底
+  - 4 个新单测：3 套卡组对战不崩 + 30 局 mirror 不崩 + 9 个 cross-deck pairing
+  - 7 suites 66 tests 全过；init.sh 全绿
