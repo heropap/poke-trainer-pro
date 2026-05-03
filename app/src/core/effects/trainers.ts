@@ -1,7 +1,14 @@
-import { getCard } from "../cards";
+import { getAllCards, getCard } from "../cards";
 import { registerEffectStep, registerTrainerEffect } from "../effects";
-import { discardHand, drawN, logEvent, shuffleDeck, shuffleHandIntoDeck } from "./helpers";
-import type { GameState, PlayerIndex } from "../state";
+import {
+  discardHand,
+  drawN,
+  logEvent,
+  setPlayer,
+  shuffleDeck,
+  shuffleHandIntoDeck,
+} from "./helpers";
+import type { GameState, GameCard, PlayerIndex } from "../state";
 import type { PromptResponse } from "../actions";
 
 // Professor's Research (svi-190) — discard your hand, draw 7.
@@ -134,6 +141,282 @@ registerEffectStep(SWITCH_EFFECT, (state: GameState, payload: PromptResponse) =>
   };
   next = logEvent(next, "Switch", { player });
   return next;
+});
+
+// Ultra Ball (svi-196) — discard 2 cards from your hand. Search your deck
+// for a Pokémon, put it into your hand, and shuffle your deck.
+const ULTRA_DISCARD = "svi-196:ultra:discard";
+const ULTRA_SEARCH = "svi-196:ultra:search";
+
+registerTrainerEffect("svi-196", (state, player) => {
+  const ps = state.players[player];
+  if (ps.hand.length < 2) {
+    return logEvent(state, "UltraBallSkip", { player, reason: "hand<2" });
+  }
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Ultra Ball — 弃 2 张手牌",
+      cardIds: ps.hand.map((c) => c.cardId),
+      minCount: 2,
+      maxCount: 2,
+    },
+    pendingEffect: { effectId: ULTRA_DISCARD, player },
+  };
+});
+
+registerEffectStep(ULTRA_DISCARD, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Ultra Ball discard expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error("No pending effect");
+  const player = eff.player;
+  const ps = state.players[player];
+  const hand = [...ps.hand];
+  const toDiscard: GameCard[] = [];
+  for (const cid of payload.cardIds.slice(0, 2)) {
+    const idx = hand.findIndex((c) => c.cardId === cid);
+    if (idx < 0) throw new Error(`Ultra Ball: card ${cid} not in hand`);
+    toDiscard.push(hand[idx]);
+    hand.splice(idx, 1);
+  }
+
+  const pokemonInDeck = Array.from(
+    new Set(ps.deck.filter((c) => getCard(c.cardId).kind === "Pokemon").map((c) => c.cardId)),
+  );
+  let next = setPlayer(state, player, {
+    ...ps,
+    hand,
+    discard: [...ps.discard, ...toDiscard],
+  });
+  if (pokemonInDeck.length === 0) {
+    next = shuffleDeck(next, player);
+    next = { ...next, pendingPrompt: null, pendingEffect: null };
+    return logEvent(next, "UltraBallNoTarget", { player });
+  }
+  return {
+    ...next,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Ultra Ball — 选择一只宝可梦",
+      cardIds: pokemonInDeck,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: ULTRA_SEARCH, player },
+  };
+});
+
+registerEffectStep(ULTRA_SEARCH, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Ultra Ball search expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error();
+  const player = eff.player;
+  const cardId = payload.cardIds[0];
+  const ps = state.players[player];
+  const card = ps.deck.find((c) => c.cardId === cardId);
+  if (!card) throw new Error(`Ultra Ball: card ${cardId} not in deck`);
+
+  let next = setPlayer(state, player, {
+    ...ps,
+    hand: [...ps.hand, card],
+    deck: ps.deck.filter((c) => c.uid !== card.uid),
+  });
+  next = shuffleDeck(next, player);
+  next = { ...next, pendingPrompt: null, pendingEffect: null };
+  return logEvent(next, "UltraBall", { player, cardId });
+});
+
+// Rare Candy (svi-191) — choose a Basic in play; if you have a Stage 2 in
+// hand whose evolution chain roots at that Basic, evolve directly (skip Stage 1).
+// Cannot be used on a Pokémon that was put into play this turn or on first turn.
+const RARE_TARGET = "svi-191:rare:target";
+const RARE_EVO = "svi-191:rare:evo";
+
+function findChainBasicForStage2(stage2Def: ReturnType<typeof getCard>): string | null {
+  if (stage2Def.kind !== "Pokemon" || stage2Def.stage !== "Stage2") return null;
+  if (!stage2Def.evolvesFrom) return null;
+  // Find Stage 1 by name; ok to use registry-wide search.
+  const stage1 = getAllCards().find((c) => {
+    return c.kind === "Pokemon" && c.name === stage2Def.evolvesFrom && c.stage === "Stage1";
+  });
+  if (stage1 && stage1.kind === "Pokemon") return stage1.evolvesFrom ?? null;
+  // Fallback hardcoded chains for cards whose Stage 1 isn't in the registry.
+  const HARDCODED: Record<string, string> = {
+    "obf-164": "Pidgey", // Pidgeot ex (Stage 1 Pidgeotto not registered)
+  };
+  return HARDCODED[stage2Def.id] ?? null;
+}
+
+registerTrainerEffect("svi-191", (state, player) => {
+  if (state.turnNumber === 1 && state.activePlayer === state.goesFirst) return state;
+  const ps = state.players[player];
+
+  const eligibleTargets: string[] = [];
+  const checkBasic = (c: GameCard) => {
+    const def = getCard(c.cardId);
+    if (def.kind !== "Pokemon" || def.stage !== "Basic") return;
+    if (c.markers["playedThisTurn"] === true) return;
+    eligibleTargets.push(c.uid);
+  };
+  if (ps.active) checkBasic(ps.active);
+  ps.bench.forEach((b) => b && checkBasic(b));
+
+  // Need at least one Stage 2 in hand
+  const hasStage2 = ps.hand.some((c) => {
+    const d = getCard(c.cardId);
+    return d.kind === "Pokemon" && d.stage === "Stage2";
+  });
+  if (eligibleTargets.length === 0 || !hasStage2) {
+    return logEvent(state, "RareCandyNoTarget", { player });
+  }
+
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectTarget",
+      player,
+      message: "Rare Candy — 选择要进化的基础宝可梦",
+      eligibleUids: eligibleTargets,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: RARE_TARGET, player },
+  };
+});
+
+registerEffectStep(RARE_TARGET, (state, payload) => {
+  if (payload.kind !== "selectTarget") {
+    throw new Error("Rare Candy target expects selectTarget");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error();
+  const player = eff.player;
+  const targetUid = payload.uids[0];
+  const ps = state.players[player];
+
+  // Locate target
+  let target: GameCard | null = null;
+  if (ps.active && ps.active.uid === targetUid) target = ps.active;
+  if (!target) {
+    for (const b of ps.bench) {
+      if (b && b.uid === targetUid) {
+        target = b;
+        break;
+      }
+    }
+  }
+  if (!target) {
+    return { ...state, pendingPrompt: null, pendingEffect: null };
+  }
+  const targetDef = getCard(target.cardId);
+  if (targetDef.kind !== "Pokemon") {
+    return { ...state, pendingPrompt: null, pendingEffect: null };
+  }
+  const basicName = targetDef.name;
+
+  // Find Stage 2 in hand whose chain matches
+  const validStage2: string[] = [];
+  for (const c of ps.hand) {
+    const d = getCard(c.cardId);
+    if (d.kind !== "Pokemon" || d.stage !== "Stage2") continue;
+    if (findChainBasicForStage2(d) === basicName) {
+      validStage2.push(c.cardId);
+    }
+  }
+  if (validStage2.length === 0) {
+    return logEvent(
+      { ...state, pendingPrompt: null, pendingEffect: null },
+      "RareCandyNoStage2",
+      { player, basic: basicName },
+    );
+  }
+
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: `Rare Candy — 选 Stage 2 进化 ${basicName}`,
+      cardIds: validStage2,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: {
+      effectId: RARE_EVO,
+      player,
+      data: { targetUid },
+    },
+  };
+});
+
+registerEffectStep(RARE_EVO, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Rare Candy evo expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error();
+  const player = eff.player;
+  const targetUid = eff.data?.targetUid as string | undefined;
+  if (!targetUid) throw new Error("No targetUid in Rare Candy evo");
+  const stage2CardId = payload.cardIds[0];
+  const ps = state.players[player];
+
+  const evoCard = ps.hand.find((c) => c.cardId === stage2CardId);
+  if (!evoCard) throw new Error(`Stage 2 ${stage2CardId} not in hand`);
+
+  // Find target in play
+  let target: GameCard | null = null;
+  let zone: "active" | "bench" = "active";
+  let benchIdx = -1;
+  if (ps.active && ps.active.uid === targetUid) {
+    target = ps.active;
+    zone = "active";
+  } else {
+    for (let i = 0; i < ps.bench.length; i++) {
+      const b = ps.bench[i];
+      if (b && b.uid === targetUid) {
+        target = b;
+        zone = "bench";
+        benchIdx = i;
+        break;
+      }
+    }
+  }
+  if (!target) {
+    return { ...state, pendingPrompt: null, pendingEffect: null };
+  }
+
+  const evolved: GameCard = {
+    ...target,
+    cardId: evoCard.cardId,
+    uid: evoCard.uid,
+    damage: target.damage,
+    attachedEnergy: target.attachedEnergy,
+    attachedTool: target.attachedTool,
+    evolutionStack: [...target.evolutionStack, target],
+    status: [],
+    markers: { evolvedThisTurn: true },
+  };
+
+  let newPs = { ...ps, hand: ps.hand.filter((c) => c.uid !== evoCard.uid) };
+  if (zone === "active") {
+    newPs = { ...newPs, active: evolved };
+  } else {
+    const newBench = [...newPs.bench];
+    newBench[benchIdx] = evolved;
+    newPs = { ...newPs, bench: newBench };
+  }
+
+  let next = setPlayer(state, player, newPs);
+  next = { ...next, pendingPrompt: null, pendingEffect: null };
+  return logEvent(next, "RareCandy", { player, fromCardId: target.cardId, toCardId: evoCard.cardId });
 });
 
 // Nest Ball (svi-181) — search your deck for a Basic Pokemon, put it on your

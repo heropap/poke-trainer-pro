@@ -112,16 +112,25 @@ export function findUsableAbility(
     const def = asPokemonDef(c);
     if (!def?.abilities) continue;
     for (const a of def.abilities) {
-      // Pidgeot Quick Search & Gardevoir Psychic Embrace are the v0 abilities
-      // that the AI knows how to use. Skip others.
+      // Abilities the v0 AI knows how to use:
       if (a.name === "Quick Search" && c.cardId === "obf-164") {
-        if (player.deck.length > 0) {
+        if (player.deck.length > 0) return { card: c, abilityName: a.name };
+      }
+      if (a.name === "Psychic Embrace" && c.cardId === "svi-86") {
+        if (player.discard.some((d) => d.cardId === "sve-5")) {
           return { card: c, abilityName: a.name };
         }
       }
-      if (a.name === "Psychic Embrace" && c.cardId === "svi-86") {
-        // Only worth using if we have Psychic Energy in discard AND a target alive.
-        if (player.discard.some((d) => d.cardId === "sve-5")) {
+      if (a.name === "Dynamotor" && c.cardId === "evs-55") {
+        if (player.discard.some((d) => d.cardId === "sve-4")) {
+          // Need a bench target.
+          if (player.bench.some((b) => b !== null)) {
+            return { card: c, abilityName: a.name };
+          }
+        }
+      }
+      if (a.name === "Refinement" && c.cardId === "svi-68") {
+        if (player.hand.length > 0 && player.deck.length > 0) {
           return { card: c, abilityName: a.name };
         }
       }

@@ -4,5 +4,6 @@ import "./miraidon-ex";
 import "./pidgeot-ex";
 import "./gardevoir-ex";
 import "./trainers";
+import "./abilities";
 
 export {};

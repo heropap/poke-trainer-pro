@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useReducer, useState } from "react";
-import { reducer, autoSetup } from "@/core/reducer";
+import { createGameState, reducer } from "@/core/reducer";
 import { chooseAction } from "@/core/ai/policy";
 import "@/core/decks";
 import type { Action } from "@/core/actions";
@@ -17,9 +17,16 @@ export interface UseGameOptions {
 }
 
 export function useGame(opts: UseGameOptions) {
-  const [state, dispatch] = useReducer(reducer, null as unknown as GameState, () =>
-    autoSetup(opts.seed, opts.selfDeck, opts.oppDeck, HUMAN_PLAYER),
-  );
+  const [state, dispatch] = useReducer(reducer, null as unknown as GameState, () => {
+    // Just kick off GameStart; the AI useEffect below auto-resolves AI prompts,
+    // and PromptStack renders human prompts (selectActiveSetup, selectBenchSetup).
+    const init = createGameState(opts.seed);
+    return reducer(init, {
+      type: "GameStart",
+      deckSlugs: [opts.selfDeck, opts.oppDeck],
+      goesFirst: HUMAN_PLAYER,
+    });
+  });
   const [thinking, setThinking] = useState(false);
 
   // Auto-dispatch driver — handles two cases:

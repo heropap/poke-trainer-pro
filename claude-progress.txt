@@ -284,3 +284,24 @@ Notes (run /build-fix internal testing):
        Gardevoir vs Charizard (seed=99) → 12 turns gameOver (noBench, 5 endTurns + 2 prompts)
        Miraidon vs Gardevoir (seed=11) → 6 turns gameOver (noBench, 6 endTurns)
   - npm run build 通过；jest 8 suites 94 tests 全过；init.sh 全绿。
+
+=== Session v0.2 polish | 2026-05-03 ===
+Status: completed
+Notes (用户问「可以交付吗」，识别 3 处显著短板继续优化)：
+  1. 人类玩家自选起手 active + bench：
+     useGame 不再调 autoSetup，改为 createGameState + GameStart。
+     AI prompt 由 useEffect 自动响应；human prompt（selectActiveSetup /
+     selectBenchSetup）由 PromptStack 渲染等待人类操作。
+  2. Ultra Ball 真实效果：multi-step 弃 2 张 → 搜任意宝可梦 → 入手 → 洗牌
+     PromptStack 的 selectFromList 升级支持 multi-select（minCount/maxCount）
+  3. Rare Candy 真实效果：multi-step 选 Basic 目标 → 选手牌 Stage 2 → 跳过
+     Stage 1 直接进化。带链路校验（findChainBasicForStage2 + Pidgey→Pidgeot
+     ex 的硬编码 fallback）
+  4. Flaaffy Dynamotor 能力：弃牌区雷能量 → 后场任意 Pokemon
+     新增 effects/abilities.ts；AI heuristics 加入识别
+  5. Kirlia Refinement 能力：弃 1 手牌 → 抽 2 张
+  - AI 决策同步更新：会用 Ultra Ball / Rare Candy / Dynamotor / Refinement
+  - 浏览器 E2E：seed=42 charizard vs miraidon → 2 turns 完整 game over，
+    事件链显示新效果全部触发（Dynamotor / TandemUnit / NestBall / Attack /
+    Evolve / ProfessorsResearch / PlayItem 等）
+  - 8 suites 94 tests 全过；npm run build 通过；init.sh 全绿

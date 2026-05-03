@@ -171,31 +171,84 @@ function PromptBody({ state, dispatch }: { state: GameState; dispatch: Dispatch 
           </div>
         </div>
       );
-    case "selectFromList":
+    case "selectFromList": {
+      const multi = prompt.minCount > 1 || prompt.maxCount > 1;
+      if (!multi) {
+        return (
+          <div className="space-y-2">
+            <div className="text-xs text-zinc-400">{prompt.message}</div>
+            <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
+              {Array.from(new Set(prompt.cardIds)).map((cid) => {
+                const def = getCard(cid);
+                return (
+                  <button
+                    key={cid}
+                    onClick={() =>
+                      dispatch({
+                        type: "ResolvePrompt",
+                        payload: { kind: "selectFromList", cardIds: [cid] },
+                      })
+                    }
+                    className="rounded-md bg-zinc-800 hover:bg-violet-700/40 border border-zinc-700 hover:border-violet-400 p-2 text-[10px] text-zinc-200 text-left"
+                  >
+                    {def.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+      // Multi-select: render with index keys (so duplicates can be picked separately).
+      const picked: number[] = Array.from(selected).map((s) => Number(s));
+      const togglePos = (idx: number) => {
+        const next = new Set(selected);
+        const key = String(idx);
+        if (next.has(key)) next.delete(key);
+        else if (next.size < prompt.maxCount) next.add(key);
+        setSelected(next);
+      };
       return (
         <div className="space-y-2">
-          <div className="text-xs text-zinc-400">{prompt.message}</div>
+          <div className="text-xs text-zinc-400">
+            {prompt.message}（{prompt.minCount === prompt.maxCount ? `选择 ${prompt.minCount} 张` : `${prompt.minCount}-${prompt.maxCount} 张`}）
+          </div>
           <div className="grid grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
-            {Array.from(new Set(prompt.cardIds)).map((cid) => {
+            {prompt.cardIds.map((cid, idx) => {
               const def = getCard(cid);
+              const isPicked = picked.includes(idx);
               return (
                 <button
-                  key={cid}
-                  onClick={() =>
-                    dispatch({
-                      type: "ResolvePrompt",
-                      payload: { kind: "selectFromList", cardIds: [cid] },
-                    })
-                  }
-                  className="rounded-md bg-zinc-800 hover:bg-violet-700/40 border border-zinc-700 hover:border-violet-400 p-2 text-[10px] text-zinc-200 text-left"
+                  key={`${cid}-${idx}`}
+                  onClick={() => togglePos(idx)}
+                  className={`rounded-md border p-2 text-[10px] text-left ${
+                    isPicked
+                      ? "bg-violet-700/60 border-violet-300 text-white"
+                      : "bg-zinc-800 border-zinc-700 text-zinc-200 hover:border-violet-400"
+                  }`}
                 >
                   {def.name}
                 </button>
               );
             })}
           </div>
+          <button
+            disabled={selected.size < prompt.minCount}
+            onClick={() => {
+              const positions = Array.from(selected).map((s) => Number(s)).sort((a, b) => a - b);
+              const cardIds = positions.map((p) => prompt.cardIds[p]);
+              dispatch({
+                type: "ResolvePrompt",
+                payload: { kind: "selectFromList", cardIds },
+              });
+            }}
+            className="mt-2 w-full px-3 py-2 rounded-md bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-semibold"
+          >
+            确认 ({selected.size}/{prompt.minCount === prompt.maxCount ? prompt.minCount : prompt.maxCount})
+          </button>
         </div>
       );
+    }
     case "coinFlip":
       return (
         <div className="space-y-2">

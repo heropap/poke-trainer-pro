@@ -1,5 +1,6 @@
+import { getCard } from "../cards";
 import type { Action, PromptResponse } from "../actions";
-import type { GameState, PlayerIndex } from "../state";
+import type { GameCard, GameState, PlayerIndex } from "../state";
 import {
   findBasicInHand,
   findEnergyInHand,
@@ -137,6 +138,34 @@ function chooseMainAction(state: GameState, player: PlayerIndex): Action {
   const nest = findItemInHand(ps, ["svi-181"]);
   if (nest && findFirstEmptyBenchSlot(ps) >= 0) {
     return { type: "PlayItem", player, uid: nest.uid };
+  }
+
+  // (E.5) Rare Candy — if any Stage 2 in hand has a chain-matched Basic in play
+  // (and not played this turn), the engine prompts for selection. We try it
+  // optimistically; engine no-ops if no valid pair.
+  const rare = findItemInHand(ps, ["svi-191"]);
+  const isFirstTurn2 = state.turnNumber === 1 && state.activePlayer === state.goesFirst;
+  if (rare && !isFirstTurn2) {
+    const handHasStage2 = ps.hand.some((c) => {
+      const d = getCard(c.cardId);
+      return d.kind === "Pokemon" && d.stage === "Stage2";
+    });
+    const isBasicReady = (c: GameCard | null) => {
+      if (!c) return false;
+      const d = getCard(c.cardId);
+      return d.kind === "Pokemon" && d.stage === "Basic" && c.markers["playedThisTurn"] !== true;
+    };
+    const playHasBasic = isBasicReady(ps.active) || ps.bench.some(isBasicReady);
+    if (handHasStage2 && playHasBasic) {
+      return { type: "PlayItem", player, uid: rare.uid };
+    }
+  }
+
+  // (E.6) Ultra Ball — search-deck-for-Pokemon; needs 3+ cards in hand (1 to
+  // play + 2 to discard).
+  const ultra = findItemInHand(ps, ["svi-196"]);
+  if (ultra && ps.hand.length >= 3 && ps.deck.length > 0) {
+    return { type: "PlayItem", player, uid: ultra.uid };
   }
 
   // (F) Switch — only if active is hurt and a healthy bencher exists.
