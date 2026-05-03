@@ -40,3 +40,17 @@ Notes:
   - 8 个单元测试全过；init.sh 全绿
   - 卡表参考归档版 archive/.../prebuilt-decks.ts；标准 SV 时代 Charizard ex / Pidgeot ex 引擎主线，
     与中国官方大师卡组的具体卡数可能略有出入，待用户提供官方卡表后再 reconcile。
+
+=== Session F2 | 2026-05-03 ===
+Feature: 密勒顿 ex + 沙奈朵 ex 大师卡组（priority 2）
+Status: completed
+Notes:
+  - 新建 app/src/core/decks/miraidon-ex.ts：10 张 unique CardDef + 60 张 deck list
+  - 新建 app/src/core/decks/gardevoir-ex.ts：10 张 unique CardDef + 60 张 deck list
+  - 修改 app/src/core/decks.ts：DECKS 暴露 3 套
+  - 13 个单测全过；init.sh 全绿
+  - 偏离归档版地方：
+      Miraidon 把 2 Regieleki VMAX 替换成 2 Iron Hands ex (PAR 70)，
+      避免 VMAX 没有对应 V 的非法 deck 构造（vMAX 必须有同名 V）。
+      Iron Hands ex 是真实的 SV 时代 Miraidon 顶级搭档，Standard 合法。
+  - 三套卡组共 37 张 unique 卡牌（Charizard 17 + Miraidon 复用 + Gardevoir 复用 + 新增）

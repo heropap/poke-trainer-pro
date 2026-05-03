@@ -1,7 +1,9 @@
 import { charizardExDeck } from "./decks/charizard-ex";
+import { miraidonExDeck } from "./decks/miraidon-ex";
+import { gardevoirExDeck } from "./decks/gardevoir-ex";
 import type { DeckDef } from "./types";
 
-export const DECKS: DeckDef[] = [charizardExDeck];
+export const DECKS: DeckDef[] = [charizardExDeck, miraidonExDeck, gardevoirExDeck];
 
 export function getDeck(slug: string): DeckDef {
   const deck = DECKS.find((d) => d.slug === slug);
@@ -9,4 +11,4 @@ export function getDeck(slug: string): DeckDef {
   return deck;
 }
 
-export { charizardExDeck };
+export { charizardExDeck, miraidonExDeck, gardevoirExDeck };

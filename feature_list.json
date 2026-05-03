@@ -35,7 +35,7 @@
       "在 src/core/decks.ts 暴露 3 套大师卡组（DeckDef 对象）",
       "Jest 测试：每套 60 张、合规性检查通过"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 2
   },
   {
