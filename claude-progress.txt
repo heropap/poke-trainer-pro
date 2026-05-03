@@ -90,3 +90,23 @@ Notes:
       * AttachTool：唯一槽位 + 校验
   - core/effects.ts：CardId → EffectHandler 注册表（F4 仅基础设施，F6 注册具体效果）
   - 12 个新单测全过；4 个 test suite，共 37 tests；init.sh 全绿
+
+=== Session F5 | 2026-05-03 ===
+Feature: 攻击 + 伤害 + KO + 取奖励（priority 5）
+Status: completed
+Notes:
+  - 新 actions：Attack / PromoteFromKO + 新 prompt kind: promoteFromKO
+  - reducer 实现：
+      * canPayAttackCost：能量花费校验（先匹配特定属性，剩余满足 Colorless）
+      * calculateDamage：base × 2 weakness / -30 resistance
+      * KO 检测：damage >= HP → 弃牌 + 取奖励（normal 1 / ex&V&VSTAR 2 / VMAX 3）
+      * 取奖励后判断胜利（prizes 空 → 胜利）
+      * KO 后判断 noBench → 输掉
+      * 否则发起 promoteFromKO prompt 让对方晋升后场
+      * Promote 之后自动结束本回合（autoEndTurn）
+      * 非 KO 攻击直接 autoEndTurn（v0 简化：所有攻击都直接结束回合，
+        因为状态异常 checkup 在 v0 内没真实效果）
+  - 11 个新单测：基础伤害 / 弱点 / 能量不足拒绝 / 首回合禁攻 / KO 1-prize /
+    ex KO 2-prize / 无后场判负 / promote 流程 / 6-prize 胜利 / 自动 endTurn /
+    未知 action 不崩
+  - 5 个 test suite，共 48 tests；init.sh 全绿

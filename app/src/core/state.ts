@@ -161,4 +161,9 @@ export type Prompt =
       player: PlayerIndex;
       message: string;
       options: string[];
+    }
+  | {
+      kind: "promoteFromKO";
+      player: PlayerIndex;
+      eligibleBenchSlots: number[];
     };

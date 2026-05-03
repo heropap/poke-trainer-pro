@@ -692,6 +692,270 @@ function requireMainPhase(state: GameState, player: PlayerIndex): void {
 }
 
 // =====================================================================
+// Attack flow (F5)
+// =====================================================================
+
+import type { EnergyType } from "./types";
+
+function canPayAttackCost(attached: GameCard[], cost: EnergyType[]): boolean {
+  const remaining = [...attached];
+  const specific = cost.filter((c) => c !== "Colorless");
+  const colorlessCount = cost.filter((c) => c === "Colorless").length;
+
+  for (const type of specific) {
+    const idx = remaining.findIndex((e) => {
+      const def = getCard(e.cardId);
+      return def.kind === "Energy" && def.energyType === type;
+    });
+    if (idx < 0) return false;
+    remaining.splice(idx, 1);
+  }
+  return remaining.length >= colorlessCount;
+}
+
+function calculateDamage(
+  attackerActive: GameCard,
+  defenderActive: GameCard,
+  baseDamage: number,
+): number {
+  const attackerDef = asPokemon(getCard(attackerActive.cardId));
+  const defenderDef = asPokemon(getCard(defenderActive.cardId));
+  if (!attackerDef || !defenderDef) return baseDamage;
+
+  const attackerType = attackerDef.types[0];
+  let dmg = baseDamage;
+
+  if (defenderDef.weakness && defenderDef.weakness.type === attackerType) {
+    dmg = dmg * 2;
+  }
+  if (defenderDef.resistance && defenderDef.resistance.type === attackerType) {
+    dmg = Math.max(0, dmg - 30);
+  }
+
+  return dmg;
+}
+
+function prizeCountForKO(card: GameCard): number {
+  const def = asPokemon(getCard(card.cardId));
+  if (!def) return 1;
+  switch (def.rarity) {
+    case "ex":
+    case "V":
+    case "VSTAR":
+      return 2;
+    case "VMAX":
+      return 3;
+    default:
+      return 1;
+  }
+}
+
+function moveKOdToDiscard(player: PlayerState, kod: GameCard): PlayerState {
+  // The KO'd card itself + all attached energy + tool + evolution stack go to discard.
+  const toDiscard = [
+    kod,
+    ...kod.attachedEnergy,
+    ...(kod.attachedTool ? [kod.attachedTool] : []),
+    ...kod.evolutionStack,
+  ];
+  // Wipe the active.
+  return {
+    ...player,
+    active: player.active && player.active.uid === kod.uid ? null : player.active,
+    bench: player.bench.map((b) => (b && b.uid === kod.uid ? null : b)),
+    discard: [...player.discard, ...toDiscard],
+  };
+}
+
+function handleAttack(state: GameState, player: PlayerIndex, attackIndex: number): GameState {
+  if (state.activePlayer !== player) {
+    throw new Error(`Player ${player} is not the active player`);
+  }
+  if (state.phase !== "main") {
+    throw new Error(`Attack requires phase=main, got ${state.phase}`);
+  }
+  if (state.pendingPrompt) {
+    throw new Error(`Resolve pending prompt before attacking`);
+  }
+  if (isFirstTurn(state)) {
+    throw new Error(`Cannot attack on the first turn`);
+  }
+
+  const attacker = state.players[player];
+  const defenderIdx = (1 - player) as PlayerIndex;
+  const defender = state.players[defenderIdx];
+
+  if (!attacker.active) throw new Error(`No active Pokemon to attack with`);
+  if (!defender.active) throw new Error(`Opponent has no active Pokemon`);
+
+  const attackerDef = asPokemon(getCard(attacker.active.cardId));
+  if (!attackerDef) throw new Error(`Active card is not a Pokemon`);
+
+  const attack = attackerDef.attacks[attackIndex];
+  if (!attack) throw new Error(`Attack index ${attackIndex} not found`);
+
+  if (!canPayAttackCost(attacker.active.attachedEnergy, attack.cost)) {
+    throw new Error(
+      `Insufficient energy for ${attack.name}: needs ${attack.cost.join(",")}`,
+    );
+  }
+
+  // Apply effect (F6 will plug in card-specific scaling). For F5 we use base
+  // damage + weakness/resistance only.
+  const damage = calculateDamage(attacker.active, defender.active, attack.damage);
+
+  // Apply damage to defender's active
+  const newDefenderActive: GameCard = {
+    ...defender.active,
+    damage: defender.active.damage + damage,
+  };
+  let next = setPlayer(state, defenderIdx, { ...defender, active: newDefenderActive });
+  next = appendLog(next, "Attack", {
+    player,
+    attackName: attack.name,
+    damage,
+  });
+
+  // Now check for KOs and resolve prizes / promotions.
+  next = resolveKOs(next, player);
+  if (next.phase === "gameOver") return next;
+
+  // If no pending prompt (no KO promotion needed), end the turn.
+  if (!next.pendingPrompt) {
+    next = autoEndTurn(next, player);
+  }
+
+  return next;
+}
+
+function resolveKOs(state: GameState, attacker: PlayerIndex): GameState {
+  let next = state;
+
+  // Check both sides; in v0 we mainly focus on opponent's active being KO'd.
+  for (let i = 0; i < 2; i++) {
+    const idx = i as PlayerIndex;
+    const ps = next.players[idx];
+    if (ps.active && ps.active.damage >= getHpFor(ps.active)) {
+      const ko = ps.active;
+      const prizes = prizeCountForKO(ko);
+
+      // Move to discard
+      const wiped = moveKOdToDiscard(ps, ko);
+      next = setPlayer(next, idx, wiped);
+
+      // Take prizes for the attacker (or opposite side if recoil).
+      // Standard: when player A's Pokemon is KO'd, player B (the opponent)
+      // takes prizes. Here `attacker` is the one who initiated the attack;
+      // typically equal to (1 - idx).
+      const takerIdx = (1 - idx) as PlayerIndex;
+      const taker = next.players[takerIdx];
+      const taken = Math.min(prizes, taker.prizes.length);
+      const remainingPrizes = taker.prizes.slice(taken);
+      const grabbed = taker.prizes.slice(0, taken);
+      next = setPlayer(next, takerIdx, {
+        ...taker,
+        prizes: remainingPrizes,
+        hand: [...taker.hand, ...grabbed],
+      });
+      next = appendLog(next, "PrizeTaken", { player: takerIdx, count: taken });
+
+      // Check win: prizes empty
+      if (next.players[takerIdx].prizes.length === 0) {
+        next = appendLog(
+          { ...next, phase: "gameOver", winner: takerIdx, winReason: "prizes" },
+          "Win",
+          { player: takerIdx, reason: "prizes" },
+        );
+        return next;
+      }
+
+      // Check if KO'd side has bench
+      const wipedPlayer = next.players[idx];
+      const benchHas = wipedPlayer.bench.some((b) => b !== null);
+      if (!benchHas) {
+        // Loss by no-bench
+        const winnerIdx = takerIdx;
+        next = appendLog(
+          { ...next, phase: "gameOver", winner: winnerIdx, winReason: "noBench" },
+          "Win",
+          { player: winnerIdx, reason: "noBench" },
+        );
+        return next;
+      }
+
+      // Otherwise: prompt KO'd side to promote
+      const eligibleSlots: number[] = [];
+      wipedPlayer.bench.forEach((b, slotIdx) => {
+        if (b !== null) eligibleSlots.push(slotIdx);
+      });
+      next = {
+        ...next,
+        pendingPrompt: {
+          kind: "promoteFromKO",
+          player: idx,
+          eligibleBenchSlots: eligibleSlots,
+        },
+      };
+
+      // Don't break — there could be simultaneous KO on the other side too;
+      // but a second iteration would set another prompt overriding. For v0
+      // we only handle one KO per attack (single-target damage).
+      void attacker;
+      return next;
+    }
+  }
+
+  return next;
+}
+
+function getHpFor(card: GameCard): number {
+  const def = asPokemon(getCard(card.cardId));
+  return def ? def.hp : 0;
+}
+
+function handlePromoteFromKO(
+  state: GameState,
+  player: PlayerIndex,
+  benchSlot: number,
+): GameState {
+  if (state.pendingPrompt?.kind !== "promoteFromKO" || state.pendingPrompt.player !== player) {
+    throw new Error(`No promote-from-KO prompt for player ${player}`);
+  }
+  const ps = state.players[player];
+  const promoted = ps.bench[benchSlot];
+  if (!promoted) throw new Error(`Bench slot ${benchSlot} is empty`);
+
+  const newBench = [...ps.bench];
+  newBench[benchSlot] = null;
+  const newPs: PlayerState = { ...ps, active: promoted, bench: newBench };
+  let next = setPlayer(state, player, newPs);
+  next = { ...next, pendingPrompt: null };
+  next = appendLog(next, "Promote", { player, cardId: promoted.cardId });
+
+  // Continue to end-of-turn for the attacker.
+  next = autoEndTurn(next, state.activePlayer);
+  return next;
+}
+
+function autoEndTurn(state: GameState, player: PlayerIndex): GameState {
+  // Skip if already game over or another prompt is pending.
+  if (state.phase === "gameOver") return state;
+  if (state.pendingPrompt) return state;
+  // Move to next player's draw phase.
+  const nextPlayer = (1 - player) as PlayerIndex;
+  return appendLog(
+    {
+      ...state,
+      activePlayer: nextPlayer,
+      phase: "draw",
+      turnNumber: state.turnNumber + 1,
+    },
+    "EndTurn",
+    { player, auto: true },
+  );
+}
+
+// =====================================================================
 // Other actions
 // =====================================================================
 
@@ -704,6 +968,9 @@ function handleResolvePrompt(state: GameState, payload: PromptResponse): GameSta
   }
   if (prompt.kind === "selectBenchSetup" && payload.kind === "selectBenchSetup") {
     return handlePlaceBenchSetup(state, prompt.player, payload.uids);
+  }
+  if (prompt.kind === "promoteFromKO" && payload.kind === "promoteFromKO") {
+    return handlePromoteFromKO(state, prompt.player, payload.benchSlot);
   }
   throw new Error(`Prompt kind ${prompt.kind} cannot be resolved by payload kind ${payload.kind}`);
 }
@@ -762,6 +1029,10 @@ export function reducer(state: GameState, action: Action): GameState {
       return handlePlayStadium(state, action.player, action.uid);
     case "AttachTool":
       return handleAttachTool(state, action.player, action.uid, action.targetUid);
+    case "Attack":
+      return handleAttack(state, action.player, action.attackIndex);
+    case "PromoteFromKO":
+      return handlePromoteFromKO(state, action.player, action.benchSlot);
     case "ResolvePrompt":
       return handleResolvePrompt(state, action.payload);
     case "Concede":

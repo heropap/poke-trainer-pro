@@ -80,6 +80,16 @@ export type Action =
       targetUid: string;
     }
   | {
+      type: "Attack";
+      player: PlayerIndex;
+      attackIndex: number;
+    }
+  | {
+      type: "PromoteFromKO";
+      player: PlayerIndex;
+      benchSlot: number;
+    }
+  | {
       type: "ResolvePrompt";
       payload: PromptResponse;
     }
@@ -95,4 +105,5 @@ export type PromptResponse =
   | { kind: "selectFromList"; cardIds: string[] }
   | { kind: "coinFlip"; results: boolean[] }
   | { kind: "confirm" }
-  | { kind: "chooseOption"; choice: number };
+  | { kind: "chooseOption"; choice: number }
+  | { kind: "promoteFromKO"; benchSlot: number };

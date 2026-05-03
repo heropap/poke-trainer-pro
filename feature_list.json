@@ -75,7 +75,7 @@
       "胜负条件：6 奖励 / 无后场 / deck out / 投降",
       "Jest 测试：完整攻击流（含弱点、KO、取奖励）"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 5
   },
   {
