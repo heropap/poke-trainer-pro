@@ -1,6 +1,7 @@
 "use client";
 
 import { getCard } from "@/core/cards";
+import { canPayCost } from "@/core/ai/heuristics";
 import type { GameCard, GameState, PlayerIndex } from "@/core/state";
 import type { Dispatch } from "./useGame";
 
@@ -144,6 +145,9 @@ export function CardActionMenu({
       def.attacks.forEach((atk, i) => {
         const reasons: string[] = [];
         if (isFirstTurn) reasons.push("首回合不可攻击");
+        if (!canPayCost(card.attachedEnergy, atk.cost)) {
+          reasons.push(`能量不足 [${atk.cost.join(",")}]`);
+        }
         actions.push({
           label: `攻击：${atk.name} (${atk.damage})`,
           disabled: reasons.length ? reasons.join(" / ") : undefined,

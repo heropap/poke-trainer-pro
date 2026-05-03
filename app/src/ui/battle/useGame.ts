@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import { createGameState, reducer } from "@/core/reducer";
 import { chooseAction } from "@/core/ai/policy";
 import "@/core/decks";
@@ -16,17 +16,52 @@ export interface UseGameOptions {
   seed: number;
 }
 
+// Wrap reducer so any thrown error becomes a state-stored toast instead of
+// crashing the React tree. The original action is dropped on error.
+function safeReducer(
+  state: GameState & { __toast?: string | null },
+  action: Action | { type: "ClearToast" },
+): GameState & { __toast?: string | null } {
+  if (action.type === "ClearToast") {
+    return { ...state, __toast: null };
+  }
+  try {
+    const next = reducer(state, action);
+    return { ...next, __toast: null };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (typeof window !== "undefined") {
+      console.warn("[reducer error]", msg);
+    }
+    return { ...state, __toast: msg };
+  }
+}
+
 export function useGame(opts: UseGameOptions) {
-  const [state, dispatch] = useReducer(reducer, null as unknown as GameState, () => {
-    // Just kick off GameStart; the AI useEffect below auto-resolves AI prompts,
-    // and PromptStack renders human prompts (selectActiveSetup, selectBenchSetup).
-    const init = createGameState(opts.seed);
-    return reducer(init, {
-      type: "GameStart",
-      deckSlugs: [opts.selfDeck, opts.oppDeck],
-      goesFirst: HUMAN_PLAYER,
-    });
-  });
+  const [state, rawDispatch] = useReducer(
+    safeReducer,
+    null as unknown as GameState & { __toast?: string | null },
+    () => {
+      // Just kick off GameStart; the AI useEffect below auto-resolves AI prompts,
+      // and PromptStack renders human prompts (selectActiveSetup, selectBenchSetup).
+      const init = createGameState(opts.seed);
+      return {
+        ...reducer(init, {
+          type: "GameStart",
+          deckSlugs: [opts.selfDeck, opts.oppDeck],
+          goesFirst: HUMAN_PLAYER,
+        }),
+        __toast: null,
+      };
+    },
+  );
+
+  const dispatch = useCallback((action: Action) => rawDispatch(action), [rawDispatch]);
+  const clearToast = useCallback(
+    () => rawDispatch({ type: "ClearToast" }),
+    [rawDispatch],
+  );
+
   const [thinking, setThinking] = useState(false);
 
   // Auto-dispatch driver — handles two cases:
@@ -68,7 +103,15 @@ export function useGame(opts: UseGameOptions) {
     };
   }, [state]);
 
-  return { state, dispatch, thinking, humanPlayer: HUMAN_PLAYER, aiPlayer: AI_PLAYER };
+  return {
+    state,
+    dispatch,
+    clearToast,
+    toast: state.__toast ?? null,
+    thinking,
+    humanPlayer: HUMAN_PLAYER,
+    aiPlayer: AI_PLAYER,
+  };
 }
 
 export type Dispatch = (action: Action) => void;

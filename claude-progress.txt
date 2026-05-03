@@ -305,3 +305,17 @@ Notes (用户问「可以交付吗」，识别 3 处显著短板继续优化)：
     事件链显示新效果全部触发（Dynamotor / TandemUnit / NestBall / Attack /
     Evolve / ProfessorsResearch / PlayItem 等）
   - 8 suites 94 tests 全过；npm run build 通过；init.sh 全绿
+
+=== Session bug-fix-2 | 2026-05-03 ===
+Status: completed
+Notes:
+  - Runtime error: "Insufficient energy for Psy Bolt: needs Psychic,Colorless"
+    人类点击能量不足的攻击 → 引擎抛异常 → React 树崩溃
+  - 修复 1: CardActionMenu 的攻击按钮 disabled 时多加「能量不足 [...]」reason
+    复用 ai/heuristics 的 canPayCost
+  - 修复 2: useGame 引入 safeReducer 包装层，try/catch 引擎异常并把 message
+    存到 state.__toast。BattlePage 渲染 ToastBanner（红色底栏 + 关闭按钮）。
+    任何后续引擎抛错都会以 toast 提示而不是炸掉 UI。
+  - 浏览器验证：clicked active Pidgey → 菜单显示 Tackle disabled，
+    reason "首回合不可攻击 / 能量不足 [Colorless]"，无 console 错误。
+  - 8 suites 94 tests 全过；npm run build 通过。
