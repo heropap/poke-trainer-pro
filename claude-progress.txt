@@ -54,3 +54,18 @@ Notes:
       避免 VMAX 没有对应 V 的非法 deck 构造（vMAX 必须有同名 V）。
       Iron Hands ex 是真实的 SV 时代 Miraidon 顶级搭档，Standard 合法。
   - 三套卡组共 37 张 unique 卡牌（Charizard 17 + Miraidon 复用 + Gardevoir 复用 + 新增）
+
+=== Session F3 | 2026-05-03 ===
+Feature: 游戏状态 + 阶段机 + 起手抽牌（priority 3）
+Status: completed
+Notes:
+  - core/state.ts：GameState / PlayerState / GameCard / GamePhase / Prompt / StatusCondition；
+    BENCH_SIZE=5 / HAND_DRAW=7 / PRIZE_COUNT=6
+  - core/actions.ts：Action union（GameStart / PlaceActiveSetup / PlaceBenchSetup /
+    DrawCard / ResolvePrompt / Concede）+ PromptResponse
+  - core/rng.ts：mulberry32 seedable RNG + Fisher-Yates shuffle
+  - core/reducer.ts：完整 setup 流程 (GameStart → mulligan + draw 7 → prompt
+    selectActive → prompt selectBench → 切换玩家 → 翻 6 prizes → phase=draw)
+  - autoSetup() helper：自动响应 setup 提示，用于测试和 AI（F7 会复用）
+  - 12 个新单测全过；init.sh 全绿
+  - Mulligan：手牌无 Basic 时 reshuffle 重抽（不实现「对手多抽 1 张」补偿；F4+ 再补）

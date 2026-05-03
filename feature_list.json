@@ -47,7 +47,7 @@
       "src/core/actions.ts 起步 action：GameStart / Mulligan / DrawCard",
       "Jest 测试：模拟 setup；验证洗牌、手牌数、奖励数"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 3
   },
   {
