@@ -139,7 +139,7 @@
       "DndContext 接入；HandCard onDragStart 触发",
       "浏览器验证：手牌 hover / 点击 / 拖拽 起步顺畅"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 10
   },
   {
@@ -152,7 +152,7 @@
       "撤退操作下拉",
       "浏览器验证：用喷火龙 mock 完整跑一次出场 → 进化 → 挂能量 → 攻击循环"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 11
   },
   {
@@ -164,7 +164,7 @@
       "接到 reducer 的 pendingPrompt",
       "浏览器验证：每种 prompt 渲染 + 应答正确"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 12
   },
   {

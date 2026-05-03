@@ -4,43 +4,71 @@ import type { GameCard, GameState, PlayerState } from "@/core/state";
 import { BoardCard, EmptySlot } from "./cards/BoardCard";
 import { HandCard } from "./cards/HandCard";
 
+export type CardClickHandler = (card: GameCard, zone: "hand" | "active" | "bench", benchSlot?: number) => void;
+
 interface TableauProps {
   state: GameState;
+  humanPlayer: 0 | 1;
+  onCardClick?: CardClickHandler;
 }
 
-export function Tableau({ state }: TableauProps) {
-  const opp = state.players[1];
-  const self = state.players[0];
+export function Tableau({ state, humanPlayer, onCardClick }: TableauProps) {
+  const opp = state.players[(1 - humanPlayer) as 0 | 1];
+  const self = state.players[humanPlayer];
 
   return (
     <div className="flex flex-col gap-3 p-4 w-full max-w-[1400px] mx-auto h-[calc(100vh-1rem)]">
-      <PlayerSide player={opp} mirrored />
+      <PlayerSide player={opp} mirrored interactive={false} />
       <Stadium card={state.stadium} />
-      <PlayerSide player={self} mirrored={false} />
-      <HandStrip player={self} />
+      <PlayerSide
+        player={self}
+        mirrored={false}
+        interactive
+        onCardClick={onCardClick}
+      />
+      <HandStrip player={self} onCardClick={onCardClick} />
     </div>
   );
 }
 
-function PlayerSide({ player, mirrored }: { player: PlayerState; mirrored: boolean }) {
+interface PlayerSideProps {
+  player: PlayerState;
+  mirrored: boolean;
+  interactive: boolean;
+  onCardClick?: CardClickHandler;
+}
+
+function PlayerSide({ player, mirrored, interactive, onCardClick }: PlayerSideProps) {
   return (
     <div className={mirrored ? "flex flex-col-reverse gap-3" : "flex flex-col gap-3"}>
-      <BenchRow player={player} />
-      <ActiveRow player={player} />
+      <BenchRow player={player} interactive={interactive} onCardClick={onCardClick} />
+      <ActiveRow player={player} interactive={interactive} onCardClick={onCardClick} />
     </div>
   );
 }
 
-function BenchRow({ player }: { player: PlayerState }) {
+interface RowProps {
+  player: PlayerState;
+  interactive: boolean;
+  onCardClick?: CardClickHandler;
+}
+
+function BenchRow({ player, interactive, onCardClick }: RowProps) {
   return (
     <div className="flex items-center gap-3">
       <PrizeStack count={player.prizes.length} />
       <div className="flex-1 grid grid-cols-5 gap-2">
         {player.bench.map((slot, i) =>
           slot ? (
-            <div key={i} className="flex justify-center">
+            <button
+              key={i}
+              type="button"
+              disabled={!interactive}
+              onClick={() => onCardClick?.(slot, "bench", i)}
+              className="flex justify-center"
+            >
               <BoardCard card={slot} size="bench" />
-            </div>
+            </button>
           ) : (
             <div key={i} className="flex justify-center">
               <EmptySlot size="bench" label={`bench ${i + 1}`} />
@@ -54,11 +82,17 @@ function BenchRow({ player }: { player: PlayerState }) {
   );
 }
 
-function ActiveRow({ player }: { player: PlayerState }) {
+function ActiveRow({ player, interactive, onCardClick }: RowProps) {
   return (
     <div className="flex justify-center">
       {player.active ? (
-        <BoardCard card={player.active} size="active" isActive />
+        <button
+          type="button"
+          disabled={!interactive}
+          onClick={() => player.active && onCardClick?.(player.active, "active")}
+        >
+          <BoardCard card={player.active} size="active" isActive />
+        </button>
       ) : (
         <EmptySlot size="active" label="active" />
       )}
@@ -139,7 +173,12 @@ function Stadium({ card }: { card: GameCard | null }) {
   );
 }
 
-function HandStrip({ player }: { player: PlayerState }) {
+interface HandStripProps {
+  player: PlayerState;
+  onCardClick?: CardClickHandler;
+}
+
+function HandStrip({ player, onCardClick }: HandStripProps) {
   return (
     <div className="h-28 rounded-lg bg-gradient-to-t from-zinc-950/80 via-zinc-900/40 to-transparent border-t border-violet-500/20 flex items-end justify-center px-4 pb-2 overflow-hidden">
       {player.hand.length === 0 ? (
@@ -147,7 +186,14 @@ function HandStrip({ player }: { player: PlayerState }) {
       ) : (
         <div className="flex">
           {player.hand.map((c, i) => (
-            <HandCard key={c.uid} card={c} index={i} />
+            <button
+              key={c.uid}
+              type="button"
+              onClick={() => onCardClick?.(c, "hand")}
+              className="bg-transparent border-0 p-0"
+            >
+              <HandCard card={c} index={i} />
+            </button>
           ))}
         </div>
       )}

@@ -198,3 +198,34 @@ Notes:
         （Switch / Arven / Nest Ball ×2 / Professor's Research / Basic Fire Energy）
       * 浏览器 console 无错误
   - init.sh 全绿；7 suites 66 tests 仍全过
+
+=== Session F10+F11+F12 | 2026-05-03 ===
+Feature: 完整交互层 + Prompt 渲染（priority 10-12 一并完成）
+Status: completed
+Notes:
+  - useGame.ts：useReducer 包裹引擎 reducer + AI useEffect 驱动器
+      （监听 state，AI 回合或 AI 收到 prompt 时延迟 350ms 自动派发）
+  - CardActionMenu.tsx：点击卡片弹出操作菜单（替代拖拽）
+      * 手牌 Basic：放后场
+      * 手牌 进化：进化（首回合禁止 + 同回合禁止）
+      * 手牌 能量：挂到前/后场任一目标
+      * 手牌 训练家：使用（按 Item / Supporter / Stadium 区分，含每回合 / 首回合限制）
+      * 前场：所有招式（含能量校验）+ 能力 + 撤退（自动选首张能量付费）
+      * 后场：能力（如 Pidgeot Quick Search）
+  - PromptStack.tsx：8 种 prompt kind 全部 UI 渲染
+      * selectActiveSetup / selectBenchSetup / promoteFromKO（基础设施类）
+      * selectFromList / selectTarget（卡牌效果类）
+      * coinFlip / confirm / chooseOption（一般 prompt）
+      * 自动只渲染 humanPlayer 的 prompt（AI 的 prompt 由 useGame useEffect 处理）
+  - GameCanvas.tsx 重写：含 Sidebar（结束回合按钮、AI thinking 状态、log）+ GameOverOverlay
+  - Tableau.tsx 重写：所有 zone 接受 onCardClick，前场/后场/手牌都可点击
+  - BattlePage.tsx：起手「抽牌」按钮触发 StartTurn（事件总线方式连到 sidebar）
+  - 浏览器验证（1280×800）：
+      * 加载 /battle?deck=charizard-ex&opp=miraidon-ex&seed=99
+      * 「抽牌」按钮派发 StartTurn → 阶段 main / 抽 1 张（46 deck，6 hand）
+      * 点击手牌 Charmander → 弹出操作菜单显示「放到后场」+ 卡牌详情
+      * Battle Log 显示完整事件链
+      * 浏览器 console 无错误
+  - init.sh 全绿；7 suites 66 tests 仍全过
+  - F10/F11/F12 一并完成（user 要求全自动模式连续推进）
+  - 暂未实装 dnd-kit drag（用 click 代替）；F13 加 framer-motion 动画
