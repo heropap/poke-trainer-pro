@@ -153,3 +153,23 @@ Notes:
       8. EndTurn 兜底
   - 4 个新单测：3 套卡组对战不崩 + 30 局 mirror 不崩 + 9 个 cross-deck pairing
   - 7 suites 66 tests 全过；init.sh 全绿
+
+=== Session F8 | 2026-05-03 ===
+Feature: UI 骨架 + Tableau 布局（priority 8）
+Status: completed
+Notes:
+  - app/src/ui/battle/Tableau.tsx：PTCG Live 风格布局
+      * 顶部 PlayerSide(opp, mirrored=true)：bench (5 槽) + 前后场 + 牌组/弃牌/奖励
+      * 中部 Stadium 接缝
+      * 下部 PlayerSide(self)：对称布局
+      * 最底部 HandStrip：玩家手牌横向滚动
+  - app/src/ui/battle/GameCanvas.tsx：顶层容器 + 右上角 Sidebar（回合 / 阶段 / 事件日志）
+  - app/src/ui/battle/BattlePage.tsx：客户端组件，调用 autoSetup 生成 mock 状态
+  - app/src/app/battle/page.tsx：Next.js 服务端入口，从 ?deck= ?opp= ?seed= query 读 props
+  - app/src/app/page.tsx：重写为 3 卡组选择器（点选直接跳到 /battle?deck=...）
+  - 浏览器验证：1440×900 viewport 下，完整看到对手 + 中央 Stadium + 自己 + 手牌结构
+    - 喷火龙 vs 密勒顿对战页：active 显示 Pidgey vs Iron Hands ex；
+      奖励 6 张可视化、bench 5 槽、deck 47 / discard 0 计数正确；
+      手牌横排显示具体卡名（Switch / Arven / Nest Ball / Professor's Research 等）
+  - 浏览器 console 无错误；init.sh 全绿
+  - F8 是「静态 mock state」阶段，无交互；F10+ 接入拖拽 + 行动 dispatch
