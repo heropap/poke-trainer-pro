@@ -401,3 +401,36 @@ Notes: 沙奈朵 ex 卡组完整效果设计 — 3 个新效果
     AttackEffectHandler 支持 state 修改（Fierce Tackle 自伤）
     Tool 静态修饰内联（Choice Belt 伤害 / Exp. Share KO）
     Stadium 全局修饰内联（Beach Court 撤退）
+
+=== Session status-conditions | 2026-05-03 ===
+Status: completed
+Notes: 状态条件子系统实装 — 含 Mew Psy Bolt 麻痹效果
+  - effects/helpers.ts 加 status helpers:
+      applyStatus / clearAllStatus / clearStatus / hasStatus
+      移动类状态（asleep / paralyzed / confused）互斥替换
+      damage 类状态（poisoned / burned）累加
+  - reducer.handleAttack 加状态封锁：active asleep / paralyzed → 抛错
+  - reducer.handleEndTurn / autoEndTurn 调用 curePostTurnStatuses：
+      回合结束时清除该玩家所有 Pokemon 的 paralyzed 状态
+      （PTCG: "Paralysis goes away once that Pokémon's owner's turn ends."）
+  - reducer.handleRetreat: 撤退时清除 formerly-active 的所有 status
+  - effects/trainers.ts: BOSS_EFFECT 与 SWITCH_EFFECT step handler 都在
+    swap 时清除 formerly-active 的 status
+  - **effects/cel-mew.ts (新文件)**: Mew CEL 11 Psy Bolt 攻击效果
+      30 伤害 + 自决定性硬币（rngState 派生）→ 50% 几率麻痹对方前场
+      heads = PsyBoltParalyze; tails = PsyBoltMiss（log 事件）
+  - core/ai/policy.ts: 攻击决策加 status 封锁守卫
+      asleep / paralyzed 时跳过攻击优先级
+  - 6 个新单测：状态封锁攻击 / endTurn 治愈麻痹 / 不能麻痹下撤退 /
+    撤退清非封锁状态 / Psy Bolt 30 dmg + 硬币事件 / applyStatus 互斥
+  - 8 suites 119 tests 全过；npm run build 通过
+  - 浏览器 E2E：charizard vs miraidon seed=12 跑完整对局，事件链含 Attack
+    / TandemUnit / UltraBall 等，无 console error，无 toast。
+  - 未实装的状态机：poison/burn between-turns 伤害（v0 内无卡牌赋予 poison/burn，
+    保留扩展点）；asleep/burn 治愈硬币翻；confused 攻击翻硬币。
+
+==== 三套卡组效果设计 100% 完成 ====
+- 喷火龙 ex: 17/17 全部完成（含 Mew Psy Bolt 麻痹 ✅）
+- 密勒顿 ex: 10/10 全部完成
+- 沙奈朵 ex: 10/10 全部完成（含 Mew Psy Bolt 麻痹 ✅）
+- 共 37 张 unique 卡，0 张待办

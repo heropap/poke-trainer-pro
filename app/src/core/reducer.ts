@@ -375,15 +375,36 @@ function handleEndTurn(state: GameState, player: PlayerIndex): GameState {
     throw new Error(`EndTurn invalid in phase ${state.phase}`);
   }
 
-  // Between-turn checkup is implemented in F5. For F4 we just advance.
+  let next: GameState = curePostTurnStatuses(state, player);
   const nextPlayer = (1 - player) as PlayerIndex;
-  const next: GameState = {
-    ...state,
+  next = {
+    ...next,
     activePlayer: nextPlayer,
     phase: "draw",
-    turnNumber: state.turnNumber + 1,
+    turnNumber: next.turnNumber + 1,
   };
   return appendLog(next, "EndTurn", { player });
+}
+
+// Cure paralysis on a player's pokemon at the end of THEIR turn.
+// Per PTCG rule: "Paralysis goes away once that Pokémon's owner's turn ends."
+function curePostTurnStatuses(state: GameState, player: PlayerIndex): GameState {
+  const ps = state.players[player];
+  let changed = false;
+  const stripPara = (c: GameCard | null): GameCard | null => {
+    if (!c) return null;
+    if (!c.status.includes("paralyzed")) return c;
+    changed = true;
+    return { ...c, status: c.status.filter((s) => s !== "paralyzed") };
+  };
+  const newActive = stripPara(ps.active);
+  const newBench = ps.bench.map(stripPara);
+  if (!changed) return state;
+  return setPlayer(state, player, {
+    ...ps,
+    active: newActive,
+    bench: newBench,
+  });
 }
 
 function handlePlayBasicPokemon(
@@ -515,10 +536,14 @@ function handleRetreat(
     payEnergyUids.includes(e.uid),
   );
 
-  const newActive: GameCard = { ...ps.active, attachedEnergy: remainingEnergy };
-  // Swap active with bench[benchSlot].
+  // Retreating clears Special Conditions on the formerly-active.
+  const retiredFromActive: GameCard = {
+    ...ps.active,
+    attachedEnergy: remainingEnergy,
+    status: [],
+  };
   const newBench = [...ps.bench];
-  newBench[benchSlot] = newActive;
+  newBench[benchSlot] = retiredFromActive;
   const newPs: PlayerState = {
     ...ps,
     active: benched,
@@ -860,6 +885,14 @@ function handleAttack(state: GameState, player: PlayerIndex, attackIndex: number
   if (!attacker.active) throw new Error(`No active Pokemon to attack with`);
   if (!defender.active) throw new Error(`Opponent has no active Pokemon`);
 
+  // Status conditions block attack
+  if (attacker.active.status.includes("asleep")) {
+    throw new Error(`Active Pokémon is asleep — cannot attack`);
+  }
+  if (attacker.active.status.includes("paralyzed")) {
+    throw new Error(`Active Pokémon is paralyzed — cannot attack`);
+  }
+
   const attackerDef = asPokemon(getCard(attacker.active.cardId));
   if (!attackerDef) throw new Error(`Active card is not a Pokemon`);
 
@@ -1050,14 +1083,15 @@ function autoEndTurn(state: GameState, player: PlayerIndex): GameState {
   // Skip if already game over or another prompt is pending.
   if (state.phase === "gameOver") return state;
   if (state.pendingPrompt) return state;
-  // Move to next player's draw phase.
+
+  let next: GameState = curePostTurnStatuses(state, player);
   const nextPlayer = (1 - player) as PlayerIndex;
   return appendLog(
     {
-      ...state,
+      ...next,
       activePlayer: nextPlayer,
       phase: "draw",
-      turnNumber: state.turnNumber + 1,
+      turnNumber: next.turnNumber + 1,
     },
     "EndTurn",
     { player, auto: true },

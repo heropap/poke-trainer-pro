@@ -5,5 +5,6 @@ import "./pidgeot-ex";
 import "./gardevoir-ex";
 import "./trainers";
 import "./abilities";
+import "./cel-mew";
 
 export {};

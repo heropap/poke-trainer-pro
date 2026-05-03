@@ -225,7 +225,11 @@ function chooseMainAction(state: GameState, player: PlayerIndex): Action {
   }
 
   // (H) Attack with highest available damage (if not first turn).
-  if (!isFirstTurn && ps.active) {
+  // Asleep / paralyzed Pokémon cannot attack.
+  const blockedByStatus =
+    !!ps.active &&
+    (ps.active.status.includes("asleep") || ps.active.status.includes("paralyzed"));
+  if (!isFirstTurn && ps.active && !blockedByStatus) {
     const best = pickBestAttack(ps.active);
     if (best) {
       // Validate opponent has an active target

@@ -1,6 +1,12 @@
 import { getCard } from "../cards";
 import { makeRng, shuffle } from "../rng";
-import type { GameState, PlayerState, PlayerIndex, GameCard } from "../state";
+import type {
+  GameState,
+  PlayerState,
+  PlayerIndex,
+  GameCard,
+  StatusCondition,
+} from "../state";
 
 export function setPlayer(
   state: GameState,
@@ -149,4 +155,35 @@ export function replaceInPlay(
 
 export function setMarker(card: GameCard, key: string, value: number | boolean): GameCard {
   return { ...card, markers: { ...card.markers, [key]: value } };
+}
+
+// =====================================================================
+// Status condition helpers
+// =====================================================================
+
+export function applyStatus(card: GameCard, status: StatusCondition): GameCard {
+  if (card.status.includes(status)) return card;
+  // PTCG rule: asleep / paralyzed / confused are mutually exclusive — the new
+  // one replaces existing. Burn / poison can stack with movement statuses.
+  const MOVEMENT: StatusCondition[] = ["asleep", "paralyzed", "confused"];
+  if (MOVEMENT.includes(status)) {
+    return {
+      ...card,
+      status: [...card.status.filter((s) => !MOVEMENT.includes(s)), status],
+    };
+  }
+  return { ...card, status: [...card.status, status] };
+}
+
+export function clearAllStatus(card: GameCard): GameCard {
+  if (card.status.length === 0) return card;
+  return { ...card, status: [] };
+}
+
+export function clearStatus(card: GameCard, status: StatusCondition): GameCard {
+  return { ...card, status: card.status.filter((s) => s !== status) };
+}
+
+export function hasStatus(card: GameCard, status: StatusCondition): boolean {
+  return card.status.includes(status);
 }

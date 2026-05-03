@@ -852,6 +852,133 @@ describe("Fog Crystal", () => {
   });
 });
 
+describe("Status conditions — Mew Psy Bolt + paralyze flow", () => {
+  function buildSceneParalyzed() {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: ["sve-2", "sve-2"],
+        bench: ["obf-26"], // bench Pokémon for retreat target
+      },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+    });
+    // Manually paralyze active Charmander
+    const players = [...s.players] as typeof s.players;
+    players[0] = {
+      ...players[0],
+      active: { ...players[0].active!, status: ["paralyzed"] },
+    };
+    return { ...s, players };
+  }
+
+  it("paralyzed attacker cannot attack", () => {
+    const s = buildSceneParalyzed();
+    expect(() =>
+      reducer(s, { type: "Attack", player: 0, attackIndex: 1 }),
+    ).toThrow(/paralyzed/);
+  });
+
+  it("EndTurn cures paralysis on affected player", () => {
+    const s = buildSceneParalyzed();
+    const next = reducer(s, { type: "EndTurn", player: 0 });
+    expect(next.players[0].active!.status).not.toContain("paralyzed");
+  });
+
+  it("Cannot retreat while paralyzed (PTCG rule)", () => {
+    const s = buildSceneParalyzed();
+    expect(() =>
+      reducer(s, {
+        type: "Retreat",
+        player: 0,
+        benchSlot: 0,
+        payEnergyUids: [],
+      }),
+    ).toThrow(/paralyzed|asleep/);
+  });
+
+  it("Retreat clears non-blocking status (e.g., confused) on formerly-active", () => {
+    const s = buildScene({
+      attacker: { cardId: "obf-26", energy: ["sve-2"] },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+    });
+    // Apply 'confused' (which doesn't block retreat) to active
+    const players = [...s.players] as typeof s.players;
+    players[0] = {
+      ...players[0],
+      active: { ...players[0].active!, status: ["confused"] },
+      bench: [
+        {
+          uid: "bench-0",
+          cardId: "obf-26",
+          damage: 0,
+          attachedEnergy: [],
+          attachedTool: null,
+          evolutionStack: [],
+          status: [],
+          markers: {},
+        },
+        null,
+        null,
+        null,
+        null,
+      ],
+    };
+    const fireUid = players[0].active!.attachedEnergy[0].uid;
+    const sConfused = { ...s, players };
+    const next = reducer(sConfused, {
+      type: "Retreat",
+      player: 0,
+      benchSlot: 0,
+      payEnergyUids: [fireUid],
+    });
+    // The retreating Charmander is now on bench[0] — status cleared
+    const benchedCard = next.players[0].bench[0];
+    expect(benchedCard?.cardId).toBe("obf-26");
+    expect(benchedCard?.status).not.toContain("confused");
+  });
+
+  it("Mew Psy Bolt 30 damage; coin flip determines paralyze", () => {
+    // Set up Mew (cel-11) as active with Psychic Energy and Charmander (Fire)
+    // attached as a "colorless" filler. Cost is [Psychic, Colorless].
+    const s = buildScene({
+      attacker: {
+        cardId: "cel-11", // Mew (Psychic, 60HP)
+        energy: ["sve-5", "sve-2"], // Psychic + Fire (covers Colorless)
+      },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+    });
+    const next = reducer(s, { type: "Attack", player: 0, attackIndex: 0 });
+    // 30 damage should be applied (Mew vs Mareep — no weakness for Lightning vs Psychic)
+    expect(next.players[1].active!.damage).toBeGreaterThanOrEqual(30);
+    // Either paralyze or miss event was logged
+    const hasFlipEvent =
+      next.log.some((e) => e.kind === "PsyBoltParalyze") ||
+      next.log.some((e) => e.kind === "PsyBoltMiss");
+    expect(hasFlipEvent).toBe(true);
+  });
+});
+
+describe("Status helpers (applyStatus / clearAllStatus)", () => {
+  it("paralyzed-then-asleep replaces paralysis (movement statuses are mutex)", async () => {
+    const { applyStatus } = await import("../effects/helpers");
+    const card: GameCard = {
+      uid: "u",
+      cardId: "obf-26",
+      damage: 0,
+      attachedEnergy: [],
+      attachedTool: null,
+      evolutionStack: [],
+      status: [],
+      markers: {},
+    };
+    let c = applyStatus(card, "paralyzed");
+    expect(c.status).toContain("paralyzed");
+    c = applyStatus(c, "asleep");
+    expect(c.status).toContain("asleep");
+    expect(c.status).not.toContain("paralyzed");
+  });
+});
+
 describe("Trainer effects: Switch", () => {
   it("swaps active and bench", () => {
     const s = buildScene({

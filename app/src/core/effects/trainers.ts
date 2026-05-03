@@ -77,7 +77,8 @@ registerEffectStep(BOSS_EFFECT, (state: GameState, payload: PromptResponse) => {
     return { ...state, pendingPrompt: null, pendingEffect: null };
   }
   const newBench = [...oppPs.bench];
-  newBench[slot] = active;
+  // The formerly-active goes to bench → clear its Special Conditions.
+  newBench[slot] = { ...active, status: [] };
   const players = [...state.players] as typeof state.players;
   players[opp] = { ...oppPs, active: benched, bench: newBench };
 
@@ -432,7 +433,8 @@ registerEffectStep(SWITCH_EFFECT, (state: GameState, payload: PromptResponse) =>
     return { ...state, pendingPrompt: null, pendingEffect: null };
   }
   const newBench = [...ps.bench];
-  newBench[slot] = ps.active;
+  // The formerly-active goes to bench → clear its Special Conditions.
+  newBench[slot] = { ...ps.active, status: [] };
   const players = [...state.players] as typeof state.players;
   players[player] = { ...ps, active: benched, bench: newBench };
 
