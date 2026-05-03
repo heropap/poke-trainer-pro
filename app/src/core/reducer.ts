@@ -493,7 +493,12 @@ function handleRetreat(
 
   const def = asPokemon(getCard(ps.active.cardId));
   if (!def) throw new Error(`Active card is not a Pokemon`);
-  const cost = def.retreatCost;
+  let cost = def.retreatCost;
+
+  // Beach Court (svi-167) — Stadium: Basic Pokémon retreat cost is Colorless less.
+  if (state.stadium?.cardId === "svi-167" && def.stage === "Basic") {
+    cost = Math.max(0, cost - 1);
+  }
 
   if (payEnergyUids.length !== cost) {
     throw new Error(`Retreat cost is ${cost}, paid ${payEnergyUids.length} energy`);
@@ -758,6 +763,18 @@ function calculateDamage(
   const attackerType = attackerDef.types[0];
   let dmg = baseDamage;
 
+  // Choice Belt (pal-176) — Tool on attacker: +30 damage to opp Pokémon V
+  // (V / VMAX / VSTAR), applied BEFORE weakness/resistance per card text.
+  if (attackerActive.attachedTool?.cardId === "pal-176") {
+    if (
+      defenderDef.rarity === "V" ||
+      defenderDef.rarity === "VMAX" ||
+      defenderDef.rarity === "VSTAR"
+    ) {
+      dmg += 30;
+    }
+  }
+
   if (defenderDef.weakness && defenderDef.weakness.type === attackerType) {
     dmg = dmg * 2;
   }
@@ -783,20 +800,42 @@ function prizeCountForKO(card: GameCard): number {
   }
 }
 
-function moveKOdToDiscard(player: PlayerState, kod: GameCard): PlayerState {
-  // The KO'd card itself + all attached energy + tool + evolution stack go to discard.
+function moveKOdToDiscard(
+  player: PlayerState,
+  kod: GameCard,
+): { player: PlayerState; expShareTransfer?: GameCard } {
+  // Exp. Share (svi-174) — when wearer is KO'd, take 1 Basic Energy off and
+  // attach to first benched Pokémon. Returns the energy to transfer (caller
+  // applies the attach since bench may have changed by then).
+  let expShareEnergy: GameCard | undefined;
+  let energiesToDiscard = kod.attachedEnergy;
+  if (kod.attachedTool?.cardId === "svi-174") {
+    const idx = kod.attachedEnergy.findIndex((e) => {
+      const d = getCard(e.cardId);
+      return d.kind === "Energy" && d.energyKind === "Basic";
+    });
+    if (idx >= 0) {
+      expShareEnergy = kod.attachedEnergy[idx];
+      energiesToDiscard = kod.attachedEnergy.filter((_, i) => i !== idx);
+    }
+  }
+
   const toDiscard = [
     kod,
-    ...kod.attachedEnergy,
+    ...energiesToDiscard,
     ...(kod.attachedTool ? [kod.attachedTool] : []),
     ...kod.evolutionStack,
   ];
-  // Wipe the active.
+
   return {
-    ...player,
-    active: player.active && player.active.uid === kod.uid ? null : player.active,
-    bench: player.bench.map((b) => (b && b.uid === kod.uid ? null : b)),
-    discard: [...player.discard, ...toDiscard],
+    player: {
+      ...player,
+      active:
+        player.active && player.active.uid === kod.uid ? null : player.active,
+      bench: player.bench.map((b) => (b && b.uid === kod.uid ? null : b)),
+      discard: [...player.discard, ...toDiscard],
+    },
+    expShareTransfer: expShareEnergy,
   };
 }
 
@@ -888,8 +927,29 @@ function resolveKOs(state: GameState, attacker: PlayerIndex): GameState {
       const ko = ps.active;
       const prizes = prizeCountForKO(ko);
 
-      // Move to discard
-      const wiped = moveKOdToDiscard(ps, ko);
+      // Move to discard (handles Exp. Share rescue energy)
+      const result = moveKOdToDiscard(ps, ko);
+      let wiped: PlayerState = result.player;
+
+      // Apply Exp. Share transfer to first remaining bench Pokémon.
+      if (result.expShareTransfer) {
+        const benchIdx = wiped.bench.findIndex((b) => b !== null);
+        if (benchIdx >= 0 && wiped.bench[benchIdx]) {
+          const target = wiped.bench[benchIdx]!;
+          const newBench = [...wiped.bench];
+          newBench[benchIdx] = {
+            ...target,
+            attachedEnergy: [...target.attachedEnergy, result.expShareTransfer],
+          };
+          wiped = { ...wiped, bench: newBench };
+          next = appendLog(next, "ExpShareTransfer", {
+            player: idx,
+            energyId: result.expShareTransfer.cardId,
+            targetUid: target.uid,
+          });
+        }
+      }
+
       next = setPlayer(next, idx, wiped);
 
       // Take prizes for the attacker (or opposite side if recoil).

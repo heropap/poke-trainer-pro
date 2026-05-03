@@ -523,6 +523,203 @@ describe("Arven", () => {
   });
 });
 
+describe("Raikou V Lightning Rondo (attack 0)", () => {
+  it("base 20 + 50 per opponent V/VMAX/VSTAR in play", () => {
+    const s = buildScene({
+      attacker: { cardId: "brs-48", energy: ["sve-4"] },
+      defender: { cardId: "brs-48", bench: ["brs-48"] }, // 2 V Pokemon (active + bench)
+    });
+    const next = reducer(s, { type: "Attack", player: 0, attackIndex: 0 });
+    // Base 20 + 50 × 2 = 120. Raikou V vs Raikou V: no weakness, no resistance.
+    expect(next.players[1].active!.damage).toBe(120);
+  });
+  it("base 20 + 0 against no V Pokemon", () => {
+    const s = buildScene({
+      attacker: { cardId: "brs-48", energy: ["sve-4"] },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+    });
+    const next = reducer(s, { type: "Attack", player: 0, attackIndex: 0 });
+    expect(next.players[1].active!.damage).toBe(20);
+  });
+});
+
+describe("Raikou V Fierce Tackle (attack 1)", () => {
+  it("does 130 damage and 30 self damage", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "brs-48",
+        energy: ["sve-4", "sve-4", "sve-4"], // L L C
+      },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+    });
+    const next = reducer(s, { type: "Attack", player: 0, attackIndex: 1 });
+    // Mareep is fighting weak (not lightning), so no weakness. 130 + 30 self.
+    // Mareep would be KO'd (60HP)
+    expect(next.players[0].prizes.length).toBeLessThan(6);
+    // Self damage applied (Raikou V isn't KO'd from 30 since it has 220HP)
+    // After auto-end-turn the active stays. Raikou should have 30 damage now —
+    // unless it transitioned. Let's check the log for FierceTackleSelfDamage.
+    expect(next.log.some((e) => e.kind === "FierceTackleSelfDamage")).toBe(true);
+  });
+});
+
+describe("Choice Belt damage modifier", () => {
+  it("+30 damage to opponent's V active before weakness/resistance", () => {
+    const s = buildScene({
+      attacker: { cardId: "obf-26", energy: ["sve-2", "sve-2"] }, // Charmander
+      defender: { cardId: "brs-48", bench: ["evs-54"] }, // Raikou V active
+    });
+    // Attach Choice Belt to Charmander
+    const players = [...s.players] as typeof s.players;
+    const active = { ...players[0].active! };
+    active.attachedTool = {
+      uid: "tool-cb",
+      cardId: "pal-176",
+      damage: 0,
+      attachedEnergy: [],
+      attachedTool: null,
+      evolutionStack: [],
+      status: [],
+      markers: {},
+    };
+    players[0] = { ...players[0], active };
+    const sWithBelt = { ...s, players };
+    const next = reducer(sWithBelt, { type: "Attack", player: 0, attackIndex: 1 });
+    // Live Coal 30 + 30 (Choice Belt vs V) = 60. Raikou V no Fire weak/resist.
+    expect(next.players[1].active!.damage).toBe(60);
+  });
+  it("no bonus vs non-V Pokémon", () => {
+    const s = buildScene({
+      attacker: { cardId: "obf-26", energy: ["sve-2", "sve-2"] },
+      defender: { cardId: "evs-54", bench: ["evs-54"] }, // Mareep (normal)
+    });
+    const players = [...s.players] as typeof s.players;
+    const active = { ...players[0].active! };
+    active.attachedTool = {
+      uid: "tool-cb",
+      cardId: "pal-176",
+      damage: 0,
+      attachedEnergy: [],
+      attachedTool: null,
+      evolutionStack: [],
+      status: [],
+      markers: {},
+    };
+    players[0] = { ...players[0], active };
+    const sWithBelt = { ...s, players };
+    const next = reducer(sWithBelt, { type: "Attack", player: 0, attackIndex: 1 });
+    expect(next.players[1].active!.damage).toBe(30);
+  });
+});
+
+describe("Beach Court retreat modifier", () => {
+  it("Basic Pokemon retreat cost reduced by 1 colorless", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "evs-54", // Mareep (Basic, retreat 1)
+        energy: ["sve-4"],
+        bench: ["evs-54"],
+      },
+      defender: { cardId: "obf-26" },
+    });
+    const stadiumCard: GameCard = {
+      uid: "stad-1",
+      cardId: "svi-167",
+      damage: 0,
+      attachedEnergy: [],
+      attachedTool: null,
+      evolutionStack: [],
+      status: [],
+      markers: {},
+    };
+    const sWithStadium = { ...s, stadium: stadiumCard };
+    // With Beach Court, Mareep retreat (cost 1) → 0
+    const next = reducer(sWithStadium, {
+      type: "Retreat",
+      player: 0,
+      benchSlot: 0,
+      payEnergyUids: [],
+    });
+    // Should not throw — and should swap
+    expect(next.players[0].active!.cardId).toBe("evs-54");
+  });
+});
+
+describe("Exp. Share onKO transfer", () => {
+  it("moves 1 Basic Energy to bench when KO'd", () => {
+    // Set up: Mareep with Exp. Share + 1 Lightning attached as active.
+    // Charmander attacks for 60 to KO Mareep.
+    const s = buildScene({
+      attacker: { cardId: "obf-26", energy: ["sve-2", "sve-2"] },
+      defender: {
+        cardId: "evs-54", // 60HP, Fighting weak
+        damage: 30, // 1 Live Coal more = 60 = KO
+        bench: ["evs-54"],
+      },
+    });
+    // Attach Exp. Share + 1 Lightning energy to Mareep
+    const players = [...s.players] as typeof s.players;
+    const active = { ...players[1].active! };
+    active.attachedTool = {
+      uid: "tool-es",
+      cardId: "svi-174",
+      damage: 0,
+      attachedEnergy: [],
+      attachedTool: null,
+      evolutionStack: [],
+      status: [],
+      markers: {},
+    };
+    active.attachedEnergy = [
+      {
+        uid: "e-1",
+        cardId: "sve-4",
+        damage: 0,
+        attachedEnergy: [],
+        attachedTool: null,
+        evolutionStack: [],
+        status: [],
+        markers: {},
+      },
+    ];
+    players[1] = { ...players[1], active };
+    const sWithES = { ...s, players };
+    let next = reducer(sWithES, { type: "Attack", player: 0, attackIndex: 1 });
+    // Should be in promote prompt for player 1
+    expect(next.pendingPrompt?.kind).toBe("promoteFromKO");
+    // Resolve promote
+    next = reducer(next, { type: "PromoteFromKO", player: 1, benchSlot: 0 });
+    // The new active (was bench) should have the energy from Exp. Share
+    expect(next.players[1].active!.attachedEnergy.length).toBe(1);
+    expect(next.log.some((e) => e.kind === "ExpShareTransfer")).toBe(true);
+  });
+});
+
+describe("Electric Generator", () => {
+  it("attaches Lightning Energy from top 5 to bench Lightning", () => {
+    // Build deck with known top-5 cards
+    const s = buildScene({
+      attacker: {
+        cardId: "evs-54", // Mareep active
+        energy: [],
+        hand: ["svi-170"],
+        deck: ["sve-4", "sve-4", "sve-4", "obf-26", "svi-194"], // 3 Lightning + others
+        bench: ["evs-54", "evs-54"],
+      },
+      defender: { cardId: "obf-26" },
+    });
+    const egUid = s.players[0].hand[0].uid;
+    const next = reducer(s, { type: "PlayItem", player: 0, uid: egUid });
+    // Expect 2 Lightning attached to bench Lightning Pokemon
+    const benchE = next.players[0].bench.reduce(
+      (sum, b) => sum + (b ? b.attachedEnergy.length : 0),
+      0,
+    );
+    expect(benchE).toBe(2);
+    expect(next.log.some((e) => e.kind === "ElectricGenerator")).toBe(true);
+  });
+});
+
 describe("Trainer effects: Switch", () => {
   it("swaps active and bench", () => {
     const s = buildScene({

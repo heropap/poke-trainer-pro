@@ -346,3 +346,28 @@ Notes: 喷火龙 ex 卡组完整效果设计 — 4 个新效果 + 1 个新触发
     Arven 2 个；总 8 suites 100 tests。
   - 浏览器 E2E：charizard vs miraidon seed=99 完整 24 turns 游戏不崩，
     事件包含 Attack / Promote / PrizeTaken / Win 全链路。
+
+=== Session miraidon-deck-spec | 2026-05-03 ===
+Status: completed
+Notes: 密勒顿 ex 卡组完整效果设计 — 6 个新效果
+  - **Raikou V Lightning Rondo** (brs-48 attack 0): base 20 + 50/对手 V 系
+    （含 V/VMAX/VSTAR）。AttackEffect handler 计数 opponent 在场所有 V 类。
+  - **Raikou V Fierce Tackle** (brs-48 attack 1): 130 伤害 + 30 自伤。
+    Attack effect 修改 state 给 attacker.active +30 damage，再返回 base 130。
+    自伤可能导致自 KO，resolveKOs 会扫双方 active 处理。
+  - **Electric Generator** (svi-170 Item): 看牌组前 5 张 → 取最多 2 张基础雷
+    能量贴到后场雷系 Pokemon。v0 简化：自动选前 2 雷能 + 轮询贴前 N 个雷系
+    后场，不出 prompt。
+  - **Choice Belt** (pal-176 Tool, 内联 calculateDamage):
+    attacker.active.attachedTool 是 pal-176 时，对 V 系 defender +30 伤害
+    （在弱抵之前）。
+  - **Beach Court** (svi-167 Stadium, 内联 handleRetreat):
+    state.stadium === svi-167 且 active 是 Basic 时，retreatCost -1（最小 0）。
+  - **Exp. Share** (svi-174 Tool, 内联 moveKOdToDiscard + resolveKOs):
+    KO'd Pokemon 携带 Exp. Share 时，从其能量取 1 张基础能量贴到第一张后场，
+    其他能量 + Exp. Share + 卡本身仍进弃牌堆。
+  - 8 个新单测：Lightning Rondo 2 个 / Fierce Tackle 1 个 / Choice Belt 2 个 /
+    Beach Court 1 个 / Exp. Share 1 个 / Electric Generator 1 个
+  - 8 suites 108 tests 全过；npm run build 通过
+  - 浏览器 E2E：miraidon mirror seed=33 跑 22 turns 不崩，事件链含
+    BossOrders / NestBall / SuperRod / UltraBall / Attack / Promote 等。
