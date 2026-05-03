@@ -246,3 +246,17 @@ Notes:
   - init.sh 全绿
   - v0 范围内的动画：卡牌进出场 + 攻击伤害闪烁。
     更详细的 KO 烟雾 / 取奖励飞行 cinematic 等留待 v0.2+
+
+=== Session F14 | 2026-05-03 ===
+Feature: 三套卡组 E2E 烟雾测试 + v0.1 收尾（priority 14）
+Status: completed
+Notes:
+  - 新建 core/__tests__/e2e.test.ts：
+      * 27 个跨卡组对战 case（3 卡组 × 3 卡组 × 3 seeds）
+        全部通过 — 没有崩溃，迭代数 > 10
+      * 引擎事件 log 完整性验证（GameStart / PlaceActiveSetup /
+        PlaceBenchSetup / StartTurn 全部记录）
+  - 8 suites 94 tests 全过；init.sh 全绿
+  - README 重写当前状态节为「v0.1 已完成」+ 功能清单
+  - feature_list.json：15/15 priority 全部 passes:true
+  - 准备打 git tag v0.1

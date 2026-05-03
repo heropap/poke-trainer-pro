@@ -10,8 +10,18 @@
 
 ## 当前状态
 
-**v0 开发中**。项目刚完成完全重置（tabula rasa）。详见 [spec.txt](./spec.txt) 与
-[feature_list.json](./feature_list.json)。
+**v0.1 已完成**。15/15 features 全部 `passes: true`。详见 [feature_list.json](./feature_list.json)
+与 [claude-progress.txt](./claude-progress.txt)。
+
+- ✅ 引擎核心（state / actions / phases / prompts / reducer / effects / AI）
+- ✅ 三套官方大师卡组的卡牌数据（37 张 unique 卡 / ~180 张实例）
+- ✅ 关键卡牌效果（Charizard Burning Darkness 伤害递增 / Miraidon Tandem Unit
+  入场技 / Pidgeot Quick Search / Gardevoir Psychic Embrace / Professor's
+  Research / Iono / Boss's Orders / Switch / Nest Ball）
+- ✅ AI 启发式对手 + 全自动对战仿真器
+- ✅ PTCG Live 风格 UI（横向战场、卡图、HP 条、能量徽章、ex 全息）
+- ✅ 完整交互（点选卡片弹动作菜单、8 种 prompt UI、AI 自动行动、动画特效）
+- ✅ 94 个测试通过（覆盖引擎单元 + 27 个跨卡组 E2E 模拟）
 
 上一轮（40 个 session）的全部产出在 [`archive/legacy-2026-05-03/`](./archive/)
 目录下，仅作参考资料，不导入也不构建。

@@ -189,7 +189,7 @@
       "新增 jest 集成测试覆盖 reducer happy path",
       "更新 README，标 git tag v0.1"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 14
   }
 ]
