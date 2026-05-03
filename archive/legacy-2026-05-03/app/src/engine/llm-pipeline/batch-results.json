@@ -1,0 +1,430 @@
+[
+  {
+    "cardId": "sv1-68",
+    "cardName": "Pachirisu [Electricity Pouches]",
+    "effectSource": "ability",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "STATUS_IMMUNITY"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "sv1-86",
+    "cardName": "Gardevoir ex [Miracle Force]",
+    "effectSource": "attack",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_FLAT",
+      "STATUS_HEAL"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "sv1-86",
+    "cardName": "Gardevoir ex [Psychic Embrace]",
+    "effectSource": "ability",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "NRG_ACCELERATE",
+      "DMG_PLACE_COUNTERS"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh10-62",
+    "cardName": "Gallade [Swirling Slice]",
+    "effectSource": "attack",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_FLAT",
+      "NRG_MOVE"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh10-62",
+    "cardName": "Gallade [Buddy Catch]",
+    "effectSource": "ability",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_SEARCH_DECK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "cel25-16",
+    "cardName": "Zacian V [Storm Slash]",
+    "effectSource": "attack",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_CONDITIONAL_BONUS"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "cel25-16",
+    "cardName": "Zacian V [Roar of the Sword]",
+    "effectSource": "ability",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "NRG_ACCELERATE",
+      "FLOW_LOCK"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "swsh11-74",
+    "cardName": "Cresselia [Moonglow Reverse]",
+    "effectSource": "attack",
+    "fromDeck": "Gardevoir ex",
+    "status": "error",
+    "error": "LLM 解析结果校验失败 [Cresselia [Moonglow Reverse]]:\n  - parsedEffect.steps[0]: 未知的 effect type \"target_selection\"\n\n原始输出:\n{\n  \"cardName\": \"Cresselia\",\n  \"effectSource\": \"attack\",\n  \"trigger\": \"NONE\",\n  \"parse"
+  },
+  {
+    "cardId": "sv1-89",
+    "cardName": "Drifloon [Balloon Blast]",
+    "effectSource": "attack",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_DYNAMIC_MULTIPLIER"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh5-129",
+    "cardName": "Level Ball",
+    "effectSource": "trainer_item",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_SEARCH_DECK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh6-140",
+    "cardName": "Fog Crystal",
+    "effectSource": "trainer_item",
+    "fromDeck": "Gardevoir ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_SEARCH_DECK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "sv1-81",
+    "cardName": "Miraidon ex [Photon Blaster]",
+    "effectSource": "attack",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_FLAT",
+      "FLOW_LOCK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "sv1-81",
+    "cardName": "Miraidon ex [Tandem Unit]",
+    "effectSource": "ability",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_SEARCH_DECK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh7-55",
+    "cardName": "Flaaffy [Dynamotor]",
+    "effectSource": "ability",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "NRG_ACCELERATE"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh9-48",
+    "cardName": "Raikou V [Lightning Rondo]",
+    "effectSource": "attack",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_CONDITIONAL_BONUS"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh9-48",
+    "cardName": "Raikou V [Fleet-Footed]",
+    "effectSource": "ability",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_DRAW"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh12-58",
+    "cardName": "Regieleki VMAX [Max Thunder and Lightning]",
+    "effectSource": "attack",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "DMG_FLAT",
+      "FLOW_LOCK"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh12-58",
+    "cardName": "Regieleki VMAX [Transistor]",
+    "effectSource": "ability",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "STATUS_DAMAGE_REDUCTION"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "sv1-170",
+    "cardName": "Electric Generator",
+    "effectSource": "trainer_item",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "CARD_PEEK",
+      "NRG_ACCELERATE"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "sv1-167",
+    "cardName": "Beach Court",
+    "effectSource": "trainer_stadium",
+    "fromDeck": "Miraidon ex",
+    "status": "error",
+    "error": "LLM 解析结果校验失败 [Beach Court]:\n  - parsedEffect: 未知的 patternId \"STATUS_SPECIAL_EFFECT\"\n\n原始输出:\n{\n  \"cardName\": \"Beach Court\",\n  \"effectSource\": \"trainer_stadium\",\n  \"trigger\": \"PASSIVE\",\n  \"parsedEffect\":"
+  },
+  {
+    "cardId": "sv1-174",
+    "cardName": "Exp. Share",
+    "effectSource": "trainer_item",
+    "fromDeck": "Miraidon ex",
+    "status": "pass",
+    "patternIds": [
+      "NRG_MOVE"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "swsh11-79",
+    "cardName": "Comfey [Flower Selecting]",
+    "effectSource": "ability",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_PEEK",
+      "CARD_DRAW",
+      "CARD_DISCARD_HAND"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "swsh11-50",
+    "cardName": "Cramorant [Spit Innocently]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "DMG_FLAT"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh11-50",
+    "cardName": "Cramorant [Lost Provisions]",
+    "effectSource": "ability",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "FLOW_LOCK"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "swsh11-70",
+    "cardName": "Sableye [Lost Mine]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "DMG_DISTRIBUTE"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh12-49",
+    "cardName": "Pikachu [Pika Strike]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "DMG_CONDITIONAL_BONUS"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "cel25-3",
+    "cardName": "Kyogre [Aqua Storm]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_DISCARD_HAND",
+      "DMG_DYNAMIC_MULTIPLIER"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh9-41",
+    "cardName": "Manaphy [Wave Veil]",
+    "effectSource": "ability",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "STATUS_IMMUNITY"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh10-46",
+    "cardName": "Radiant Greninja [Moonlight Shuriken]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "NRG_DISCARD_TARGET",
+      "DMG_FLAT"
+    ],
+    "confidence": 0.98
+  },
+  {
+    "cardId": "swsh10-46",
+    "cardName": "Radiant Greninja [Concealed Cards]",
+    "effectSource": "ability",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_DRAW"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh11-155",
+    "cardName": "Colress's Experiment",
+    "effectSource": "trainer_supporter",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_PEEK",
+      "CARD_DRAW",
+      "CARD_DISCARD_HAND"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh8-225",
+    "cardName": "Battle VIP Pass",
+    "effectSource": "trainer_item",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "FLOW_LOCK"
+    ],
+    "confidence": 0.9
+  },
+  {
+    "cardId": "swsh11-163",
+    "cardName": "Mirage Gate",
+    "effectSource": "trainer_item",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "NRG_ACCELERATE"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh10-154",
+    "cardName": "Switch Cart",
+    "effectSource": "trainer_item",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "FLOW_SELF_SWITCH",
+      "STATUS_HEAL"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh5-125",
+    "cardName": "Escape Rope",
+    "effectSource": "trainer_item",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "FLOW_SELF_SWITCH",
+      "FLOW_SELF_SWITCH"
+    ],
+    "confidence": 0.95
+  },
+  {
+    "cardId": "swsh11-147",
+    "cardName": "Hisuian Zoroark VSTAR [Ticking Curse]",
+    "effectSource": "attack",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "DMG_DYNAMIC_MULTIPLIER"
+    ],
+    "confidence": 1
+  },
+  {
+    "cardId": "swsh11-147",
+    "cardName": "Hisuian Zoroark VSTAR [Phantom Star]",
+    "effectSource": "ability",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_DISCARD_HAND",
+      "CARD_DRAW"
+    ],
+    "confidence": 0.98
+  },
+  {
+    "cardId": "swsh5-124",
+    "cardName": "Energy Recycler",
+    "effectSource": "trainer_item",
+    "fromDeck": "Lost Zone Box",
+    "status": "pass",
+    "patternIds": [
+      "CARD_RECOVER"
+    ],
+    "confidence": 1
+  }
+]

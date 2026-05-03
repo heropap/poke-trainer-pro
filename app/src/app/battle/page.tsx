@@ -1,20 +1,21 @@
-import BattlePageClient from "./BattlePageClient";
-import { SocketProvider } from "@/components/socket/SocketContext";
+import { Suspense } from "react";
+import { BattlePage } from "@/ui/battle/BattlePage";
 
-export default function BattlePage() {
+export const dynamic = "force-dynamic";
+
+interface PageProps {
+  searchParams: Promise<{ deck?: string; opp?: string; seed?: string }>;
+}
+
+export default async function Page({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const selfDeck = sp.deck ?? "charizard-ex";
+  const oppDeck = sp.opp ?? "miraidon-ex";
+  const seed = sp.seed ? parseInt(sp.seed, 10) : 1234;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-        对战
-      </h1>
-      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        选择卡组，开始 Pokemon TCG 对战。
-      </p>
-      <div className="mt-8">
-        <SocketProvider>
-          <BattlePageClient />
-        </SocketProvider>
-      </div>
-    </div>
+    <Suspense fallback={<div className="p-8 text-zinc-300">Loading…</div>}>
+      <BattlePage selfDeck={selfDeck} oppDeck={oppDeck} seed={seed} />
+    </Suspense>
   );
 }

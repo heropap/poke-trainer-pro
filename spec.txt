@@ -1,195 +1,137 @@
-针对你的需求，这份 MVP（最小可行性产品）的核心逻辑是：**不做搬运工，做集成商。** 我们要利用 `ryuu-play` 的 **现代架构** 作为骨架，通过 LLM 批量将 `TCG ONE` 的 **海量卡牌逻辑** 注入进去，从而在最短时间内实现对当前 Standard 环境（甚至全环境）的覆盖。
-
-以下是细化后的 **Poke-Trainer Pro MVP 规格书**：
-
----
-
-## 一、 MVP 核心目标
-
-1. **全环境覆盖**：通过逻辑翻译层，支持当前 Standard 环境下所有主流卡组。
-2. **核心对战流**：完成“洗牌-抽牌-对战-判定胜负”的闭环。
-3. **智能辅助**：AI 能够基于当前规则引擎给出“合法动作建议”。
-
----
-
-## 二、 技术集成方案 (The Integration Stack)
-
-| 模块 | 集成来源 | 作用 |
-| --- | --- | --- |
-| **规则内核 (Engine)** | `keeshii/ryuu-play` | **主逻辑大脑**。负责状态管理、回合流转、Action 验证。 |
-| **卡牌逻辑库 (Logic)** | `axpendix/tcgone-engine-contrib` | **逻辑字典**。提供几千张卡牌效果的精确脚本实现参考。 |
-| **静态数据 (Data)** | `PokemonTCG/pokemon-tcg-data` | **数字资产**。提供高清卡图、中英字段映射、合规性（Legality）检查。 |
-| **AI 决策 (Brain)** | `ryuu-play` (SimpleBot) | **基础对手**。基于评估函数的启发式 AI，用于 MVP 阶段的对测。 |
-
----
-
-## 三、 关键模块细化设计
-
-### 3.1 自动化逻辑翻译流水线 (Logic Bridge)
-
-这是实现“全环境覆盖”的杀手锏。我们不手工写代码，而是利用 LLM 构建一个 **Groovy-to-TS 转译器**。
-
-* **输入**：`tcgone` 的 Groovy 脚本（定义了攻击伤害、特性效果）。
-* **中转**：Prompt 模板。告知 LLM `ryuu-play` 的接口规范（如 `this.state.addDamage()`）。
-* **输出**：符合 `ryuu-play` 规范的 TS 卡牌类。
-* **验证**：利用 `ryuu-play` 的单元测试框架，自动模拟该卡牌的攻击动作，检查输出结果。
-
-### 3.2 动态加载体系
-
-为了支持海量卡牌，MVP 采用**动态注入**模式：
-
-1. 用户导入卡组代码（PTCG Live 格式）。
-2. 系统识别 `card_id`（来自 `pokemon-tcg-data`）。
-3. 系统从预先转译好的 **逻辑库** 中调取该卡的 `.ts` 字节码。
-4. 规则引擎实时挂载该卡牌效果。
-
----
-
-## 四、 MVP 核心功能规格
-
-### 4.1 核心对战 (Battle Core)
-
-* **完全适配标准规则**：
-作为一个卡牌对战系统的规则设计，为了保证逻辑闭环和涵盖各种卡牌效果，建议你从完整游戏循环和特殊状态管理这两个维度补充以下内容：
-
-1. 区域定义的补充 (Zones)
-你已经定义了核心区域，但还需要补充这几个关键区域，否则游戏无法判定胜负或开始：
-
-奖赏卡区 (Prize Cards Zone)：
-
-规则：通常6张。击倒对方宝可梦拿取，拿完即获胜。
-
-检测点：每次攻击结算后，需检测是否有宝可梦气绝（HP归零），若有，触发拿取奖赏卡逻辑。
-
-牌库区 (Deck Zone)：
-
-规则：抽牌的来源。
-
-检测点：回合开始时必须抽一张牌。如果牌库耗尽无法抽牌，则判负（这是一个核心败北条件）。
-
-进化链/堆叠检测 (Evolution/Stack Check)：
-
-虽然在战斗/备战区，但程序需要知道一张卡下面压着什么（例如：基础宝可梦 -> 1阶进化 -> 2阶进化）。退化喷雾等道具会把最上面的卡回手，把下面的卡露出来。
-
-2. 对战流程与状态检测的补充 (Flow & State)
-除了你提到的“单次操作”，还需要更细致的时机锁（Timing Locks）和状态标记：
-
-游戏准备阶段 (Setup Phase)：
-
-洗切牌库 -> 抽7张手牌 -> 放置基础宝可梦（若无需展示手牌并重抽，对方多抽1张）-> 放置奖赏卡。
-
-宝可梦检查阶段 (Pokémon Checkup / Between Turns)：
-
-这是在两个回合之间发生的，不属于任何一方。
-
-检测内容：中毒扣血、灼伤扣血及判定、睡眠/麻痹判定。
-
-特殊状态 (Special Conditions)：
-
-除了HP，宝可梦还有状态：中毒、灼伤、睡眠、麻痹、混乱。
-
-互斥规则：睡眠、麻痹、混乱三者互斥（通常通过改变卡牌方向表示），中毒和灼伤可以共存。撤退或进化会清除所有特殊状态。
-
-首回合限制 (First Turn Rules)：
-
-先攻玩家：第一回合不能攻击，不能使用支援者卡。
-
-后攻玩家：第一回合可以攻击，可以使用支援者卡。
-
-注：所有玩家第一回合都不能进化（除非卡牌效果特许）。
-
-3. 卡牌使用与操作限制的补充 (Actions & Constraints)
-你列出了能量和支援者，建议补全以下常见的操作限制：
-
-撤退 (Retreat)：
-
-规则：一般情况下，每回合只能撤退1次。
-
-消耗：必须丢弃对应数量的能量。
-
-进化 (Evolve)：
-
-限制：刚上场的宝可梦（无论是否是第一回合）不能当回合进化。
-
-物品卡 (Item Cards)：
-
-规则：每回合使用数量不限。
-
-特性 (Abilities)：
-
-规则：每回合使用数量不限（除非特性说明里写了“每回合一次”）。需要在UI上区分“已使用”状态。
-
-攻击 (Attack)：
-
-规则：攻击声明是回合的结束动作。攻击结算完成后，回合强制结束，轮到对手。
-
-4. 胜利条件检测 (Win Conditions)
-程序需要在每次操作后（特别是攻击结算后）做一个全局检测：
-
-奖赏卡拿完：某一方奖赏卡为0，该方获胜。
-
-场上无宝可梦：某一方战斗区气绝，且备战区无宝可梦可供替换，该方败北。
-
-牌库抽干：回合开始时无法抽牌，该方败北。
-
-总结建议添加的列表：
-新增区域：奖赏卡区、牌库区。
-
-新增状态：特殊状态（毒/烧/睡/麻/乱）及其处理逻辑。
-
-新增操作限制：撤退（1次/回合）、攻击（作为回合结束符）、首回合特殊限制（先攻不可攻/不可支援者）。
-
-全局检测：三类胜利/败北条件的实时监控。
-
-这样你的规则逻辑就基本涵盖了标准PTCG（宝可梦集换式卡牌游戏）的核心框架了。
-
-
-
-### 4.2 卡组导入与验证 (Deck Management)
-
-* **一键导入**：支持复制 PTCG Live 导出的文本。
-* **环境自检**：基于 `pokemon-tcg-data` 的 `legalities` 字段，自动标记非 Standard 卡牌。
-
-### 4.3 UI/UX 设计 (Minimalist Interface)
-
-* **基于 Canvas/SVG**：高性能展示卡牌缩略图（来自 `images.small`）。
-* **动作日志**：侧边栏实时显示“玩家 A 使用了 博士的研究”、“皮卡丘受到了 30 点伤害”。
-* **悬浮提示**：鼠标悬停在卡牌上，通过 RAG 实时显示其中文技能描述。
-
----
-
-## 五、 MVP 开发路线图 (2-Month Sprint)
-
-### 第一阶段：基础设施 (Weeks 1-2)
-
-* 部署 `ryuu-play` Server 端，打通 WebSocket 通信。
-* 拉取 `pokemon-tcg-data` 全量 JSON，建立本地 `card_id` 索引。
-
-### 第二阶段：逻辑转译 (Weeks 3-5)
-
-* **核心攻关**：编写 LLM 转译 Prompt，将 TCG ONE 中当前环境前 20 套主流卡组（约 150 张核心卡）转换为 TS 逻辑。
-* **测试**：确保“喷火龙 ex”、“猛雷鼓 ex”等复杂特性在 `ryuu-play` 中运行正确。
-
-### 第三阶段：AI 与对战优化 (Weeks 6-8)
-
-* 集成 `ryuu-play` 的 SimpleBot，并优化其评估函数（针对 ex 环境调整分数比重）。
-* 上线卡组导入功能和简单的复盘日志记录。
-
----
-
-## 六、 风险与规避策略
-
-* **逻辑不一致**：`tcgone` 的逻辑可能有 Bug。
-* **对策**：MVP 优先覆盖 Top 榜单卡组，这部分卡组在开源社区被测试最充分，准确率最高。
-
-
-* **性能瓶颈**：全环境卡牌逻辑注入可能导致内存占用。
-* **对策**：按需加载（On-demand loading），仅加载对局双方涉及的卡牌逻辑。
-
-
-
----
-
-**Walter，针对这份 MVP 规格书，你现在的首要任务是验证“逻辑转译”的可行性。**
-
-如果你愿意，我可以为你展示一个 **Prompt 示例**：如何将一张复杂的 `tcgone` 卡牌 Groovy 代码，通过我（Gemini）转化为可以直接运行在 `ryuu-play` 引擎下的 TypeScript 代码。**你想试试哪张卡？**
+Pokemon TCG · v0 — 精简规格
+
+本规格只描述 v0 范围。完整 PTCG 规则随 feature 落地逐步补全。
+
+================================================================
+项目目标 (v0)
+================================================================
+打造一个桌面浏览器版的 Pokemon TCG 单人 PvE 体验，参考 PTCG Live
+的横向战场布局与视觉风格，从中国区域官方发布的三套大师卡组开始：
+
+  1. 喷火龙 ex 大师卡组
+  2. 密勒顿 ex 大师卡组
+  3. 沙奈朵 ex 大师卡组
+
+后续版本逐步扩充更多卡组与机制。本版本不实现联机对战、不实现音效、
+不实现移动端响应式 — 这些都留给 v0 之后。
+
+================================================================
+技术栈
+================================================================
+- Next.js 16 (App Router) + React 19 + TypeScript 5
+- Tailwind CSS 4
+- 状态管理：useReducer（游戏状态） + Zustand（UI 状态）
+- 拖拽：@dnd-kit/core
+- 动画：framer-motion
+- 测试：Jest + React Testing Library
+- 部署：Vercel / Docker（保留旧 Dockerfile / vercel.json）
+
+================================================================
+目录结构
+================================================================
+app/src/
+  app/                  Next.js routes（home, battle, /api/health）
+  core/                 引擎纯 TS 层（无 React 依赖）
+    types.ts            GameState / PlayerState / GameCard 等类型
+    cards.ts            CardDef 接口与注册表
+    decks.ts            3 套大师卡组的 DeckDef
+    reducer.ts          (state, action) => state'
+    actions.ts          Action 类型 + 创建器
+    phases.ts           回合阶段机
+    prompts.ts          中断式 prompt
+    effects/            按 deck 分目录的卡牌效果
+      charizard-ex/
+      miraidon-ex/
+      gardevoir-ex/
+    ai/
+      policy.ts         启发式 AI
+      heuristics.ts
+  ui/
+    battle/
+      GameCanvas.tsx
+      Tableau.tsx
+      zones/            ActiveSlot / BenchRow / PrizeRack 等
+      cards/            BoardCard / HandCard / EnergyChip
+      prompts/PromptStack.tsx
+      fx/               DamageBurst / KOSmoke / EnergySnap / PrizeCinematic
+      overlay/          CardZoom / ActionLog / TurnTimer / OptionsMenu
+    home/
+      DeckPicker.tsx
+      HeroBanner.tsx
+  store/
+    battleUi.ts         Zustand：选中态 / 悬停 / 动画队列 / modal 栈
+  styles/
+    globals.css         CSS 变量、背景渐变、关键 keyframe
+public/
+  card-art/             v0 三套卡组的本地卡图
+
+================================================================
+核心引擎设计要点
+================================================================
+- 纯 reducer：(state, action) => state'，状态不可变
+- 同步驱动 + 中断 prompt：reducer 推进遇到 prompt 暂停，等外部应答
+- 卡牌效果 = TS 函数：(ctx) => Action[]，不上 DSL 不上 LLM 抽取
+- AI = 启发式：能进化就进化、能挂能量就挂、能搜就搜、能攻击就打最高伤害
+- 副作用（动画 / 声音）通过 reducer 返回的 log 派生，不入引擎
+
+GameState 字段（精简版）：
+  players: [PlayerState, PlayerState]   // [self, opponent]
+  activePlayer: 0 | 1
+  phase: 'setup' | 'draw' | 'main' | 'attack' | 'between' | 'gameOver'
+  turnNumber: number
+  stadium: GameCard | null
+  pendingPrompt: Prompt | null
+  log: GameEvent[]
+  winner: 0 | 1 | null
+
+PlayerState：
+  deck / hand / active / bench(5) / prizes(6) / discard / lostZone
+  hasPlayedSupporter / hasAttachedEnergy / retreatedThisTurn
+
+GameCard：
+  uid / cardId / damage / attachedEnergy / attachedTool / evolutionStack
+  status / markers
+
+================================================================
+UI 视觉规范
+================================================================
+- 主色：深暗紫蓝渐变 linear-gradient(135deg, #0d0e26, #1a0d3a, #0f1a3a)
+- 强调色：按属性 6 色调色板（火 / 水 / 草 / 电 / 超 / 钢 / 恶 / 格斗）
+- 活跃 Pokemon 光晕：box-shadow + drop-shadow + pulse 呼吸 keyframe
+- 稀有卡 holographic：mask-image 渐变 + mix-blend-mode: color-dodge
+- 字体：系统字体栈，数字用 Inter 或等宽
+
+布局（自上而下视角，self 在下）：
+  rows 1-3   对手 prize / bench / deck-discard
+  rows 4-5   对手 active
+  row 6      Stadium（中央接缝）
+  rows 7-8   己方 active（光晕）
+  rows 9-10  己方 prize / bench / deck-discard
+  rows 11-12 HandFan
+  右侧悬浮：ActionLog / TurnTimer / OptionsMenu
+  中央悬浮：PromptStack / CardZoom / FX 层
+
+================================================================
+开发命令
+================================================================
+- 开发：cd app && npm run dev          (port 3000)
+- 测试：cd app && npm test
+- 构建：cd app && npm run build
+- 健康检查：curl localhost:3000/api/health
+- 端到端验证：bash init.sh             (root 目录运行)
+
+================================================================
+不在 v0 范围
+================================================================
+- 联机 PvP（socket.io 已经从 dev script 移除，但依赖保留待后用）
+- 音效（public/audio/ 目录留位）
+- 移动端响应式
+- 其他卡组 / 其他系列
+- VSTAR Power 专属界面 / VMAX 进化动画
+- 3D 卡片倾斜
+- 多语言（仅中文）
+- 卡组编辑器
+- 集换 / 收藏 / 经济系统
+
+参考：archive/legacy-2026-05-03/ 下保留了上一轮 40 个 session 的产出，
+仅作为引擎设计与 PTCG 规则解读的参考资料；不导入、不构建。
