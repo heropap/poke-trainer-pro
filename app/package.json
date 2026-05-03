@@ -3,13 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node --project tsconfig.server.json server.ts",
-    "dev:next-only": "next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest --passWithNoTests",
-    "generate-rules": "npx tsx src/engine/llm/generate-all-rules.ts"
+    "test": "jest --passWithNoTests"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

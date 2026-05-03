@@ -1,209 +1,195 @@
 [
   {
     "category": "infrastructure",
-    "description": "项目基础架构 - Next.js + TypeScript 项目搭建，基本布局和目录结构",
+    "description": "清场 + 重建骨架（tabula rasa）",
     "steps": [
-      "使用 create-next-app 初始化 TypeScript 项目",
-      "创建核心目录结构（engine/, data/, components/, lib/）",
-      "搭建基本页面布局（导航栏、主内容区）",
-      "配置 Tailwind CSS 样式系统",
-      "确保开发服务器能正常启动并响应"
+      "把 app/src 与 root 的 spec.txt / feature_list.json / claude-progress.txt / 设计稿移到 archive/legacy-2026-05-03/",
+      "修补 app/package.json dev 脚本（去掉 ts-node + server.ts），清理 tsconfig.json 与 jest.config.ts 的旧路径",
+      "新建最小 app/src/app/ 骨架：layout.tsx / page.tsx / globals.css / api/health/route.ts",
+      "重写 init.sh，写入新版精简 spec.txt 与空 claude-progress.txt（首条记录为本 session）",
+      "验证：bash init.sh 必须绿（dev server 起得来 / /api/health 返回 200 / jest 通过）"
     ],
     "passes": true,
     "priority": 0
   },
   {
-    "category": "infrastructure",
-    "description": "Pokemon TCG 静态数据集成 - 拉取 pokemon-tcg-data 并建立本地卡牌索引",
+    "category": "data",
+    "description": "卡牌数据骨架 + 喷火龙 ex 大师卡组",
     "steps": [
-      "下载 pokemon-tcg-data JSON 数据（cards、sets）",
-      "创建卡牌数据类型定义（Card, Set, Attack, Ability 等接口）",
-      "实现卡牌索引服务（按 id、name、set 查询）",
-      "实现 Standard 环境合规性（Legality）过滤",
-      "编写数据加载和查询的单元测试"
+      "在 src/core/types.ts 定义 GameState / PlayerState / GameCard / Zone / Phase 等核心类型",
+      "在 src/core/cards.ts 定义 CardDef 接口与注册表",
+      "把官方版「喷火龙 ex 大师卡组」60 张卡转录为 CardDef（含 HP / 招式 / 能力 / 弱抗 / 撤退花费）",
+      "把对应卡图放到 public/card-art/ 下（命名规则：deck-slug + card-id）",
+      "Jest 测试：注册表查找正确；deck 60 张且 ≤4 张同名（基本能量除外）"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 1
   },
   {
-    "category": "functional",
-    "description": "卡牌展示组件 - 使用 Canvas/SVG 渲染卡牌缩略图和详情",
+    "category": "data",
+    "description": "密勒顿 ex + 沙奈朵 ex 大师卡组",
     "steps": [
-      "创建 CardImage 组件（使用 images.small 展示缩略图）",
-      "创建 CardDetail 组件（悬浮显示技能描述、HP、弱点等）",
-      "实现卡牌列表/网格视图",
-      "添加卡牌搜索和过滤功能",
-      "编写组件渲染测试"
+      "把官方版「密勒顿 ex 大师卡组」60 张卡转录为 CardDef",
+      "把官方版「沙奈朵 ex 大师卡组」60 张卡转录为 CardDef",
+      "卡图放到 public/card-art/ 下",
+      "在 src/core/decks.ts 暴露 3 套大师卡组（DeckDef 对象）",
+      "Jest 测试：每套 60 张、合规性检查通过"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 2
   },
   {
-    "category": "functional",
-    "description": "卡组导入与验证 - 支持 PTCG Live 格式导入，自动检查合规性",
+    "category": "engine",
+    "description": "游戏状态 + 阶段机 + 起手抽牌",
     "steps": [
-      "实现 PTCG Live 卡组文本解析器",
-      "将解析结果映射到 pokemon-tcg-data 的 card_id",
-      "实现 Standard 环境合规性校验（标记非法卡牌）",
-      "创建卡组导入 UI（文本框粘贴 + 解析结果展示）",
-      "编写解析器和验证逻辑的单元测试"
+      "src/core/reducer.ts 骨架：setup / mulligan / 起手 7 张 / 翻 6 张奖励",
+      "src/core/phases.ts 阶段机：Setup → Draw → Main → Attack → Between → GameOver",
+      "src/core/actions.ts 起步 action：GameStart / Mulligan / DrawCard",
+      "Jest 测试：模拟 setup；验证洗牌、手牌数、奖励数"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 3
   },
   {
-    "category": "functional",
-    "description": "游戏引擎核心 - 基于 ryuu-play 架构实现基本游戏状态管理",
+    "category": "engine",
+    "description": "主回合 actions（出牌、挂能量、进化、撤退、训练家）",
     "steps": [
-      "定义核心游戏状态类型（GameState, Player, Zone, Card 等）",
-      "实现游戏区域管理（手牌、牌组、弃牌堆、场上、奖励卡、备战区）",
-      "实现回合流转系统（抽牌阶段→主阶段→攻击阶段→结束阶段）",
-      "实现 Action 系统（定义合法动作、验证动作、执行动作）",
-      "编写游戏状态管理的单元测试"
+      "Action: PlayBasicPokemon（手牌 → 后场/前场，setup 与主回合各自规则）",
+      "Action: AttachEnergy（每回合一次）",
+      "Action: PlayItem / PlaySupporter（每回合一张 supporter）",
+      "Action: Retreat（前后场互换 + 支付撤退花费）",
+      "Action: Evolve（首回合不可进化）",
+      "Reducer 中的合法性校验 + 每个 action 对应单测"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 4
   },
   {
-    "category": "functional",
-    "description": "对战准备阶段 - Mulligan 处理、奖励卡设置、初始手牌",
+    "category": "engine",
+    "description": "攻击 + 伤害 + KO + 取奖励",
     "steps": [
-      "实现洗牌算法（Fisher-Yates）",
-      "实现初始手牌抽取（7张）",
-      "实现 Mulligan 检测和处理（无基础宝可梦时重抽）",
-      "实现奖励卡设置（6张）",
-      "实现基础宝可梦放置（战斗区 + 备战区）",
-      "编写准备阶段流程测试"
+      "Action: Attack（能量花费检查 → 效果 → 计算伤害含弱抗）",
+      "KO 检测 + 取奖励（基础 1 张 / ex 2 张）",
+      "前场被 KO 时的「从后场晋升」prompt",
+      "BetweenTurns 阶段：状态异常 checkup",
+      "胜负条件：6 奖励 / 无后场 / deck out / 投降",
+      "Jest 测试：完整攻击流（含弱点、KO、取奖励）"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 5
   },
   {
-    "category": "functional",
-    "description": "回合内动作实现 - 附能、进化、撤退、使用支持者",
+    "category": "engine",
+    "description": "三套卡组的关键卡牌效果实现",
     "steps": [
-      "实现能量附加（每回合一次限制）",
-      "实现宝可梦进化（入场首回合禁用规则）",
-      "实现撤退（消耗撤退费用）",
-      "实现支持者卡使用（每回合一次限制）",
-      "实现物品卡使用",
-      "编写各动作的合法性检查测试"
+      "喷火龙 ex 的 *爆炎挥发* 攻击伤害递增逻辑",
+      "比雕 ex 的 *Quick Search* 能力（搜索一张卡）",
+      "密勒顿 ex 的 *Tandem Unit* 入场技（搜索两张基础雷属性 → 后场）",
+      "沙奈朵 ex 的 *Psychic Embrace* 能力（弃牌区超能量 → 后场）",
+      "训练家：博士的研究 / Iono / 老板命令 / 高级球 / 巢穴球 / 神奇糖果 / Arven",
+      "效果共享 helper：drawN / searchDeck / healDamage / attachFromDiscard",
+      "每个独立效果对应单测"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 6
   },
   {
-    "category": "functional",
-    "description": "伤害与击倒系统 - HP追踪、弱点/抵抗力计算、奖励卡获取",
+    "category": "engine",
+    "description": "AI 启发式对手",
     "steps": [
-      "实现攻击伤害计算（基础伤害 + 弱点/抵抗力）",
-      "实现 HP 追踪和击倒判定",
-      "实现普通宝可梦击倒奖励（1张）",
-      "实现 ex/V 宝可梦击倒奖励（2张）和 VSTAR/VMAX（3张）",
-      "实现胜负判定（奖励卡取完、对方无法抽牌、对方场上无宝可梦）",
-      "编写伤害和击倒系统测试"
+      "src/core/ai/policy.ts 主入口：state → next action",
+      "启发式：能进化就进化 / 能挂能量就挂 / 能搜就搜 / 能打最高伤害就打",
+      "AI 自我对战 100 局不崩 (simulateGame)",
+      "Jest：AI 不发出非法 action；基础 win-rate 合理"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 7
   },
   {
-    "category": "functional",
-    "description": "WebSocket 对战通信 - 建立实时游戏通信层",
+    "category": "ui",
+    "description": "UI 骨架 + Tableau 12×12 CSS Grid",
     "steps": [
-      "搭建 WebSocket 服务器（Next.js API Route 或独立服务）",
-      "定义通信协议（GameAction、GameEvent 消息格式）",
-      "实现房间管理（创建房间、加入房间、匹配）",
-      "实现游戏状态同步（服务端权威模型）",
-      "编写 WebSocket 通信测试"
+      "src/ui/battle/GameCanvas.tsx 顶层挂载点",
+      "src/ui/battle/Tableau.tsx：12 行 × 12 列 grid，所有 zone 占位",
+      "用静态 mock state 渲染 3 套卡组各自的初始战场（无交互）",
+      "浏览器验证：访问 /battle?mock=charizard|miraidon|gardevoir 看到正确布局"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 8
   },
   {
-    "category": "functional",
-    "description": "卡牌效果框架 - 动态效果加载系统",
+    "category": "ui",
+    "description": "BoardCard / HandCard / 能量徽章 视觉到位",
     "steps": [
-      "设计卡牌效果接口（Attack, Ability, TrainerEffect）",
-      "实现效果注册表（按 card_id 注册和查询效果）",
-      "实现动态效果加载（按需加载对局涉及的卡牌逻辑）",
-      "实现 5 张示例卡牌效果（基础宝可梦）",
-      "编写效果加载和执行测试"
+      "src/ui/battle/cards/BoardCard.tsx：卡图 / HP / 伤害指示器 / 能量徽章 / 状态徽章",
+      "src/ui/battle/cards/HandCard.tsx：手牌小尺寸版本",
+      "src/ui/battle/cards/EnergyChip.tsx：按属性着色",
+      "ex / 稀有卡的 holographic shimmer（CSS mask + mix-blend-mode）",
+      "浏览器验证：3 套 mock 状态下所有卡视觉正确"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 9
   },
   {
-    "category": "functional",
-    "description": "对战 UI - 战斗界面布局与交互",
+    "category": "ui",
+    "description": "HandFan + 选中 + 拖拽起步",
     "steps": [
-      "创建对战场地布局（双方战斗区、备战区、牌组、弃牌堆）",
-      "实现手牌展示和选择交互",
-      "实现动作选择 UI（附能目标、攻击选择、撤退确认）",
-      "实现卡牌拖拽放置",
-      "编写 UI 交互测试"
+      "src/ui/battle/zones/HandFan.tsx 扇形叠加布局",
+      "悬停抬起 + 点击放大（src/store/battleUi.ts Zustand）",
+      "DndContext 接入；HandCard onDragStart 触发",
+      "浏览器验证：手牌 hover / 点击 / 拖拽 起步顺畅"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 10
   },
   {
-    "category": "functional",
-    "description": "动作日志侧边栏 - 实时显示对战事件",
+    "category": "ui",
+    "description": "拖到场上 + 挂能量 + 撤退 + 进化手势",
     "steps": [
-      "创建 ActionLog 组件",
-      "实现事件格式化（中文描述：使用卡牌、造成伤害、击倒等）",
-      "实现日志自动滚动",
-      "集成到对战界面侧边栏",
-      "编写日志显示测试"
+      "Drop targets：ActiveSlot / BenchSlot / 已在场的 Pokemon",
+      "drag-end 派发引擎 action（PlayBasicPokemon / AttachEnergy / Evolve）",
+      "ActiveSlot 上的攻击按钮触发 Attack action",
+      "撤退操作下拉",
+      "浏览器验证：用喷火龙 mock 完整跑一次出场 → 进化 → 挂能量 → 攻击循环"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 11
   },
   {
-    "category": "functional",
-    "description": "AI 对手 - 基于启发式评估的 SimpleBot",
+    "category": "ui",
+    "description": "PromptStack 中断式 prompt 渲染层",
     "steps": [
-      "实现游戏状态评估函数（场面优势、手牌优势、奖励卡差距）",
-      "实现合法动作枚举",
-      "实现贪心策略（选择评估分最高的动作序列）",
-      "针对 ex 环境调整评估权重",
-      "编写 AI 决策测试"
+      "src/ui/battle/prompts/PromptStack.tsx 按 prompt.kind switch",
+      "实现：SelectTarget / SelectCards / OrderCards / CoinFlip / Confirm / ChooseOption",
+      "接到 reducer 的 pendingPrompt",
+      "浏览器验证：每种 prompt 渲染 + 应答正确"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 12
   },
   {
-    "category": "functional",
-    "description": "主流卡牌逻辑实现 - 实现 Standard 环境前 20 套卡组的核心卡牌",
+    "category": "ui",
+    "description": "动画 + 特效层（v0 范围）",
     "steps": [
-      "整理 Standard 环境主流卡组清单（约 150 张核心卡）",
-      "设计 Groovy-to-TS 逻辑转译 Prompt 模板",
-      "批量转译并验证卡牌效果",
-      "实现特殊规则（VSTAR Power 使用次数限制等）",
-      "编写核心卡牌效果的集成测试"
+      "DamageBurst：伤害数字飞升 + 淡出",
+      "KOSmoke / EnergySnap / PrizeCinematic",
+      "抽牌动画：framer-motion LayoutGroup deck → hand",
+      "出牌动画：hand → 场上的弧线运动",
+      "浏览器验证：完整跑一局动画链路顺畅"
     ],
-    "passes": true,
+    "passes": false,
     "priority": 13
   },
-  {"category":"infrastructure","description":"Stadium 卡系统 — 场地卡机制(打出/替换/效果)","steps":["GameState 添加 stadium 字段","实现 playStadium() 和路由","EffectContext 添加 stadium 方法","实现 5 张常用场地卡效果","编写 stadium 系统测试"],"passes":true,"priority":15},
-  {"category":"integration","description":"ryuu-play 卡牌效果批量移植 — 移植 50 张 Standard 核心卡效果","steps":["分析 ryuu-play 696 张卡牌实现","移植 Top 50 核心攻击效果","移植剩余常用训练师","使用 EffectContext API 编写效果","编写集成测试验证效果"],"passes":true,"priority":16},
-  {"category":"functional","description":"Marker 系统 — 卡牌标记/计数器支持","steps":["GameCard 添加 markers 字段","EffectContext 添加 marker CRUD 方法","实现常见 marker 类型","VisualCard 显示 marker 徽章","编写 marker 系统测试"],"passes":true,"priority":17},
-  {"category":"ui","description":"移动端响应式布局 — 适配手机和平板","steps":["BattleBoard flex-col/flex-row 响应式","手牌 carousel + 触摸传感器","ActionMenu bottom sheet","ActionLog 全屏 modal","多视口测试"],"passes":true,"priority":18},
-  {"category":"ui","description":"卡牌动画系统 — Framer Motion 对战动画","steps":["安装 framer-motion","实现 5 种核心动画(抽牌/打出/攻击/受击/击倒)","进化翻转动画","能量附加飞行动画","AI 动画队列系统"],"passes":true,"priority":19},
-  {"category":"deployment","description":"Docker 容器化部署 — Dockerfile + 健康检查 + 环境变量","steps":["多阶段 Dockerfile","docker-compose.yml","env.example 环境变量","健康检查 /api/health","部署文档"],"passes":true,"priority":20},
-  {"category":"functional","description":"WebSocket 断线重连 — 自动重连 + 状态恢复","steps":["服务端游戏状态持久化(30分钟TTL)","game:reconnect 事件实现","客户端 exponential backoff","掉线 UI 提示横幅","编写重连流程测试"],"passes":true,"priority":21},
-  {"category":"functional","description":"回合计时器 — 90秒限时 + 超时自动结束","steps":["GameState 添加 turnTimer 字段","服务端倒计时 + 超时自动 end_turn","客户端进度环 UI","10秒警告闪红","编写计时器测试"],"passes":true,"priority":22},
-  {"category":"functional","description":"高级 Prompt 系统 — 硬币翻转/选择宝可梦/排序卡牌","steps":["扩展 GamePrompt 支持 6 种类型","PromptModal 组件(按类型渲染)","硬币翻转动画","拖拽排序卡牌","Prompt 队列(连续提示)"],"passes":true,"priority":23},
-  {"category":"polish","description":"卡牌图片优化 — next/image + 预加载 + 离线缓存","steps":["配置 Next.js images.remotePatterns","VisualCard 使用 next/image","对战开始预加载卡组图片","卡背图片替代占位符","IntersectionObserver 懒加载"],"passes":true,"priority":24},
-  {"category":"ui","description":"开局硬币翻转动画+先后攻选择 — 3D硬币动画+赢家选择先攻/后攻","steps":["SetupResult 携带 coinFlipResult","创建 OpeningSequenceModal 组件(3D硬币翻转CSS动画)","硬币翻转赢家选择先攻/后攻(AI自动选)","BattlePageClient 集成开局序列","编写开局序列测试"],"passes":true,"priority":25},
-  {"category":"ui","description":"开局宝可梦选择 Modal — 从手牌选基础宝可梦放置战斗区/备战区","steps":["创建 PokemonPlacementModal 组件","显示手牌中所有基础宝可梦","选择战斗区宝可梦(必选1只)","选择备战区宝可梦(可选0-5只)","替换 autoPlaceBasicPokemon 为交互式放置"],"passes":true,"priority":26},
-  {"category":"ui","description":"KO后备战区选择优化 — 被击倒后选择替补宝可梦的交互改进","steps":["创建 PromotionModal 专用组件","显示备战区宝可梦卡牌详情","高亮可选目标+确认按钮","添加升级动画过渡效果","替换当前点击备战区直接升级的交互"],"passes":true,"priority":27},
-  {"category":"polish","description":"预置示例卡组 — 内置3-5套可直接使用的Standard卡组","steps":["收集3-5套Standard主流卡组的PTCG Live代码","创建prebuilt-decks.ts静态数据文件","卡组页面添加'示例卡组'快捷导入按钮","一键导入到localStorage","编写预置卡组加载测试"],"passes":true,"priority":28},
-  {"category":"polish","description":"回合切换视觉提示 — 回合开始/结束的Banner动画","steps":["创建TurnBanner组件(全屏横幅动画)","显示'你的回合'/'对手回合'切换提示","Framer Motion滑入滑出动画(1.5秒自动消失)","集成到BattleBoard的回合切换检测","AI回合开始时显示'AI思考中'横幅"],"passes":true,"priority":29},
-  {"category":"functional","description":"先攻首回合规则验证 — 确保先攻方首回合不能攻击和使用Supporter","steps":["验证canAttack在isFirstTurn时正确阻止攻击","验证canPlaySupporter在isFirstTurn时正确阻止","UI攻击按钮在首回合正确禁用+提示文字","AI在首回合正确跳过攻击直接结束回合","编写首回合规则完整测试"],"passes":true,"priority":30},
-  {"category":"functional","description":"Deck Out胜利条件修复 — 牌组抽空时正确判定胜负","steps":["drawCard检测牌组为空时设置winner","checkWinCondition增加deck_out检查","game-controller在抽牌失败时正确处理game_over","Game Over界面显示'对方无法抽牌'","编写deck_out胜利条件测试"],"passes":true,"priority":31},
-  {"category":"ui","description":"游戏结算统计画面 — 胜负后显示对局数据统计","steps":["收集对局统计数据(回合数/击倒数/奖赏卡获取/使用的训练师卡数)","创建GameResultsOverlay组件","显示双方统计对比","添加'再来一局'和'返回大厅'按钮","替换当前简单的GameOver覆盖层"],"passes":true,"priority":32},
-  {"category":"ui","description":"对手手牌遮罩 — AI/本地对战中隐藏对手手牌信息","steps":["BattleBoard区分我方/对手手牌渲染","对手手牌显示卡背而非正面","对手手牌数量正确显示","可选debug模式切换显示/隐藏","编写手牌遮罩测试"],"passes":true,"priority":33},
-  {"category":"functional","description":"引擎错误恢复 — processAction异常时不卡死游戏","steps":["processAction包裹try-catch返回error","BattleBoard显示错误toast而非卡死","连续错误自动结束回合防止死循环","错误日志记录到gameState.log","编写错误恢复测试"],"passes":true,"priority":34},
-  {"category":"ui","description":"奖赏卡翻开动画 — 击倒后取奖赏卡的视觉反馈","steps":["检测prize_taken事件触发动画","创建PrizeRevealOverlay组件","卡牌翻转动画展示获得的奖赏卡","1.5秒后自动关闭","集成到BattleBoard事件监听"],"passes":true,"priority":35},
-  {"category":"polish","description":"对战页快速开始 — 无需选卡组直接用预置卡组开始","steps":["对战大厅检测无已保存卡组时自动导入预置卡组","添加'快速开始'按钮(随机预置卡组)","首次访问引导提示","减少新用户到对战的步骤","编写快速开始流程测试"],"passes":true,"priority":36}
+  {
+    "category": "integration",
+    "description": "三套卡组 E2E 烟雾测试 + v0.1 收尾",
+    "steps": [
+      "人工：用三套卡组各对 AI 跑一局完整对局",
+      "验证所有关键效果在实战中正确触发",
+      "新增 jest 集成测试覆盖 reducer happy path",
+      "更新 README，标 git tag v0.1"
+    ],
+    "passes": false,
+    "priority": 14
+  }
 ]

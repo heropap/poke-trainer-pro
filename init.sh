@@ -1,68 +1,65 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# init.sh — v0 验证脚本：启动 dev server / 健康检查 / 跑测试 / 关闭 server
+# 用法：bash init.sh
+
 set -e
 
-APP_DIR="$(cd "$(dirname "$0")/app" && pwd)"
-PORT=3000
-PID_FILE="/tmp/poke-trainer-dev.pid"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_DIR="$ROOT/app"
+LOG_DIR="$ROOT/.init-logs"
+mkdir -p "$LOG_DIR"
 
-echo "=== Poke-Trainer Pro - Init Script ==="
-echo ""
-
-# Step 1: Install dependencies
-echo "[1/5] Installing dependencies..."
 cd "$APP_DIR"
-npm install --silent 2>&1 | tail -1
 
-# Step 2: Run tests
-echo "[2/5] Running tests..."
-npm test 2>&1
-TEST_EXIT=$?
-
-if [ $TEST_EXIT -ne 0 ]; then
-  echo "FAIL: Tests failed with exit code $TEST_EXIT"
-  exit 1
+# ---- 安装依赖（首次运行才需要）-------------------------------------
+if [ ! -d node_modules ]; then
+  echo "[init] 首次运行，安装依赖..."
+  npm install --no-audit --no-fund > "$LOG_DIR/npm-install.log" 2>&1
 fi
 
-# Step 3: Build check
-echo "[3/5] Building project..."
-npm run build 2>&1 | tail -5
-BUILD_EXIT=$?
-
-if [ $BUILD_EXIT -ne 0 ]; then
-  echo "FAIL: Build failed with exit code $BUILD_EXIT"
-  exit 1
-fi
-
-# Step 4: Start dev server and health check
-echo "[4/5] Starting dev server on port $PORT..."
-npm run dev -- -p $PORT &
+# ---- 启动 dev server（后台）---------------------------------------
+echo "[init] 启动 next dev (port 3000)..."
+PORT=3000 npm run dev > "$LOG_DIR/dev-server.log" 2>&1 &
 DEV_PID=$!
-echo $DEV_PID > "$PID_FILE"
 
-# Wait for server to be ready
-MAX_RETRIES=30
-RETRY=0
-while [ $RETRY -lt $MAX_RETRIES ]; do
-  if curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT" | grep -q "200"; then
-    echo "  Server is ready!"
+cleanup() {
+  if kill -0 "$DEV_PID" 2>/dev/null; then
+    echo "[init] 关闭 dev server (pid=$DEV_PID)"
+    kill "$DEV_PID" 2>/dev/null || true
+    wait "$DEV_PID" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT INT TERM
+
+# ---- 等待 server 就绪 ---------------------------------------------
+echo "[init] 等待 /api/health 返回 200..."
+HEALTH_OK=0
+for i in $(seq 1 60); do
+  if curl -fsS "http://localhost:3000/api/health" > "$LOG_DIR/health.json" 2>/dev/null; then
+    HEALTH_OK=1
     break
   fi
-  RETRY=$((RETRY + 1))
   sleep 1
 done
 
-if [ $RETRY -eq $MAX_RETRIES ]; then
-  echo "FAIL: Server did not start within ${MAX_RETRIES}s"
-  kill $DEV_PID 2>/dev/null
-  rm -f "$PID_FILE"
+if [ "$HEALTH_OK" -ne 1 ]; then
+  echo "[init] FAIL: dev server 未在 60s 内响应 /api/health"
+  echo "[init] 最近 dev server 日志："
+  tail -40 "$LOG_DIR/dev-server.log" || true
   exit 1
 fi
 
-# Step 5: Shutdown
-echo "[5/5] Shutting down dev server..."
-kill $DEV_PID 2>/dev/null
-rm -f "$PID_FILE"
-wait $DEV_PID 2>/dev/null
+echo "[init] 健康检查 OK：$(cat "$LOG_DIR/health.json")"
 
-echo ""
-echo "=== All checks passed! ==="
+# ---- 跑测试 -------------------------------------------------------
+echo "[init] 跑 jest..."
+if ! npm test --silent > "$LOG_DIR/jest.log" 2>&1; then
+  echo "[init] FAIL: 测试未通过"
+  tail -60 "$LOG_DIR/jest.log" || true
+  exit 1
+fi
+
+echo "[init] 测试通过"
+
+# ---- 收尾 ---------------------------------------------------------
+echo "[init] OK — dev server 启动 / 健康检查 / 测试 全部通过"
