@@ -22,7 +22,7 @@
       "把对应卡图放到 public/card-art/ 下（命名规则：deck-slug + card-id）",
       "Jest 测试：注册表查找正确；deck 60 张且 ≤4 张同名（基本能量除外）"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 1
   },
   {

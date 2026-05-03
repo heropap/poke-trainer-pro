@@ -28,3 +28,15 @@ Notes:
       3. AI 难度级别
       4. v0 完结后是 PvP 还是扩卡
       5. 音效是否预留挂载点
+
+=== Session F1 | 2026-05-03 ===
+Feature: 卡牌数据骨架 + 喷火龙 ex 大师卡组（priority 1）
+Status: completed
+Notes:
+  - 新建 app/src/core/types.ts：CardDef union（Pokemon / Trainer / Energy）+ DeckDef + 9 种 EnergyType
+  - 新建 app/src/core/cards.ts：Map registry + registerCard / getCard / validateDeck
+  - 新建 app/src/core/decks/charizard-ex.ts：17 张 unique CardDef + DeckDef（slug=charizard-ex）
+  - 卡图通过 pokemontcg.io 远程 URL（next.config.ts 已配 remotePatterns）
+  - 8 个单元测试全过；init.sh 全绿
+  - 卡表参考归档版 archive/.../prebuilt-decks.ts；标准 SV 时代 Charizard ex / Pidgeot ex 引擎主线，
+    与中国官方大师卡组的具体卡数可能略有出入，待用户提供官方卡表后再 reconcile。
