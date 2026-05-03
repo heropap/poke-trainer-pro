@@ -61,7 +61,7 @@
       "Action: Evolve（首回合不可进化）",
       "Reducer 中的合法性校验 + 每个 action 对应单测"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 4
   },
   {

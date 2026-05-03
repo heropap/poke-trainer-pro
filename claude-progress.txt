@@ -69,3 +69,24 @@ Notes:
   - autoSetup() helper：自动响应 setup 提示，用于测试和 AI（F7 会复用）
   - 12 个新单测全过；init.sh 全绿
   - Mulligan：手牌无 Basic 时 reshuffle 重抽（不实现「对手多抽 1 张」补偿；F4+ 再补）
+
+=== Session F4 | 2026-05-03 ===
+Feature: 主回合 actions（priority 4）
+Status: completed
+Notes:
+  - actions.ts 扩充 9 个新 action：StartTurn / EndTurn / PlayBasicPokemon /
+    AttachEnergy / Retreat / Evolve / PlayItem / PlaySupporter / PlayStadium /
+    AttachTool
+  - reducer.ts 实现：
+      * StartTurn：抽 1（deck out 判断）→ 重置 perTurn flags → phase=main
+      * EndTurn：切换 activePlayer / +1 turn / phase=draw
+      * PlayBasicPokemon：手 → 后场（合法性 + 空槽校验）
+      * AttachEnergy：手 → 前/后场（每回合一次锁）
+      * Evolve：手中进化卡 → 已在场（首回合禁止 / 同回合放出禁止 / evolveFrom 名称匹配）
+      * Retreat：支付精确 retreat cost / 状态封锁 / swap 前后场 / 弃能量
+      * PlayItem：弃 + 派发到 effect registry（F4 注册表为空，F6 填）
+      * PlaySupporter：每回合一次 + 首回合禁止
+      * PlayStadium：替换在场 stadium，旧的进 owner 弃牌堆
+      * AttachTool：唯一槽位 + 校验
+  - core/effects.ts：CardId → EffectHandler 注册表（F4 仅基础设施，F6 注册具体效果）
+  - 12 个新单测全过；4 个 test suite，共 37 tests；init.sh 全绿
