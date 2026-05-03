@@ -22,7 +22,7 @@ export type TrainerKind = "Item" | "Supporter" | "Stadium" | "Tool";
 
 export type EnergyKind = "Basic" | "Special";
 
-export type RegulationMark = "F" | "G" | "H" | "I";
+export type RegulationMark = "E" | "F" | "G" | "H" | "I";
 
 export interface CardImages {
   small: string;

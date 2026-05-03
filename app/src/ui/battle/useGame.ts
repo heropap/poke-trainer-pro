@@ -22,9 +22,10 @@ export function useGame(opts: UseGameOptions) {
   );
   const [thinking, setThinking] = useState(false);
 
-  // AI driver — when it's the AI's turn or a prompt for the AI is pending,
-  // pick an action and dispatch (with a small delay so the UI has time to
-  // animate / render).
+  // Auto-dispatch driver — handles two cases:
+  //   1. AI's turn or a prompt for the AI: pick action via policy
+  //   2. Human's turn but phase=draw: auto-trigger StartTurn (PTCG auto-draws
+  //      at the start of each turn; the player doesn't need to click anything).
   useEffect(() => {
     if (state.phase === "gameOver") return;
     let actor: PlayerIndex;
@@ -35,6 +36,17 @@ export function useGame(opts: UseGameOptions) {
     } else {
       return;
     }
+
+    // Human's draw phase: auto-fire StartTurn so the player lands in main.
+    if (
+      actor === HUMAN_PLAYER &&
+      state.phase === "draw" &&
+      !state.pendingPrompt
+    ) {
+      const t = setTimeout(() => dispatch({ type: "StartTurn" }), 250);
+      return () => clearTimeout(t);
+    }
+
     if (actor !== AI_PLAYER) return;
     const action = chooseAction(state, actor);
     if (!action) return;

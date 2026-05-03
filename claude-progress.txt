@@ -260,3 +260,27 @@ Notes:
   - README 重写当前状态节为「v0.1 已完成」+ 功能清单
   - feature_list.json：15/15 priority 全部 passes:true
   - 准备打 git tag v0.1
+
+=== Session bug-fix | 2026-05-03 ===
+Status: completed
+Notes (run /build-fix internal testing):
+  - 修复 5 个 bug：
+    1. RegulationMark 类型缺 "E"：build TS 报错（Level Ball BST 是 E 标）。
+       types.ts 把 "E" 加入 union。npm run build 由失败转为通过。
+    2. 玩家回合 phase=draw 卡住（必须手动点「抽牌」按钮）：
+       useGame useEffect 自动派发 StartTurn（PTCG 真实规则就是自动抽牌）。
+       Sidebar 的「抽牌（开始回合）」按钮 + BattlePage 的事件监听一并删除。
+    3. Nest Ball 接受任意卡（应只搜 Basic Pokemon）：
+       trainers.ts 的 eligibleCardIds filter 之前是 `return true`（占位 bug）。
+       新增 isBasicPokemonId helper（getCard + kind+stage 判断）；
+       step handler 也加 guard 防止无效负载。
+    4. Iron Hands ex 在 Miraidon 卡组中无法攻击：两个招式都需要 Fighting 能量
+       但 Miraidon 卡组只有 Lightning。把 2 张 Iron Hands ex (par-70) 替换为
+       1 张 → 3 张 Raikou V (brs-48)，纯 Lightning 卡组。
+    5. Zacian V 在 Gardevoir 卡组中无法攻击：Brave Blade 需要 Metal 但卡组只有
+       Psychic。把 2 张 Zacian V 替换为 +2 张 Mew CEL（达到 4 张上限）。
+  - 浏览器 E2E 测试结果：
+       Charizard vs Miraidon (seed=42) → 4 turns gameOver (noBench)
+       Gardevoir vs Charizard (seed=99) → 12 turns gameOver (noBench, 5 endTurns + 2 prompts)
+       Miraidon vs Gardevoir (seed=11) → 6 turns gameOver (noBench, 6 endTurns)
+  - npm run build 通过；jest 8 suites 94 tests 全过；init.sh 全绿。

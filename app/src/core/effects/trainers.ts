@@ -1,3 +1,4 @@
+import { getCard } from "../cards";
 import { registerEffectStep, registerTrainerEffect } from "../effects";
 import { discardHand, drawN, logEvent, shuffleDeck, shuffleHandIntoDeck } from "./helpers";
 import type { GameState, PlayerIndex } from "../state";
@@ -138,22 +139,18 @@ registerEffectStep(SWITCH_EFFECT, (state: GameState, payload: PromptResponse) =>
 // Nest Ball (svi-181) — search your deck for a Basic Pokemon, put it on your
 // bench, and shuffle your deck.
 const NEST_EFFECT = "svi-181:nest";
+
+function isBasicPokemonId(cardId: string): boolean {
+  const def = getCard(cardId);
+  return def.kind === "Pokemon" && def.stage === "Basic";
+}
+
 registerTrainerEffect("svi-181", (state, player) => {
   const ps = state.players[player];
-  // Eligible: Basic Pokemon in deck.
   const eligibleCardIds = Array.from(
-    new Set(
-      ps.deck
-        .filter((c) => {
-          // Inline import would be circular; use lookup via cards.ts get
-          // We'll use cardId only for prompt; resolution checks Basic.
-          return true;
-        })
-        .map((c) => c.cardId),
-    ),
+    new Set(ps.deck.filter((c) => isBasicPokemonId(c.cardId)).map((c) => c.cardId)),
   );
   if (eligibleCardIds.length === 0) return state;
-  // Bench full?
   if (!ps.bench.includes(null)) return state;
 
   return {
@@ -177,9 +174,11 @@ registerEffectStep(NEST_EFFECT, (state: GameState, payload: PromptResponse) => {
   if (!eff) throw new Error("No pending effect");
   const player = eff.player;
   const cardId = payload.cardIds[0];
+  if (!isBasicPokemonId(cardId)) {
+    throw new Error(`Nest Ball: ${cardId} is not a Basic Pokemon`);
+  }
   const ps = state.players[player];
 
-  // Pull the card from deck.
   const card = ps.deck.find((c) => c.cardId === cardId);
   if (!card) throw new Error(`Card ${cardId} not in deck`);
 

@@ -117,17 +117,6 @@ function Sidebar({ state, humanPlayer, thinking, canEndTurn, onEndTurn }: Sideba
           ⚠️ Prompt: {state.pendingPrompt.kind} (player {state.pendingPrompt.player})
         </div>
       )}
-      {state.activePlayer === humanPlayer && state.phase === "draw" && (
-        <button
-          onClick={() => {
-            const evt = new CustomEvent("trigger-start-turn");
-            window.dispatchEvent(evt);
-          }}
-          className="w-full px-3 py-2 rounded bg-violet-600 hover:bg-violet-500 text-white font-semibold"
-        >
-          抽牌（开始回合）
-        </button>
-      )}
       <button
         onClick={onEndTurn}
         disabled={!canEndTurn}

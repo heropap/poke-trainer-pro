@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { GameCanvas } from "./GameCanvas";
 import { useGame } from "./useGame";
 
@@ -21,13 +20,6 @@ export function BattlePage({
     oppDeck,
     seed: finalSeed,
   });
-
-  // Listen for trigger-start-turn event from the sidebar.
-  useEffect(() => {
-    const handler = () => dispatch({ type: "StartTurn" });
-    window.addEventListener("trigger-start-turn", handler);
-    return () => window.removeEventListener("trigger-start-turn", handler);
-  }, [dispatch]);
 
   return (
     <GameCanvas
