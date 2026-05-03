@@ -127,7 +127,7 @@
       "ex / 稀有卡的 holographic shimmer（CSS mask + mix-blend-mode）",
       "浏览器验证：3 套 mock 状态下所有卡视觉正确"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 9
   },
   {

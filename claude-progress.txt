@@ -173,3 +173,28 @@ Notes:
       手牌横排显示具体卡名（Switch / Arven / Nest Ball / Professor's Research 等）
   - 浏览器 console 无错误；init.sh 全绿
   - F8 是「静态 mock state」阶段，无交互；F10+ 接入拖拽 + 行动 dispatch
+
+=== Session F9 | 2026-05-03 ===
+Feature: BoardCard / HandCard / EnergyChip 视觉到位（priority 9）
+Status: completed
+Notes:
+  - ui/battle/cards/EnergyChip.tsx：9 种能量按属性着色（Fire 橙 / Water 蓝 /
+    Grass 绿 / Lightning 黄 / Psychic 紫 / Fighting 棕 / Darkness 灰 / Metal 银 /
+    Colorless 浅灰）+ 字母标识 + 1px ring + 阴影
+  - ui/battle/cards/BoardCard.tsx：完整棋盘卡渲染
+      * Next.js Image 加载 pokemontcg.io 卡图（unoptimized）
+      * HP 进度条（顶部 1.5px，>50% 绿，>25% 黄，否则红）
+      * 伤害指示器（右上角，红色徽章 -<damage>）
+      * 能量徽章（底部横排）
+      * 状态徽章（左上角）
+      * ex/V/VMAX/VSTAR 全息渐变叠加层（mix-blend-mode: screen）
+      * active 尺寸 112×156 + 紫色光晕 box-shadow，bench 尺寸 72×100
+  - ui/battle/cards/HandCard.tsx：手牌小尺寸（68×96），hover 抬起 + 紫色光晕
+  - Tableau.tsx 重写：用 BoardCard / HandCard 替换内联渲染；牌组叠层效果
+    （多层 div 偏移 -0.5/-1 模拟一叠卡）；手牌 -16px margin 实现 fan 叠加
+  - 浏览器验证（1024×700）：
+      * 喷火龙 vs 密勒顿对战页：双方 active 卡图正确加载（Iron Hands ex / Pidgey），
+        opp bench 显示 Mareep 卡图，6 张奖励叠层可视，手牌 6 张全部加载图
+        （Switch / Arven / Nest Ball ×2 / Professor's Research / Basic Fire Energy）
+      * 浏览器 console 无错误
+  - init.sh 全绿；7 suites 66 tests 仍全过
