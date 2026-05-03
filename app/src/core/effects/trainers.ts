@@ -91,6 +91,128 @@ registerEffectStep(BOSS_EFFECT, (state: GameState, payload: PromptResponse) => {
   return next;
 });
 
+// Level Ball (bst-129) — Item.
+// "Search your deck for a Pokémon with 90 HP or less, reveal it, and put it
+// into your hand. Then, shuffle your deck."
+const LEVEL_BALL_EFFECT = "bst-129:level-ball";
+
+registerTrainerEffect("bst-129", (state, player) => {
+  const ps = state.players[player];
+  const eligible = Array.from(
+    new Set(
+      ps.deck
+        .filter((c) => {
+          const d = getCard(c.cardId);
+          return d.kind === "Pokemon" && d.hp <= 90;
+        })
+        .map((c) => c.cardId),
+    ),
+  );
+  if (eligible.length === 0) {
+    return logEvent(state, "LevelBallEmpty", { player });
+  }
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Level Ball — 选 1 张 90HP 或以下的 Pokémon",
+      cardIds: eligible,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: LEVEL_BALL_EFFECT, player },
+  };
+});
+
+registerEffectStep(LEVEL_BALL_EFFECT, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Level Ball expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error();
+  const player = eff.player;
+  const cardId = payload.cardIds[0];
+  const def = getCard(cardId);
+  if (def.kind !== "Pokemon" || def.hp > 90) {
+    throw new Error(`Level Ball: ${cardId} is not a Pokémon ≤90HP`);
+  }
+  const ps = state.players[player];
+  const card = ps.deck.find((c) => c.cardId === cardId);
+  if (!card) throw new Error(`Card ${cardId} not in deck`);
+
+  let next = setPlayer(state, player, {
+    ...ps,
+    hand: [...ps.hand, card],
+    deck: ps.deck.filter((c) => c.uid !== card.uid),
+  });
+  next = shuffleDeck(next, player);
+  next = { ...next, pendingPrompt: null, pendingEffect: null };
+  return logEvent(next, "LevelBall", { player, cardId });
+});
+
+// Fog Crystal (cre-140) — Item.
+// "Search your deck for a Basic Psychic Pokémon or a Basic Psychic Energy
+// card, reveal it, and put it into your hand. Then, shuffle your deck."
+const FOG_CRYSTAL_EFFECT = "cre-140:fog";
+
+function isBasicPsychicMatch(cardId: string): boolean {
+  const d = getCard(cardId);
+  if (d.kind === "Pokemon") {
+    return d.stage === "Basic" && d.types.includes("Psychic");
+  }
+  if (d.kind === "Energy") {
+    return d.energyKind === "Basic" && d.energyType === "Psychic";
+  }
+  return false;
+}
+
+registerTrainerEffect("cre-140", (state, player) => {
+  const ps = state.players[player];
+  const eligible = Array.from(
+    new Set(ps.deck.filter((c) => isBasicPsychicMatch(c.cardId)).map((c) => c.cardId)),
+  );
+  if (eligible.length === 0) {
+    return logEvent(state, "FogCrystalEmpty", { player });
+  }
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Fog Crystal — 选基础超能 Pokémon 或基础超能量",
+      cardIds: eligible,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: FOG_CRYSTAL_EFFECT, player },
+  };
+});
+
+registerEffectStep(FOG_CRYSTAL_EFFECT, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Fog Crystal expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error();
+  const player = eff.player;
+  const cardId = payload.cardIds[0];
+  if (!isBasicPsychicMatch(cardId)) {
+    throw new Error(`Fog Crystal: ${cardId} is not eligible`);
+  }
+  const ps = state.players[player];
+  const card = ps.deck.find((c) => c.cardId === cardId);
+  if (!card) throw new Error(`Card ${cardId} not in deck`);
+  let next = setPlayer(state, player, {
+    ...ps,
+    hand: [...ps.hand, card],
+    deck: ps.deck.filter((c) => c.uid !== card.uid),
+  });
+  next = shuffleDeck(next, player);
+  next = { ...next, pendingPrompt: null, pendingEffect: null };
+  return logEvent(next, "FogCrystal", { player, cardId });
+});
+
 // Energy Retrieval (svi-171) — Item.
 // "Put 2 Basic Energy cards from your discard pile into your hand."
 // v0: auto-take first 2 Basic Energy cards from discard. No prompt.

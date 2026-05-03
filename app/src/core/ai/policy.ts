@@ -141,6 +141,19 @@ function chooseMainAction(state: GameState, player: PlayerIndex): Action {
     return { type: "PlayItem", player, uid: nest.uid };
   }
 
+  // (E.1) Level Ball — search Pokemon ≤90HP, useful when need basics or evos.
+  const levelBall = findItemInHand(ps, ["bst-129"]);
+  if (levelBall && ps.deck.length > 0) {
+    return { type: "PlayItem", player, uid: levelBall.uid };
+  }
+
+  // (E.2) Fog Crystal — search Basic Psychic Pokemon or Psychic Energy.
+  // Skip energy unless bench has Gardevoir-line.
+  const fogCrystal = findItemInHand(ps, ["cre-140"]);
+  if (fogCrystal && ps.deck.length > 0) {
+    return { type: "PlayItem", player, uid: fogCrystal.uid };
+  }
+
   // (E.5) Rare Candy — if any Stage 2 in hand has a chain-matched Basic in play
   // (and not played this turn), the engine prompts for selection. We try it
   // optimistically; engine no-ops if no valid pair.

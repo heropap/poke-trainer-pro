@@ -134,6 +134,11 @@ export function findUsableAbility(
           return { card: c, abilityName: a.name };
         }
       }
+      if (a.name === "Premonition" && c.cardId === "asr-62") {
+        if (player.deck.length > 0) {
+          return { card: c, abilityName: a.name };
+        }
+      }
     }
   }
   return null;

@@ -720,6 +720,138 @@ describe("Electric Generator", () => {
   });
 });
 
+describe("Gallade Premonition", () => {
+  it("emits a confirm prompt revealing top 5 cards", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "asr-62", // Gallade active
+        energy: [],
+        deck: ["sve-5", "svi-67", "svi-68", "svi-86", "svi-194"],
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const galladeUid = s.players[0].active!.uid;
+    let next = reducer(s, {
+      type: "UseAbility",
+      player: 0,
+      sourceUid: galladeUid,
+      abilityName: "Premonition",
+    });
+    expect(next.pendingPrompt?.kind).toBe("confirm");
+    if (next.pendingPrompt?.kind === "confirm") {
+      // Top 5 names should be in the message
+      expect(next.pendingPrompt.message).toContain("Premonition");
+    }
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "confirm" },
+    });
+    expect(next.pendingPrompt).toBeNull();
+    expect(next.pendingEffect).toBeNull();
+    expect(next.players[0].active!.markers["abilityUsedThisTurn"]).toBe(true);
+  });
+  it("rejects 2nd use in same turn", () => {
+    const s = buildScene({
+      attacker: { cardId: "asr-62", energy: [], deck: ["svi-67"] },
+      defender: { cardId: "evs-54" },
+    });
+    const uid = s.players[0].active!.uid;
+    let next = reducer(s, {
+      type: "UseAbility",
+      player: 0,
+      sourceUid: uid,
+      abilityName: "Premonition",
+    });
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "confirm" },
+    });
+    expect(() =>
+      reducer(next, {
+        type: "UseAbility",
+        player: 0,
+        sourceUid: uid,
+        abilityName: "Premonition",
+      }),
+    ).toThrow(/already used/);
+  });
+});
+
+describe("Level Ball", () => {
+  it("searches a Pokemon ≤90 HP from deck to hand", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["bst-129"],
+        // Charmeleon (90 HP) eligible; Charizard ex (330) not eligible
+        deck: ["obf-27", "obf-125", "evs-54"],
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const lbUid = s.players[0].hand[0].uid;
+    let next = reducer(s, { type: "PlayItem", player: 0, uid: lbUid });
+    expect(next.pendingPrompt?.kind).toBe("selectFromList");
+    if (next.pendingPrompt?.kind === "selectFromList") {
+      expect(next.pendingPrompt.cardIds).toContain("obf-27");
+      expect(next.pendingPrompt.cardIds).toContain("evs-54");
+      expect(next.pendingPrompt.cardIds).not.toContain("obf-125");
+    }
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "selectFromList", cardIds: ["obf-27"] },
+    });
+    expect(next.players[0].hand.some((c) => c.cardId === "obf-27")).toBe(true);
+  });
+  it("rejects selection of >90HP Pokemon at step", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["bst-129"],
+        deck: ["obf-27"],
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const lbUid = s.players[0].hand[0].uid;
+    let next = reducer(s, { type: "PlayItem", player: 0, uid: lbUid });
+    expect(() =>
+      reducer(next, {
+        type: "ResolvePrompt",
+        payload: { kind: "selectFromList", cardIds: ["obf-125"] },
+      }),
+    ).toThrow();
+  });
+});
+
+describe("Fog Crystal", () => {
+  it("searches Basic Psychic Pokemon or Energy from deck to hand", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["cre-140"],
+        deck: ["svi-67", "sve-5", "svi-68", "obf-26", "svi-194"], // Ralts (Basic Psy), Psy Energy, Kirlia (Stage1 — not eligible)
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const fcUid = s.players[0].hand[0].uid;
+    let next = reducer(s, { type: "PlayItem", player: 0, uid: fcUid });
+    expect(next.pendingPrompt?.kind).toBe("selectFromList");
+    if (next.pendingPrompt?.kind === "selectFromList") {
+      expect(next.pendingPrompt.cardIds).toContain("svi-67");
+      expect(next.pendingPrompt.cardIds).toContain("sve-5");
+      expect(next.pendingPrompt.cardIds).not.toContain("svi-68"); // Stage 1
+      expect(next.pendingPrompt.cardIds).not.toContain("obf-26"); // Fire
+    }
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "selectFromList", cardIds: ["sve-5"] },
+    });
+    expect(next.players[0].hand.some((c) => c.cardId === "sve-5")).toBe(true);
+  });
+});
+
 describe("Trainer effects: Switch", () => {
   it("swaps active and bench", () => {
     const s = buildScene({

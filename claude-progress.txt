@@ -371,3 +371,33 @@ Notes: 密勒顿 ex 卡组完整效果设计 — 6 个新效果
   - 8 suites 108 tests 全过；npm run build 通过
   - 浏览器 E2E：miraidon mirror seed=33 跑 22 turns 不崩，事件链含
     BossOrders / NestBall / SuperRod / UltraBall / Attack / Promote 等。
+
+=== Session gardevoir-deck-spec | 2026-05-03 ===
+Status: completed
+Notes: 沙奈朵 ex 卡组完整效果设计 — 3 个新效果
+  - **Gallade Premonition** (asr-62 ability): 看牌组前 5 张并重排。
+    v0 简化：emit confirm prompt 显示前 5 张卡名（中文），玩家点确认后
+    无实际重排（重排 UI 后排）。Mark abilityUsedThisTurn。
+  - **Level Ball** (bst-129 Item): 搜 ≤90HP Pokemon 入手 + 洗牌组。
+    Multi-step：emit selectFromList → resolve 时校验 HP，然后入手。
+  - **Fog Crystal** (cre-140 Item): 搜基础超能 Pokemon 或基础超能量。
+    使用 isBasicPsychicMatch helper 同时过滤 Pokemon (Basic + Psychic types)
+    和 Energy (Basic + energyType=Psychic)。
+  - AI heuristics 同步：findUsableAbility 加 Premonition；policy 加 Level Ball
+    和 Fog Crystal 的 PlayItem 优先级。
+  - 5 个新单测：Premonition 2 个 / Level Ball 2 个 / Fog Crystal 1 个
+  - 8 suites 113 tests 全过；npm run build 通过
+  - 浏览器 E2E：gardevoir mirror seed=55 跑完整对局，事件链含 LevelBall /
+    Arven / UltraBall / Attack 等，无 console error，无 toast。
+  - Mew Psy Bolt 麻痹仍跳过：依赖状态条件子系统。
+
+==== 三套卡组效果设计完成总结 ====
+- 喷火龙 ex 卡组：17/17 张卡，1 张依赖状态系统（Mew CEL 11 麻痹）
+- 密勒顿 ex 卡组：10/10 张卡，0 张待办
+- 沙奈朵 ex 卡组：10/10 张卡，1 张依赖状态系统（Mew CEL 11 同上）
+- 共计 37 张 unique 卡，2 张依赖状态条件子系统（同一张 Mew）。
+- 引擎新增的基础设施：
+    onEvolve trigger 注册表 + 触发点（reducer.handleEvolve / Rare Candy step）
+    AttackEffectHandler 支持 state 修改（Fierce Tackle 自伤）
+    Tool 静态修饰内联（Choice Belt 伤害 / Exp. Share KO）
+    Stadium 全局修饰内联（Beach Court 撤退）
