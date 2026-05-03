@@ -1,5 +1,5 @@
 import { getAllCards, getCard } from "../cards";
-import { registerEffectStep, registerTrainerEffect } from "../effects";
+import { getOnEvolve, registerEffectStep, registerTrainerEffect } from "../effects";
 import {
   discardHand,
   drawN,
@@ -89,6 +89,187 @@ registerEffectStep(BOSS_EFFECT, (state: GameState, payload: PromptResponse) => {
   };
   next = logEvent(next, "BossOrders", { player, targetUid: benched.uid });
   return next;
+});
+
+// Energy Retrieval (svi-171) — Item.
+// "Put 2 Basic Energy cards from your discard pile into your hand."
+// v0: auto-take first 2 Basic Energy cards from discard. No prompt.
+registerTrainerEffect("svi-171", (state, player) => {
+  const ps = state.players[player];
+  const basicEnergies: GameCard[] = ps.discard.filter((c) => {
+    const def = getCard(c.cardId);
+    return def.kind === "Energy" && def.energyKind === "Basic";
+  });
+  if (basicEnergies.length === 0) {
+    return logEvent(state, "EnergyRetrievalEmpty", { player });
+  }
+  const take = basicEnergies.slice(0, 2);
+  const takeUids = new Set(take.map((c) => c.uid));
+  const next = setPlayer(state, player, {
+    ...ps,
+    discard: ps.discard.filter((c) => !takeUids.has(c.uid)),
+    hand: [...ps.hand, ...take],
+  });
+  return logEvent(next, "EnergyRetrieval", { player, count: take.length });
+});
+
+// Super Rod (pal-188) — Item.
+// "Shuffle up to 3 in any combination of Pokémon and Basic Energy cards from
+// your discard pile into your deck."
+// v0: auto-shuffle first 3 matching cards back into deck.
+registerTrainerEffect("pal-188", (state, player) => {
+  const ps = state.players[player];
+  const eligible: GameCard[] = ps.discard.filter((c) => {
+    const def = getCard(c.cardId);
+    return (
+      def.kind === "Pokemon" ||
+      (def.kind === "Energy" && def.energyKind === "Basic")
+    );
+  });
+  if (eligible.length === 0) {
+    return logEvent(state, "SuperRodEmpty", { player });
+  }
+  const take = eligible.slice(0, 3);
+  const takeUids = new Set(take.map((c) => c.uid));
+  let next = setPlayer(state, player, {
+    ...ps,
+    discard: ps.discard.filter((c) => !takeUids.has(c.uid)),
+    deck: [...ps.deck, ...take],
+  });
+  next = shuffleDeck(next, player);
+  return logEvent(next, "SuperRod", { player, count: take.length });
+});
+
+// Arven (svi-186) — Supporter.
+// "Search your deck for a Pokémon Tool card and an Item card, reveal them, and
+// put them into your hand. Then, shuffle your deck."
+// 2-step prompt: pick Tool first, then Item. If deck has 0 Tools, skip directly
+// to Item step.
+const ARVEN_TOOL = "svi-186:arven:tool";
+const ARVEN_ITEM = "svi-186:arven:item";
+
+function findToolCardIdsInDeck(state: GameState, player: PlayerIndex): string[] {
+  return Array.from(
+    new Set(
+      state.players[player].deck
+        .filter((c) => {
+          const d = getCard(c.cardId);
+          return d.kind === "Trainer" && d.trainerKind === "Tool";
+        })
+        .map((c) => c.cardId),
+    ),
+  );
+}
+
+function findItemCardIdsInDeck(state: GameState, player: PlayerIndex): string[] {
+  return Array.from(
+    new Set(
+      state.players[player].deck
+        .filter((c) => {
+          const d = getCard(c.cardId);
+          return d.kind === "Trainer" && d.trainerKind === "Item";
+        })
+        .map((c) => c.cardId),
+    ),
+  );
+}
+
+function moveDeckCardToHand(
+  state: GameState,
+  player: PlayerIndex,
+  cardId: string,
+): GameState {
+  const ps = state.players[player];
+  const card = ps.deck.find((c) => c.cardId === cardId);
+  if (!card) return state;
+  return setPlayer(state, player, {
+    ...ps,
+    deck: ps.deck.filter((c) => c.uid !== card.uid),
+    hand: [...ps.hand, card],
+  });
+}
+
+registerTrainerEffect("svi-186", (state, player) => {
+  const tools = findToolCardIdsInDeck(state, player);
+  const items = findItemCardIdsInDeck(state, player);
+  if (tools.length === 0 && items.length === 0) {
+    return logEvent(state, "ArvenEmpty", { player });
+  }
+  if (tools.length === 0) {
+    // Skip to Item step
+    return {
+      ...state,
+      pendingPrompt: {
+        kind: "selectFromList",
+        player,
+        message: "Arven — 选择 1 张物品（Item）",
+        cardIds: items,
+        minCount: 1,
+        maxCount: 1,
+      },
+      pendingEffect: { effectId: ARVEN_ITEM, player },
+    };
+  }
+  return {
+    ...state,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Arven — 选择 1 张道具（Tool）",
+      cardIds: tools,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: ARVEN_TOOL, player },
+  };
+});
+
+registerEffectStep(ARVEN_TOOL, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Arven tool expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error("No pending effect");
+  const player = eff.player;
+  const toolId = payload.cardIds[0];
+  let next = moveDeckCardToHand(state, player, toolId);
+
+  const items = findItemCardIdsInDeck(next, player);
+  if (items.length === 0) {
+    next = shuffleDeck(next, player);
+    next = { ...next, pendingPrompt: null, pendingEffect: null };
+    return logEvent(next, "Arven", { player, toolId, itemId: null });
+  }
+  return {
+    ...next,
+    pendingPrompt: {
+      kind: "selectFromList",
+      player,
+      message: "Arven — 选择 1 张物品（Item）",
+      cardIds: items,
+      minCount: 1,
+      maxCount: 1,
+    },
+    pendingEffect: { effectId: ARVEN_ITEM, player, data: { toolId } },
+  };
+});
+
+registerEffectStep(ARVEN_ITEM, (state, payload) => {
+  if (payload.kind !== "selectFromList") {
+    throw new Error("Arven item expects selectFromList");
+  }
+  const eff = state.pendingEffect;
+  if (!eff) throw new Error("No pending effect");
+  const player = eff.player;
+  const itemId = payload.cardIds[0];
+  let next = moveDeckCardToHand(state, player, itemId);
+  next = shuffleDeck(next, player);
+  next = { ...next, pendingPrompt: null, pendingEffect: null };
+  return logEvent(next, "Arven", {
+    player,
+    toolId: (eff.data?.toolId as string) ?? null,
+    itemId,
+  });
 });
 
 // Switch (svi-194) — switch your active with one bench Pokemon.
@@ -416,7 +597,13 @@ registerEffectStep(RARE_EVO, (state, payload) => {
 
   let next = setPlayer(state, player, newPs);
   next = { ...next, pendingPrompt: null, pendingEffect: null };
-  return logEvent(next, "RareCandy", { player, fromCardId: target.cardId, toCardId: evoCard.cardId });
+  next = logEvent(next, "RareCandy", { player, fromCardId: target.cardId, toCardId: evoCard.cardId });
+
+  // Rare Candy is also "playing the evolution from hand", so fire onEvolve.
+  const onEvolve = getOnEvolve(evoCard.cardId);
+  if (onEvolve) next = onEvolve(next, player, evolved.uid);
+
+  return next;
 });
 
 // Nest Ball (svi-181) — search your deck for a Basic Pokemon, put it on your

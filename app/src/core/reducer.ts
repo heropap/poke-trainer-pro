@@ -4,6 +4,7 @@ import {
   getAbility,
   getAttackEffect,
   getEffectStep,
+  getOnEvolve,
   getOnPlay,
   getTrainerEffect,
 } from "./effects";
@@ -576,12 +577,18 @@ function handleEvolve(
   let newPs = removeFromHand(ps, uid);
   newPs = replaceInPlay(newPs, targetUid, evolved);
 
-  return appendLog(setPlayer(state, player, newPs), "Evolve", {
+  let next: GameState = appendLog(setPlayer(state, player, newPs), "Evolve", {
     player,
     fromCardId: found.card.cardId,
     toCardId: evoCard.cardId,
     targetUid,
   });
+
+  // Fire on-evolve trigger if any (e.g., Charizard ex Infernal Reign).
+  const onEvolve = getOnEvolve(evoCard.cardId);
+  if (onEvolve) next = onEvolve(next, player, evolved.uid);
+
+  return next;
 }
 
 function handlePlayItem(state: GameState, player: PlayerIndex, uid: string): GameState {

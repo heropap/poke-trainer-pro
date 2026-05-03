@@ -128,8 +128,9 @@ function chooseMainAction(state: GameState, player: PlayerIndex): Action {
   const isFirstTurn = state.turnNumber === 1 && state.activePlayer === state.goesFirst;
   if (!ps.hasPlayedSupporter && !isFirstTurn) {
     const supporter = findSupporterInHand(ps);
-    // Prefer Professor's Research if hand is small.
-    if (supporter && (ps.hand.length <= 5 || supporter.cardId === "pal-172")) {
+    // Prefer Professor's Research if hand is small; play Boss's Orders or
+    // Arven aggressively. Iono late game.
+    if (supporter && (ps.hand.length <= 5 || supporter.cardId === "pal-172" || supporter.cardId === "svi-186")) {
       return { type: "PlaySupporter", player, uid: supporter.uid };
     }
   }
@@ -166,6 +167,32 @@ function chooseMainAction(state: GameState, player: PlayerIndex): Action {
   const ultra = findItemInHand(ps, ["svi-196"]);
   if (ultra && ps.hand.length >= 3 && ps.deck.length > 0) {
     return { type: "PlayItem", player, uid: ultra.uid };
+  }
+
+  // (E.7) Energy Retrieval — only useful if discard has Basic Energy.
+  const energyRetrieval = findItemInHand(ps, ["svi-171"]);
+  if (energyRetrieval) {
+    const hasBasicEnergyInDiscard = ps.discard.some((c) => {
+      const d = getCard(c.cardId);
+      return d.kind === "Energy" && d.energyKind === "Basic";
+    });
+    if (hasBasicEnergyInDiscard) {
+      return { type: "PlayItem", player, uid: energyRetrieval.uid };
+    }
+  }
+
+  // (E.8) Super Rod — only useful if discard has 1+ Pokemon or Basic Energy.
+  const superRod = findItemInHand(ps, ["pal-188"]);
+  if (superRod) {
+    const recoverable = ps.discard.some((c) => {
+      const d = getCard(c.cardId);
+      return (
+        d.kind === "Pokemon" || (d.kind === "Energy" && d.energyKind === "Basic")
+      );
+    });
+    if (recoverable && ps.discard.length >= 3) {
+      return { type: "PlayItem", player, uid: superRod.uid };
+    }
   }
 
   // (F) Switch — only if active is hurt and a healthy bencher exists.

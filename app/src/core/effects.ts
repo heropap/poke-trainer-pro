@@ -97,6 +97,21 @@ export function getOnPlay(cardId: string): OnPlayTrigger | undefined {
 }
 
 // =============================================================
+// On-evolve triggers — fired when a Pokemon evolves into a Stage 1
+// or Stage 2 from hand (including via Rare Candy). Used for entry
+// abilities like Charizard ex's Infernal Reign.
+// =============================================================
+export type OnEvolveTrigger = (state: GameState, player: PlayerIndex, sourceUid: string) => GameState;
+
+const ON_EVOLVE = new Map<string, OnEvolveTrigger>();
+export function registerOnEvolve(cardId: string, h: OnEvolveTrigger): void {
+  ON_EVOLVE.set(cardId, h);
+}
+export function getOnEvolve(cardId: string): OnEvolveTrigger | undefined {
+  return ON_EVOLVE.get(cardId);
+}
+
+// =============================================================
 // Effect-step continuations — for multi-step effects that need
 // to dispatch on PromptResponse.
 // =============================================================

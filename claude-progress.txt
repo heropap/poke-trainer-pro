@@ -319,3 +319,30 @@ Notes:
   - 浏览器验证：clicked active Pidgey → 菜单显示 Tackle disabled，
     reason "首回合不可攻击 / 能量不足 [Colorless]"，无 console 错误。
   - 8 suites 94 tests 全过；npm run build 通过。
+
+=== Session charizard-deck-spec | 2026-05-03 ===
+Status: completed
+Notes: 喷火龙 ex 卡组完整效果设计 — 4 个新效果 + 1 个新触发器
+  - 新基础设施: registerOnEvolve / getOnEvolve（onEvolve 触发器）
+    reducer.handleEvolve 触发；effects/trainers.ts 的 Rare Candy step handler
+    也触发（Rare Candy 跳 Stage 1 时也算 onEvolve）。
+  - **Charizard ex Infernal Reign** (obf-125 onEvolve):
+    进化时从牌组搜最多 3 张基础火能量 → 全部贴到刚进化的 Charizard ex →
+    洗牌组。v0 简化：所有 3 张都贴 source（不分配到其他 Pokemon）。
+  - **Energy Retrieval** (svi-171 Item):
+    弃牌堆前 2 张基础能量 → 入手。无 prompt（v0 简化）。
+  - **Super Rod** (pal-188 Item):
+    弃牌堆前 3 张 Pokemon/基础能量 → 洗回牌组。无 prompt。
+  - **Arven** (svi-186 Supporter): 2-step 多步效果
+    Step 1: 选 1 张 Tool 卡（如果牌组有）→ 入手
+    Step 2: 选 1 张 Item 卡 → 入手
+    最后洗牌组。如果牌组无 Tool 直接跳到 Item step。
+  - AI heuristic 同步更新：识别新 Item（Energy Retrieval / Super Rod 条件触发）
+    Supporter 优先级加 Arven 与 Boss's Orders 同列。
+  - Mew Psy Bolt 麻痹效果跳过：依赖状态条件子系统（poison / burn / asleep /
+    paralyzed / confused），单独排期。Mew 在 Charizard 卡组没有 Psychic 能量
+    实战中也无法发动 Psy Bolt，影响最小。
+  - 6 个新单测：Infernal Reign 2 个 / Energy Retrieval 1 个 / Super Rod 1 个 /
+    Arven 2 个；总 8 suites 100 tests。
+  - 浏览器 E2E：charizard vs miraidon seed=99 完整 24 turns 游戏不崩，
+    事件包含 Attack / Promote / PrizeTaken / Win 全链路。

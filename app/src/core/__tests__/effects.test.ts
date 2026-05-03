@@ -372,6 +372,157 @@ describe("Trainer effects: Nest Ball", () => {
   });
 });
 
+describe("Charizard ex Infernal Reign onEvolve", () => {
+  it("attaches up to 3 Basic Fire Energy from deck on evolve", () => {
+    // Build a state where Charmeleon is in active and we evolve to Charizard ex
+    // by placing the evolution from hand. To trigger via Evolve action requires
+    // turn>1 + target not played this turn. Simplest: hand-craft state.
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-27", // Charmeleon active (Stage 1)
+        energy: [],
+        hand: ["obf-125"], // Charizard ex in hand
+        deck: ["sve-2", "sve-2", "sve-2", "sve-2", "obf-26"], // 4 Fire energies + Charmander
+      },
+      defender: { cardId: "evs-54", bench: ["evs-54"] },
+      turn: 5,
+    });
+    const charizardUid = s.players[0].hand[0].uid;
+    const activeUid = s.players[0].active!.uid;
+    const next = reducer(s, {
+      type: "Evolve",
+      player: 0,
+      uid: charizardUid,
+      targetUid: activeUid,
+    });
+    // Active should now be Charizard ex with 3 Fire energies attached.
+    expect(next.players[0].active!.cardId).toBe("obf-125");
+    expect(next.players[0].active!.attachedEnergy.length).toBe(3);
+    // Deck Fire energies reduced by 3
+    const deckFire = next.players[0].deck.filter((c) => c.cardId === "sve-2").length;
+    expect(deckFire).toBe(1);
+    // Log contains InfernalReign
+    expect(next.log.some((e) => e.kind === "InfernalReign")).toBe(true);
+  });
+
+  it("does nothing if no Fire Energy in deck", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-27",
+        energy: [],
+        hand: ["obf-125"],
+        deck: ["obf-26"], // no Fire energy
+      },
+      defender: { cardId: "evs-54" },
+      turn: 5,
+    });
+    const charizardUid = s.players[0].hand[0].uid;
+    const activeUid = s.players[0].active!.uid;
+    const next = reducer(s, {
+      type: "Evolve",
+      player: 0,
+      uid: charizardUid,
+      targetUid: activeUid,
+    });
+    expect(next.players[0].active!.cardId).toBe("obf-125");
+    expect(next.players[0].active!.attachedEnergy.length).toBe(0);
+  });
+});
+
+describe("Energy Retrieval", () => {
+  it("moves 2 Basic Energy from discard to hand", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["svi-171"],
+        discard: ["sve-2", "sve-2", "sve-2"],
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const erUid = s.players[0].hand[0].uid;
+    const next = reducer(s, { type: "PlayItem", player: 0, uid: erUid });
+    const fireInHand = next.players[0].hand.filter((c) => c.cardId === "sve-2").length;
+    const fireInDiscard = next.players[0].discard.filter((c) => c.cardId === "sve-2").length;
+    expect(fireInHand).toBe(2);
+    expect(fireInDiscard).toBe(1);
+  });
+});
+
+describe("Super Rod", () => {
+  it("shuffles up to 3 Pokemon/Basic Energy from discard back to deck", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["pal-188"],
+        discard: ["sve-2", "obf-26", "obf-27", "svi-194"], // 3 valid + 1 trainer
+      },
+      defender: { cardId: "evs-54" },
+    });
+    const rodUid = s.players[0].hand[0].uid;
+    const before = s.players[0].deck.length;
+    const next = reducer(s, { type: "PlayItem", player: 0, uid: rodUid });
+    expect(next.players[0].deck.length).toBe(before + 3);
+    // 1 trainer remains in discard + the played Super Rod itself
+    expect(next.players[0].discard.some((c) => c.cardId === "svi-194")).toBe(true);
+  });
+});
+
+describe("Arven", () => {
+  it("emits Tool prompt when deck has Tools, then Item prompt", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["svi-186"],
+        deck: ["pal-176", "svi-181", "svi-196"], // Choice Belt (Tool) + 2 Items
+      },
+      defender: { cardId: "evs-54" },
+      turn: 5,
+    });
+    const arvenUid = s.players[0].hand[0].uid;
+    let next = reducer(s, { type: "PlaySupporter", player: 0, uid: arvenUid });
+    expect(next.pendingPrompt?.kind).toBe("selectFromList");
+    if (next.pendingPrompt?.kind === "selectFromList") {
+      expect(next.pendingPrompt.cardIds).toContain("pal-176");
+    }
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "selectFromList", cardIds: ["pal-176"] },
+    });
+    // Now Item prompt
+    expect(next.pendingPrompt?.kind).toBe("selectFromList");
+    next = reducer(next, {
+      type: "ResolvePrompt",
+      payload: { kind: "selectFromList", cardIds: ["svi-181"] },
+    });
+    // Both should be in hand
+    expect(next.players[0].hand.some((c) => c.cardId === "pal-176")).toBe(true);
+    expect(next.players[0].hand.some((c) => c.cardId === "svi-181")).toBe(true);
+    expect(next.pendingPrompt).toBeNull();
+  });
+
+  it("skips to Item prompt when deck has no Tools", () => {
+    const s = buildScene({
+      attacker: {
+        cardId: "obf-26",
+        energy: [],
+        hand: ["svi-186"],
+        deck: ["svi-181", "svi-196"], // only Items, no Tools
+      },
+      defender: { cardId: "evs-54" },
+      turn: 5,
+    });
+    const arvenUid = s.players[0].hand[0].uid;
+    const next = reducer(s, { type: "PlaySupporter", player: 0, uid: arvenUid });
+    expect(next.pendingPrompt?.kind).toBe("selectFromList");
+    if (next.pendingPrompt?.kind === "selectFromList") {
+      expect(next.pendingPrompt.message).toContain("物品");
+    }
+  });
+});
+
 describe("Trainer effects: Switch", () => {
   it("swaps active and bench", () => {
     const s = buildScene({
