@@ -90,6 +90,12 @@ export type Action =
       benchSlot: number;
     }
   | {
+      type: "UseAbility";
+      player: PlayerIndex;
+      sourceUid: string;
+      abilityName: string;
+    }
+  | {
       type: "ResolvePrompt";
       payload: PromptResponse;
     }

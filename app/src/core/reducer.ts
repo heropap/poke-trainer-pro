@@ -1,6 +1,12 @@
 import { getCard } from "./cards";
 import { getDeck } from "./decks";
-import { getEffect } from "./effects";
+import {
+  getAbility,
+  getAttackEffect,
+  getEffectStep,
+  getOnPlay,
+  getTrainerEffect,
+} from "./effects";
 import { makeRng, shuffle } from "./rng";
 import type { Action, PromptResponse } from "./actions";
 import {
@@ -324,7 +330,6 @@ function handleStartTurn(state: GameState): GameState {
   const ps = state.players[player];
 
   if (ps.deck.length === 0) {
-    // Deck-out: opponent wins.
     return appendLog(
       {
         ...state,
@@ -338,8 +343,19 @@ function handleStartTurn(state: GameState): GameState {
   }
 
   const drawn = drawNFromDeck(ps, 1);
+  // Clear per-turn markers on the active player's Pokemon.
+  const clearMarkers = (c: GameCard | null): GameCard | null => {
+    if (!c) return null;
+    const m: Record<string, number | boolean> = { ...c.markers };
+    delete m.playedThisTurn;
+    delete m.evolvedThisTurn;
+    delete m.abilityUsedThisTurn;
+    return { ...c, markers: m };
+  };
   const reset: PlayerState = {
     ...drawn,
+    active: clearMarkers(drawn.active),
+    bench: drawn.bench.map(clearMarkers),
     hasPlayedSupporter: false,
     hasAttachedEnergy: false,
     retreatedThisTurn: false,
@@ -390,17 +406,28 @@ function handlePlayBasicPokemon(
   }
 
   const newBench = [...ps.bench];
-  newBench[benchSlot] = card;
+  // Attach a marker indicating this Pokemon was played this turn (for evolve check).
+  const cardWithMarker: GameCard = {
+    ...card,
+    markers: { ...card.markers, playedThisTurn: true },
+  };
+  newBench[benchSlot] = cardWithMarker;
   const newPs: PlayerState = {
     ...removeFromHand(ps, uid),
     bench: newBench,
   };
 
-  return appendLog(setPlayer(state, player, newPs), "PlayBasicPokemon", {
-    player,
-    cardId: card.cardId,
-    benchSlot,
-  });
+  let next: GameState = appendLog(
+    setPlayer(state, player, newPs),
+    "PlayBasicPokemon",
+    { player, cardId: card.cardId, benchSlot },
+  );
+
+  // Fire on-play trigger if any (e.g., Miraidon Tandem Unit).
+  const onPlay = getOnPlay(card.cardId);
+  if (onPlay) next = onPlay(next, player, cardWithMarker.uid);
+
+  return next;
 }
 
 function handleAttachEnergy(
@@ -572,8 +599,7 @@ function handlePlayItem(state: GameState, player: PlayerIndex, uid: string): Gam
   let next: GameState = setPlayer(state, player, newPs);
   next = appendLog(next, "PlayItem", { player, cardId: card.cardId });
 
-  // Run effect if registered (F6).
-  const effect = getEffect(card.cardId);
+  const effect = getTrainerEffect(card.cardId);
   if (effect) next = effect(next, player);
 
   return next;
@@ -607,7 +633,7 @@ function handlePlaySupporter(
   let next: GameState = setPlayer(state, player, newPs);
   next = appendLog(next, "PlaySupporter", { player, cardId: card.cardId });
 
-  const effect = getEffect(card.cardId);
+  const effect = getTrainerEffect(card.cardId);
   if (effect) next = effect(next, player);
 
   return next;
@@ -800,16 +826,32 @@ function handleAttack(state: GameState, player: PlayerIndex, attackIndex: number
     );
   }
 
-  // Apply effect (F6 will plug in card-specific scaling). For F5 we use base
-  // damage + weakness/resistance only.
-  const damage = calculateDamage(attacker.active, defender.active, attack.damage);
+  // Resolve attack effect (scaling, e.g., Charizard's Burning Darkness).
+  let workingState: GameState = state;
+  let baseDamage = attack.damage;
+  const attackEffect = getAttackEffect(attacker.active.cardId, attackIndex);
+  if (attackEffect) {
+    const result = attackEffect(workingState, player, baseDamage);
+    workingState = result.state;
+    baseDamage = result.damage;
+  }
+
+  const damage = calculateDamage(attacker.active, defender.active, baseDamage);
+  // Re-derive defender from workingState in case attack effect changed state.
+  const defenderRefreshed = workingState.players[defenderIdx];
+  if (!defenderRefreshed.active) {
+    return appendLog(workingState, "AttackVoid", { player });
+  }
 
   // Apply damage to defender's active
   const newDefenderActive: GameCard = {
-    ...defender.active,
-    damage: defender.active.damage + damage,
+    ...defenderRefreshed.active,
+    damage: defenderRefreshed.active.damage + damage,
   };
-  let next = setPlayer(state, defenderIdx, { ...defender, active: newDefenderActive });
+  let next = setPlayer(workingState, defenderIdx, {
+    ...defenderRefreshed,
+    active: newDefenderActive,
+  });
   next = appendLog(next, "Attack", {
     player,
     attackName: attack.name,
@@ -963,6 +1005,18 @@ function handleResolvePrompt(state: GameState, payload: PromptResponse): GameSta
   const prompt = state.pendingPrompt;
   if (!prompt) throw new Error("No pending prompt to resolve");
 
+  // 1) Multi-step effect dispatch (Pidgeot Quick Search, Boss's Orders, etc.)
+  if (state.pendingEffect) {
+    const stepHandler = getEffectStep(state.pendingEffect.effectId);
+    if (stepHandler) {
+      return stepHandler(state, payload);
+    }
+    throw new Error(
+      `pendingEffect ${state.pendingEffect.effectId} has no registered step handler`,
+    );
+  }
+
+  // 2) Built-in setup prompts
   if (prompt.kind === "selectActiveSetup" && payload.kind === "selectActiveSetup") {
     return handlePlaceActiveSetup(state, prompt.player, payload.uid);
   }
@@ -973,6 +1027,31 @@ function handleResolvePrompt(state: GameState, payload: PromptResponse): GameSta
     return handlePromoteFromKO(state, prompt.player, payload.benchSlot);
   }
   throw new Error(`Prompt kind ${prompt.kind} cannot be resolved by payload kind ${payload.kind}`);
+}
+
+function handleUseAbility(
+  state: GameState,
+  player: PlayerIndex,
+  sourceUid: string,
+  abilityName: string,
+): GameState {
+  if (state.activePlayer !== player) {
+    throw new Error(`Player ${player} is not the active player`);
+  }
+  if (state.phase !== "main") {
+    throw new Error(`UseAbility requires phase=main (got ${state.phase})`);
+  }
+  if (state.pendingPrompt || state.pendingEffect) {
+    throw new Error(`Resolve pending prompt before using ability`);
+  }
+
+  const ps = state.players[player];
+  const found = findInPlay(ps, sourceUid);
+  const handler = getAbility(found.card.cardId, abilityName);
+  if (!handler) {
+    throw new Error(`No registered ability ${abilityName} for ${found.card.cardId}`);
+  }
+  return handler(state, player, sourceUid);
 }
 
 function handleDrawCard(state: GameState, player: PlayerIndex, count: number): GameState {
@@ -1033,6 +1112,8 @@ export function reducer(state: GameState, action: Action): GameState {
       return handleAttack(state, action.player, action.attackIndex);
     case "PromoteFromKO":
       return handlePromoteFromKO(state, action.player, action.benchSlot);
+    case "UseAbility":
+      return handleUseAbility(state, action.player, action.sourceUid, action.abilityName);
     case "ResolvePrompt":
       return handleResolvePrompt(state, action.payload);
     case "Concede":

@@ -110,3 +110,27 @@ Notes:
     ex KO 2-prize / 无后场判负 / promote 流程 / 6-prize 胜利 / 自动 endTurn /
     未知 action 不崩
   - 5 个 test suite，共 48 tests；init.sh 全绿
+
+=== Session F6 | 2026-05-03 ===
+Feature: 三套卡组的关键卡牌效果（priority 6）
+Status: completed
+Notes:
+  - core/effects.ts 重构成 4 个注册表：Trainer / Attack / Ability / OnPlay + EffectStep
+  - state.ts 新增 pendingEffect 字段（multi-step 效果状态机用）
+  - actions.ts 新增 UseAbility action
+  - reducer：
+      * handleUseAbility 派发到 ABILITY_EFFECTS
+      * handleAttack 调用 attack effect 计算最终伤害
+      * handlePlayBasicPokemon 触发 onPlay
+      * handleResolvePrompt 优先派发 pendingEffect 的 step 处理器
+      * handleStartTurn 重置 abilityUsedThisTurn / playedThisTurn / evolvedThisTurn
+  - effects/charizard-ex.ts：Burning Darkness 攻击效果（base 180 + 30/对手取奖励）
+  - effects/miraidon-ex.ts：Tandem Unit 入场效果（自动搜 2 张基础雷 → 后场）
+  - effects/pidgeot-ex.ts：Quick Search 能力（multi-step：发 prompt → 搜卡 → 入手）
+  - effects/gardevoir-ex.ts：Psychic Embrace 能力（弃牌区超能 → 我方超系，+20 dmg）
+  - effects/trainers.ts：Professor's Research / Iono / Boss's Orders / Switch / Nest Ball
+  - effects/helpers.ts：drawN / shuffleDeck / shuffleHandIntoDeck / discardHand /
+    moveDeckToHand / moveDeckToBench / findBasicInDeck 等公共 helper
+  - 13 个新单测，全过；6 suites 61 tests；init.sh 全绿
+  - 暂未实装：Flaaffy Dynamotor / Kirlia Refinement / Rare Candy / Ultra Ball /
+    Arven / 其他次要 trainer。这些在 F14 之前如有时间可补；不影响 v0 demo 流程。

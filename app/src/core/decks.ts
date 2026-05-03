@@ -1,6 +1,7 @@
 import { charizardExDeck } from "./decks/charizard-ex";
 import { miraidonExDeck } from "./decks/miraidon-ex";
 import { gardevoirExDeck } from "./decks/gardevoir-ex";
+import "./effects/index";
 import type { DeckDef } from "./types";
 
 export const DECKS: DeckDef[] = [charizardExDeck, miraidonExDeck, gardevoirExDeck];

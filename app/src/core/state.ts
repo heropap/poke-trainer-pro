@@ -66,6 +66,13 @@ export interface GameEvent {
   payload?: Record<string, unknown>;
 }
 
+export interface PendingEffect {
+  effectId: string;
+  player: PlayerIndex;
+  sourceUid?: string;
+  data?: Record<string, unknown>;
+}
+
 export interface GameState {
   players: [PlayerState, PlayerState];
   activePlayer: PlayerIndex;
@@ -74,6 +81,7 @@ export interface GameState {
   turnNumber: number;
   stadium: GameCard | null;
   pendingPrompt: Prompt | null;
+  pendingEffect: PendingEffect | null;
   log: GameEvent[];
   winner: Winner;
   winReason: WinReason;
@@ -109,6 +117,7 @@ export function emptyGameState(rngSeed: number): GameState {
     turnNumber: 0,
     stadium: null,
     pendingPrompt: null,
+    pendingEffect: null,
     log: [],
     winner: null,
     winReason: null,

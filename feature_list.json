@@ -90,7 +90,7 @@
       "效果共享 helper：drawN / searchDeck / healDamage / attachFromDiscard",
       "每个独立效果对应单测"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 6
   },
   {
