@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Tableau, type CardClickHandler } from "./Tableau";
 import { CardActionMenu } from "./CardActionMenu";
 import { PromptStack } from "./PromptStack";
+import { DamageFlash } from "./fx/DamageFlash";
 import type { Dispatch } from "./useGame";
 import type { GameCard, GameState, PlayerIndex } from "@/core/state";
 
@@ -67,6 +68,8 @@ export function GameCanvas({ state, humanPlayer, dispatch, thinking }: GameCanva
         humanPlayer={humanPlayer}
         dispatch={dispatch}
       />
+
+      <DamageFlash state={state} />
 
       <Sidebar
         state={state}

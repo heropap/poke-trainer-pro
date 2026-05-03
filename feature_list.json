@@ -177,7 +177,7 @@
       "出牌动画：hand → 场上的弧线运动",
       "浏览器验证：完整跑一局动画链路顺畅"
     ],
-    "passes": false,
+    "passes": true,
     "priority": 13
   },
   {

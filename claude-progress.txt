@@ -229,3 +229,20 @@ Notes:
   - init.sh 全绿；7 suites 66 tests 仍全过
   - F10/F11/F12 一并完成（user 要求全自动模式连续推进）
   - 暂未实装 dnd-kit drag（用 click 代替）；F13 加 framer-motion 动画
+
+=== Session F13 | 2026-05-03 ===
+Feature: 动画 + 特效层（priority 13）
+Status: completed
+Notes:
+  - BoardCard / HandCard 包 motion.div：
+      * layoutId（FLIP 自动布局动画 — 卡从手牌飞到场上时会插值）
+      * initial / animate / exit 配合 AnimatePresence
+      * spring transition (stiffness 220-280, damping 24-28)
+  - HandCard 加 whileHover：y -8, scale 1.1（替代纯 CSS hover）
+  - 新建 fx/DamageFlash.tsx：监听 log 中最近的 Attack 事件，
+    在屏幕中央闪现红色伤害数字（-XX），1.2s 动画（fade + scale + 上升）
+  - GameCanvas 挂载 DamageFlash
+  - 浏览器验证：页面加载无 console error；motion.div 节点正常工作
+  - init.sh 全绿
+  - v0 范围内的动画：卡牌进出场 + 攻击伤害闪烁。
+    更详细的 KO 烟雾 / 取奖励飞行 cinematic 等留待 v0.2+

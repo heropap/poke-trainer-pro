@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { motion } from "framer-motion";
 import { getCard } from "@/core/cards";
 import type { GameCard } from "@/core/state";
 
@@ -27,8 +28,15 @@ export function HandCard({ card, index, hidden = false }: HandCardProps) {
     (def.rarity === "ex" || def.rarity === "V" || def.rarity === "VMAX" || def.rarity === "VSTAR");
 
   return (
-    <div
-      className="relative w-[68px] h-[96px] flex-shrink-0 rounded-md overflow-hidden border border-zinc-700 bg-zinc-900 transition-transform hover:scale-110 hover:-translate-y-2 hover:z-20 hover:border-violet-400 hover:shadow-[0_0_18px_rgba(168,85,247,0.5)] cursor-pointer"
+    <motion.div
+      layout
+      layoutId={`hand-${card.uid}`}
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -24, scale: 0.85 }}
+      transition={{ type: "spring", stiffness: 280, damping: 28 }}
+      whileHover={{ y: -8, scale: 1.1, zIndex: 20 }}
+      className="relative w-[68px] h-[96px] flex-shrink-0 rounded-md overflow-hidden border border-zinc-700 bg-zinc-900 hover:border-violet-400 hover:shadow-[0_0_18px_rgba(168,85,247,0.5)] cursor-pointer"
       style={{ marginLeft: index === 0 ? 0 : -16 }}
       title={def.name}
     >
@@ -50,6 +58,6 @@ export function HandCard({ card, index, hidden = false }: HandCardProps) {
           <div className="text-[8px] text-zinc-300">{def.name}</div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
